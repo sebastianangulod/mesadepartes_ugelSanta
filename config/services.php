@@ -35,4 +35,31 @@ return [
         ],
     ],
 
+    # Servicios de APIs Peruanas
+    'reniec' => [
+        'api_url' => env('RENIEC_API_URL', 'https://api.apis.net.pe/v1/dni'),
+        'api_token' => env('RENIEC_API_TOKEN'),
+        'enabled' => env('RENIEC_API_ENABLED', false),
+        'timeout' => 30,
+        'retry_attempts' => 3,
+        'cache_ttl' => 3600, // 1 hora
+    ],
+
+    'sunat' => [
+        'api_url' => env('SUNAT_API_URL', 'https://api.apis.net.pe/v1/ruc'),
+        'api_token' => env('SUNAT_API_TOKEN'),
+        'enabled' => env('SUNAT_API_ENABLED', false),
+        'timeout' => 30,
+        'retry_attempts' => 3,
+        'cache_ttl' => 3600, // 1 hora
+    ],
+
+    'recaptcha' => [
+        'site_key' => env('RECAPTCHA_SITE_KEY'),
+        'secret_key' => env('RECAPTCHA_SECRET_KEY'),
+        'enabled' => env('RECAPTCHA_ENABLED', false),
+        'score_threshold' => 0.5,
+        'timeout' => 10,
+    ],
+
 ];
