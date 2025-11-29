@@ -66,9 +66,10 @@ class MesaPartesController extends Controller
      */
     public function tramitesRecibidos()
     {
-        // Retorna vista: resources/views/mesa-partes/recibidos.blade.php
-        // Lista trámites asignados al área del usuario
-        // Incluye acciones según permisos
+        // Por ahora retornamos directamente la vista diseñada para trámites recibidos.
+        // Más adelante se puede conectar con TramiteWorkflowService para listar los
+        // trámites reales asignados al usuario interno.
+        return view('mesa-partes.tramites-recibidos');
     }
 
     /**

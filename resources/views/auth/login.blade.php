@@ -53,6 +53,7 @@
                         <option value="">Seleccione...</option>
                         <option value="1" {{ old('tipo_persona') == '1' ? 'selected' : '' }}>Persona Natural</option>
                         <option value="2" {{ old('tipo_persona') == '2' ? 'selected' : '' }}>Persona Jurídica</option>
+                        <option value="3" {{ old('tipo_persona') == '3' ? 'selected' : '' }}>Entidad Pública</option>
                     </select>
                 </div>
                 
@@ -62,6 +63,23 @@
                            class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" 
                            placeholder="Ingrese su DNI (8 dígitos)" 
                            value="{{ old('dni') }}">
+                </div>
+
+                {{-- Campos adicionales según tipo de persona --}}
+                <div id="campo_ruc" class="{{ old('tipo_persona') == '2' ? '' : 'hidden' }}">
+                    <label for="ruc" class="block text-sm font-medium text-gray-700 mb-1">RUC (solo Persona Jurídica)</label>
+                    <input id="ruc" name="ruc" type="text"
+                           class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" 
+                           placeholder="Ingrese su RUC"
+                           value="{{ old('ruc') }}">
+                </div>
+
+                <div id="campo_nombre_entidad" class="{{ old('tipo_persona') == '3' ? '' : 'hidden' }}">
+                    <label for="nombre_entidad" class="block text-sm font-medium text-gray-700 mb-1">Nombre de Entidad (solo Entidad Pública)</label>
+                    <input id="nombre_entidad" name="nombre_entidad" type="text"
+                           class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" 
+                           placeholder="Ingrese el nombre de la entidad"
+                           value="{{ old('nombre_entidad') }}">
                 </div>
                 
                 <div>
@@ -127,5 +145,20 @@ document.getElementById('dni').addEventListener('input', function(e) {
         this.value = this.value.slice(0, 8);
     }
 });
+
+// Mostrar/ocultar campos según tipo de persona
+const tipoPersonaSelect = document.getElementById('tipo_persona');
+const campoRuc = document.getElementById('campo_ruc');
+const campoNombreEntidad = document.getElementById('campo_nombre_entidad');
+
+function actualizarCamposTipoPersona() {
+    const tipo = tipoPersonaSelect.value;
+    campoRuc.classList.toggle('hidden', tipo !== '2');
+    campoNombreEntidad.classList.toggle('hidden', tipo !== '3');
+}
+
+tipoPersonaSelect.addEventListener('change', actualizarCamposTipoPersona);
+// Ejecutar al cargar para reflejar old()
+actualizarCamposTipoPersona();
 </script>
 @endsection

@@ -44,7 +44,11 @@ class LoginRequest extends FormRequest
         return [
             'dni' => 'required|string|size:8|regex:/^[0-9]{8}$/',
             'password' => 'required|string|min:6',
-            'tipo_persona' => 'required|in:1,2',
+            // 1: Persona Natural, 2: Persona Jurídica, 3: Entidad Pública
+            'tipo_persona' => 'required|in:1,2,3',
+            // Campos opcionales que se validan en el controlador según tipo_persona
+            'ruc' => 'nullable|string|max:45',
+            'nombre_entidad' => 'nullable|string|max:255',
             'remember' => 'sometimes|boolean',
         ];
     }
@@ -63,7 +67,7 @@ class LoginRequest extends FormRequest
             'password.required' => 'La contraseña es obligatoria.',
             'password.min' => 'La contraseña debe tener al menos 6 caracteres.',
             'tipo_persona.required' => 'El tipo de persona es obligatorio.',
-            'tipo_persona.in' => 'El tipo de persona debe ser Persona Natural (1) o Persona Jurídica (2).',
+            'tipo_persona.in' => 'El tipo de persona debe ser: 1 (Persona Natural), 2 (Persona Jurídica) o 3 (Entidad Pública).',
         ];
     }
 

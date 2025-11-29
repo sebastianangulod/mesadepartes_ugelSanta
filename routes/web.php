@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\AreasController;
 use App\Http\Controllers\Admin\NivelesController;
 use App\Http\Controllers\Admin\ProcedimientosController;
 use App\Http\Controllers\Admin\UsuariosController;
+use App\Http\Controllers\MesaPartesController;
 
 /*
 |--------------------------------------------------------------------------
@@ -163,6 +164,12 @@ Route::middleware(['auth'])->group(function () {
     })->name('home');
     
     // Rutas API para dashboard (AJAX)
+    
+    // Rutas internas de mesa de partes (usuarios internos)
+    Route::prefix('mesa-partes')->group(function () {
+        Route::get('/tramites-recibidos', [MesaPartesController::class, 'tramitesRecibidos'])
+            ->name('mesa-partes.tramites-recibidos');
+    });
     Route::prefix('api')->group(function () {
         Route::get('/dashboard/estadisticas', function () {
             // Implementar lógica para estadísticas del dashboard

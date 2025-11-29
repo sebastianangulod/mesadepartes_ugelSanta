@@ -91,7 +91,10 @@ class AuthController extends Controller
             $credentials = $request->validate([
                 'dni' => 'required|string|size:8|regex:/^\\d{8}$/',
                 'password' => 'required|string|min:6',
-                'tipo_persona' => 'required|in:1,2',
+                // 1: Natural, 2: Jurídica, 3: Entidad Pública
+                'tipo_persona' => 'required|in:1,2,3',
+                'ruc' => 'nullable|string|max:45',
+                'nombre_entidad' => 'nullable|string|max:255',
                 'remember' => 'boolean'
             ]);
 
@@ -108,14 +111,47 @@ class AuthController extends Controller
                 ]);
             }
 
-            // Verificar contraseña (usar passw directamente)
+            // Verificaciones adicionales según tipo de persona (mismas que en el PHP puro)
+            if ((int)$credentials['tipo_persona'] === 2) { // Persona Jurídica
+                if (empty($credentials['ruc'])) {
+                    throw ValidationException::withMessages([
+                        'ruc' => 'El RUC es obligatorio para persona jurídica.'
+                    ]);
+                }
+
+                if (empty($usuario->ruc)) {
+                    throw ValidationException::withMessages([
+                        'ruc' => 'Su cuenta no tiene un RUC asociado. Comuníquese con la mesa de partes.'
+                    ]);
+                }
+            } elseif ((int)$credentials['tipo_persona'] === 3) { // Entidad Pública
+                if (empty($credentials['nombre_entidad'])) {
+                    throw ValidationException::withMessages([
+                        'nombre_entidad' => 'El nombre de la entidad es obligatorio para entidad pública.'
+                    ]);
+                }
+
+                if (empty($usuario->razon_social)) {
+                    throw ValidationException::withMessages([
+                        'nombre_entidad' => 'Su cuenta no tiene una entidad asociada. Comuníquese con la mesa de partes.'
+                    ]);
+                }
+            }
+
+            // Verificar contraseña (usar passw directamente) con soporte de migración de hashes antiguos
             if (!Hash::check($credentials['password'], $usuario->passw)) {
-                Log::warning("Intento de login fallido para DNI: {$credentials['dni']}");
-                $this->registrarIntentoFallido($credentials['dni'], $request->ip());
-                
-                throw ValidationException::withMessages([
-                    'password' => 'La contraseña es incorrecta.'
-                ]);
+                // Intentar migración desde texto plano como en el sistema antiguo
+                if ($usuario->passw === $credentials['password']) {
+                    $usuario->passw = Hash::make($credentials['password']);
+                    $usuario->save();
+                } else {
+                    Log::warning("Intento de login fallido para DNI: {$credentials['dni']}");
+                    $this->registrarIntentoFallido($credentials['dni'], $request->ip());
+                    
+                    throw ValidationException::withMessages([
+                        'password' => 'La contraseña es incorrecta.'
+                    ]);
+                }
             }
 
             // Verificar si el usuario está bloqueado
@@ -175,27 +211,26 @@ class AuthController extends Controller
                 ]);
             }
 
-            // Verificar contraseña (usar passw directamente)
+            // Verificar contraseña (usar passw directamente) con soporte de migración
             if (!Hash::check($credentials['password'], $usuario->passw)) {
-                Log::warning("Intento de login interno fallido para email: {$credentials['email']}");
-                $this->registrarIntentoFallido($credentials['email'], $request->ip());
-                
-                throw ValidationException::withMessages([
-                    'password' => 'La contraseña es incorrecta.'
-                ]);
+                // Intentar migración desde texto plano como en el sistema antiguo
+                if ($usuario->passw === $credentials['password']) {
+                    $usuario->passw = Hash::make($credentials['password']);
+                    $usuario->save();
+                } else {
+                    Log::warning("Intento de login interno fallido para email: {$credentials['email']}");
+                    $this->registrarIntentoFallido($credentials['email'], $request->ip());
+                    
+                    throw ValidationException::withMessages([
+                        'password' => 'La contraseña es incorrecta.'
+                    ]);
+                }
             }
 
             // Verificar si el usuario está bloqueado
             if ($this->estaUsuarioBloqueado($usuario)) {
                 throw ValidationException::withMessages([
-                    'usuario' => 'La cuenta está temporalmente bloqueada por múltiples intentos fallidos.'
-                ]);
-            }
-
-            // Verificar permisos de administrador
-            if (!$usuario->es_administrador) {
-                throw ValidationException::withMessages([
-                    'usuario' => 'No tiene permisos para acceder al área administrativa.'
+                    'email' => 'La cuenta está temporalmente bloqueada por múltiples intentos fallidos.'
                 ]);
             }
 
@@ -208,8 +243,13 @@ class AuthController extends Controller
             // Registrar acceso exitoso
             $this->registrarAccesoExitoso($usuario, $request->ip());
 
-            // Redirigir al dashboard administrativo
-            return redirect()->route('dashboard')->with('success', 'Bienvenido al sistema de administración.');
+            // Redirigir según sea administrador o usuario interno operativo
+            if ($usuario->es_administrador) {
+                return redirect()->route('dashboard')->with('success', 'Bienvenido al sistema de administración.');
+            }
+
+            // Usuario interno no administrador: redirigir a bandeja de trámites internos
+            return redirect()->route('mesa-partes.tramites-recibidos')->with('success', 'Bienvenido al panel de mesa de partes.');
 
         } catch (ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
