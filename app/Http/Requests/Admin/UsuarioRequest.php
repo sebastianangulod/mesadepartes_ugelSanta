@@ -6,7 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Request para validación de usuarios en administración
+ * Request para validación de usuarios internos en administración
  * 
  * Este request valida los datos de entrada para el CRUD de usuarios
  * internos en el panel de administración.
@@ -24,7 +24,7 @@ use Illuminate\Validation\Rule;
  * 
  * @package App\Http\Requests\Admin
  */
-class UsuarioRequest extends FormRequest
+class AdminUsuarioRequest extends FormRequest
 {
     /**
      * Determinar si el usuario está autorizado para hacer esta petición

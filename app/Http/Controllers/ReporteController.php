@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Services\Reporte\ReporteService;
-use App\Services\Tramite\TramiteService;
+use App\Services\Tramite\TramiteCreacionService;
 
 /**
  * Controlador para gestionar reportes y estadísticas
@@ -19,12 +19,12 @@ use App\Services\Tramite\TramiteService;
 class ReporteController extends Controller
 {
     protected $reporteService;
-    protected $tramiteService;
+    protected $tramiteCreacionService;
 
-    public function __construct(ReporteService $reporteService, TramiteService $tramiteService)
+    public function __construct(ReporteService $reporteService, TramiteCreacionService $tramiteCreacionService)
     {
         $this->reporteService = $reporteService;
-        $this->tramiteService = $tramiteService;
+        $this->tramiteCreacionService = $tramiteCreacionService;
     }
 
     /**

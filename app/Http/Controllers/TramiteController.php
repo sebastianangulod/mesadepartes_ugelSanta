@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\Tramites\TramiteService;
+use App\Services\Tramites\TramiteWorkflowService;
 use App\DTOs\TramiteDTO;
 use App\Domain\Tramites\EstadoTramite;
 use App\Http\Requests\TramiteRequest;
@@ -20,14 +20,14 @@ use Illuminate\View\View;
  */
 class TramiteController extends Controller
 {
-    private TramiteService $tramiteService;
+    private TramiteWorkflowService $tramiteService;
 
     /**
      * Constructor
      * 
-     * @param TramiteService $tramiteService
+     * @param TramiteWorkflowService $tramiteService
      */
-    public function __construct(TramiteService $tramiteService)
+    public function __construct(TramiteWorkflowService $tramiteService)
     {
         $this->tramiteService = $tramiteService;
     }

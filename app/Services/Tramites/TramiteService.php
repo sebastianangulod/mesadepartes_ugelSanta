@@ -12,14 +12,17 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Servicio de gestión de trámites
+ * Servicio de gestión del flujo de estados de trámites
  * 
  * Este servicio contiene la lógica de negocio principal para la gestión
- * de trámites, incluyendo las operaciones de aceptar, rechazar y observar.
+ * del CICLO DE VIDA de los trámites (aceptar, rechazar, observar, etc.).
+ * 
+ * La creación/registro de trámites se maneja en
+ * App\Services\Tramite\TramiteCreacionService.
  * 
  * @package App\Services\Tramites
  */
-class TramiteService
+class TramiteWorkflowService
 {
     private StateTransitionService $stateTransitionService;
     private TramiteRepository $tramiteRepository;
