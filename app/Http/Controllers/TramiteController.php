@@ -681,6 +681,224 @@ class TramiteController extends Controller
     }
 
     /**
+     * Corregir trámite observado (usuario externo)
+     * 
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function corregir(Request $request, int $id): JsonResponse
+    {
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        
+        if (!$tramite) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Trámite no encontrado',
+            ], 404);
+        }
+
+        $request->validate([
+            'archivo_adjunto' => 'required|file|mimes:pdf|max:10240',
+        ]);
+
+        try {
+            $tramite = $this->tramiteService->corregir($id, $request->file('archivo_adjunto'));
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Trámite corregido exitosamente',
+                'data' => $tramite,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al corregir el trámite: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Derivar trámite al siguiente nivel
+     * 
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function derivar(int $id): JsonResponse
+    {
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        
+        if (!$tramite) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Trámite no encontrado',
+            ], 404);
+        }
+
+        try {
+            $tramite = $this->tramiteService->derivar($id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Trámite derivado exitosamente',
+                'data' => $tramite,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al derivar el trámite: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Derivar trámite a otro especialista
+     * 
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function derivarEspecialista(int $id): JsonResponse
+    {
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        
+        if (!$tramite) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Trámite no encontrado',
+            ], 404);
+        }
+
+        try {
+            $tramite = $this->tramiteService->derivarEspecialista($id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Trámite derivado al especialista exitosamente',
+                'data' => $tramite,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al derivar el trámite: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Observar trámite con oficio adjunto
+     * 
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function observarConOficio(Request $request, int $id): JsonResponse
+    {
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        
+        if (!$tramite) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Trámite no encontrado',
+            ], 404);
+        }
+
+        $request->validate([
+            'observacion' => 'required|string|max:1000',
+            'oficio' => 'required|file|mimes:pdf|max:10240',
+        ]);
+
+        try {
+            $tramite = $this->tramiteService->observarConOficio(
+                $id,
+                $request->input('observacion'),
+                $request->file('oficio')
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Trámite observado con oficio exitosamente',
+                'data' => $tramite,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al observar el trámite: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Usuario externo sube oficio de subsanación
+     * 
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function subirOficioUsuario(Request $request, int $id): JsonResponse
+    {
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        
+        if (!$tramite) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Trámite no encontrado',
+            ], 404);
+        }
+
+        $request->validate([
+            'archivo_oficio' => 'required|file|mimes:pdf|max:10240',
+        ]);
+
+        try {
+            $tramite = $this->tramiteService->subirOficioUsuario($id, $request->file('archivo_oficio'));
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Oficio subido exitosamente',
+                'data' => $tramite,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al subir el oficio: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Procesar trámite (finalizar y generar voucher)
+     * 
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function procesar(int $id): JsonResponse
+    {
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        
+        if (!$tramite) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Trámite no encontrado',
+            ], 404);
+        }
+
+        try {
+            $tramite = $this->tramiteService->procesar($id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Trámite procesado exitosamente',
+                'data' => $tramite,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al procesar el trámite: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Obtener hoja de ruta de un trámite
      * Equivalente a hojaderuta.php del PHP puro
      * 

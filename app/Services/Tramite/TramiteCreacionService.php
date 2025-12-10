@@ -60,6 +60,13 @@ class TramiteCreacionService
             // Obtener el periodo actual
             $periodo = date('Y');
 
+            // Contar páginas del PDF si existe
+            $numeroPaginas = 1;
+            if ($nombreArchivo) {
+                $rutaArchivo = Storage::path($this->uploadPath . $nombreArchivo);
+                $numeroPaginas = $this->contarPaginasPDF($rutaArchivo);
+            }
+
             // Crear el trámite
             $tramite = Tramite::create([
                 'archivo_adjunto' => $nombreArchivo,
@@ -67,7 +74,7 @@ class TramiteCreacionService
                 'id_usuario' => $usuario->id,
                 'estado' => 'PENDIENTE',
                 'tipo_tramite' => $tipoTramite,
-                'tramitescol' => $datos['numero_paginas'] ?? 1,
+                'tramitescol' => $numeroPaginas,
                 'periodo' => $periodo,
                 'fecha_creacion' => now()
             ]);
@@ -122,10 +129,55 @@ class TramiteCreacionService
      */
     protected function procesarArchivo($archivo, int $usuarioId): string
     {
-        $nombreArchivo = time() . '_' . $usuarioId . '.' . $archivo->getClientOriginalExtension();
+        // Sanitizar nombre del archivo
+        $nombreOriginal = $archivo->getClientOriginalName();
+        $extension = $archivo->getClientOriginalExtension();
+        $nombreSanitizado = $this->sanitizarNombreArchivo(
+            pathinfo($nombreOriginal, PATHINFO_FILENAME)
+        );
+        $nombreArchivo = time() . '_' . $nombreSanitizado . '.' . $extension;
+        
         $archivo->storeAs($this->uploadPath, $nombreArchivo);
 
         return $nombreArchivo;
+    }
+
+    /**
+     * Sanitizar nombre de archivo
+     * 
+     * @param string $nombre
+     * @return string
+     */
+    private function sanitizarNombreArchivo(string $nombre): string
+    {
+        // Eliminar caracteres especiales y espacios
+        $nombre = preg_replace('/[^a-zA-Z0-9._-]/', '', $nombre);
+        // Reemplazar espacios por guiones bajos
+        $nombre = str_replace(' ', '_', $nombre);
+        // Convertir a minúsculas
+        $nombre = strtolower($nombre);
+        // Limitar longitud
+        $nombre = substr($nombre, 0, 100);
+        
+        return $nombre;
+    }
+
+    /**
+     * Contar páginas de un PDF usando FPDI
+     * 
+     * @param string $rutaArchivo
+     * @return int
+     */
+    private function contarPaginasPDF(string $rutaArchivo): int
+    {
+        try {
+            $pdf = new \setasign\Fpdi\Fpdi();
+            $pageCount = $pdf->setSourceFile($rutaArchivo);
+            return $pageCount;
+        } catch (\Exception $e) {
+            // Si falla, retornar 1 como valor por defecto
+            return 1;
+        }
     }
 }
 

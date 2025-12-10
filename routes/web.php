@@ -84,13 +84,23 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/buscar', [TramiteController::class, 'buscar'])->name('tramites.buscar');
         Route::post('/buscar/resultados', [TramiteController::class, 'resultadosBusqueda'])->name('tramites.buscar.resultados');
         
-        // Acciones de estado
-        Route::post('/{tramite}/aceptar', [TramiteController::class, 'aceptar'])->name('tramites.aceptar');
-        Route::post('/{tramite}/rechazar', [TramiteController::class, 'rechazar'])->name('tramites.rechazar');
-        Route::post('/{tramite}/observar', [TramiteController::class, 'observar'])->name('tramites.observar');
-        Route::post('/{tramite}/verificar', [TramiteController::class, 'verificar'])->name('tramites.verificar');
-        Route::post('/{tramite}/finalizar', [TramiteController::class, 'finalizar'])->name('tramites.finalizar');
-        Route::post('/{tramite}/anular', [TramiteController::class, 'anular'])->name('tramites.anular');
+            // Acciones de estado
+            Route::post('/{tramite}/aceptar', [TramiteController::class, 'aceptar'])->name('tramites.aceptar');
+            Route::post('/{tramite}/rechazar', [TramiteController::class, 'rechazar'])->name('tramites.rechazar');
+            Route::post('/{tramite}/observar', [TramiteController::class, 'observar'])->name('tramites.observar');
+            Route::post('/{tramite}/observar-con-oficio', [TramiteController::class, 'observarConOficio'])->name('tramites.observar-con-oficio');
+            Route::post('/{tramite}/verificar', [TramiteController::class, 'verificar'])->name('tramites.verificar');
+            Route::post('/{tramite}/finalizar', [TramiteController::class, 'finalizar'])->name('tramites.finalizar');
+            Route::post('/{tramite}/procesar', [TramiteController::class, 'procesar'])->name('tramites.procesar');
+            Route::post('/{tramite}/anular', [TramiteController::class, 'anular'])->name('tramites.anular');
+            
+            // Acciones de derivación
+            Route::post('/{tramite}/derivar', [TramiteController::class, 'derivar'])->name('tramites.derivar');
+            Route::post('/{tramite}/derivar-especialista', [TramiteController::class, 'derivarEspecialista'])->name('tramites.derivar-especialista');
+            
+            // Acciones de corrección (usuario externo)
+            Route::post('/{tramite}/corregir', [TramiteController::class, 'corregir'])->name('tramites.corregir');
+            Route::post('/{tramite}/subir-oficio', [TramiteController::class, 'subirOficioUsuario'])->name('tramites.subir-oficio');
         
         // Gestión de documentos
         Route::post('/{tramite}/documentos/agregar', [TramiteController::class, 'agregarDocumento'])->name('tramites.documentos.agregar');
