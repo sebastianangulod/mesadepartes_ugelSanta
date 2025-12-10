@@ -67,6 +67,8 @@
 @endsection
 
 @push('styles')
+<!-- Choices.js CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
 <style>
     .sidebar {
         position: fixed;
@@ -108,13 +110,63 @@
     .bg-purple {
         background-color: #9333ea !important;
     }
+
+    /* Estilos para Choices.js */
+    .choices {
+        margin-bottom: 0;
+    }
+    .choices__inner {
+        background-color: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.375rem;
+        min-height: 42px;
+    }
+    .choices__list--single {
+        padding: 0.5rem;
+    }
+    .choices__list--dropdown {
+        background-color: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.375rem;
+        margin-top: 4px;
+    }
+    .choices__list--dropdown .choices__item {
+        padding: 0.5rem 1rem;
+    }
+    .choices__list--dropdown .choices__item--selectable {
+        padding-right: 1rem;
+    }
+    .choices__list--dropdown .choices__item--selectable.is-highlighted {
+        background-color: #f7fafc;
+    }
+    .choices__input {
+        background-color: transparent;
+        padding: 0.5rem;
+    }
 </style>
 @endpush
 
 @push('scripts')
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Choices.js JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
+    let procedimientoSelect;
+    
     $(document).ready(function() {
+        // Inicializar Choices.js en el selector de procedimientos
+        const procedimientoElement = document.getElementById('id_procedimiento');
+        if (procedimientoElement) {
+            procedimientoSelect = new Choices(procedimientoElement, {
+                searchEnabled: true,
+                placeholder: true,
+                placeholderValue: 'Seleccionar un procedimiento',
+                searchPlaceholderValue: 'Buscar procedimiento...',
+                itemSelectText: '',
+                shouldSort: false,
+            });
+        }
+
         // Validar archivo PDF
         $('#archivo').change(function() {
             var file = this.files[0];
@@ -134,7 +186,14 @@
         $('#tramiteForm').submit(function(e) {
             e.preventDefault();
             
-            var selectedValue = $('#id_procedimiento').val();
+            // Obtener valor seleccionado de Choices.js
+            var selectedValue = null;
+            if (procedimientoSelect && typeof procedimientoSelect.getValue === 'function') {
+                selectedValue = procedimientoSelect.getValue(true); // true para obtener solo el value
+            } else {
+                selectedValue = $('#id_procedimiento').val();
+            }
+            
             if (!selectedValue) {
                 alert('Debe seleccionar un procedimiento.');
                 return;
@@ -156,7 +215,14 @@
                             window.location.href = response.redirect;
                         } else {
                             $('#tramiteForm')[0].reset();
-                            $('#id_procedimiento').val('').trigger('change');
+                            // Limpiar Choices.js
+                            if (procedimientoSelect && typeof procedimientoSelect.clearStore === 'function') {
+                                procedimientoSelect.clearStore();
+                            } else if (procedimientoSelect && typeof procedimientoSelect.removeActiveItems === 'function') {
+                                procedimientoSelect.removeActiveItems();
+                            } else {
+                                $('#id_procedimiento').val('').trigger('change');
+                            }
                             $('#submitBtn').prop('disabled', true);
                         }
                     } else {

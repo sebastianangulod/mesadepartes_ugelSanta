@@ -126,9 +126,13 @@
         <div class="info">
             <p><span>Derivado A:</span></p>
             <ul class="derivado-list">
-                <li>ADMINISTRACION</li>
-                <li>SECRETARIA DE APOYO</li>
-                <li>NINGUNO</li>
+                @if(isset($nivelesDerivacion) && count($nivelesDerivacion) > 0)
+                    @foreach($nivelesDerivacion as $nivel)
+                        <li>{{ $nivel }}</li>
+                    @endforeach
+                @else
+                    <li>NINGUNO</li>
+                @endif
             </ul>
         </div>
 

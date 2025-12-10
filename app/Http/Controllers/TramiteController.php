@@ -570,8 +570,64 @@ class TramiteController extends Controller
             }
         }
 
+        // Obtener niveles de derivación (similar a hojaRuta)
+        $nivelesDerivacion = [];
+        if ($tramite->procedimiento) {
+            $proc = $tramite->procedimiento;
+            
+            // Nivel 1 (Área)
+            if ($proc->id_area) {
+                $area = Nivel1::find($proc->id_area);
+                if ($area) {
+                    $nivelesDerivacion[] = $area->nombre;
+                }
+            }
+            
+            // Nivel 2 (Subárea)
+            if ($proc->id_subarea) {
+                $subarea = Nivel2::find($proc->id_subarea);
+                if ($subarea) {
+                    $nivelesDerivacion[] = $subarea->nombre;
+                }
+            }
+            
+            // Nivel 3 (si corresponde)
+            if (in_array($proc->nivel_final, ['3', '4'])) {
+                $idNivel3 = null;
+                if ($proc->nivel_final == '3') {
+                    $idNivel3 = $proc->id_nivel_final;
+                } elseif ($proc->nivel_final == '4') {
+                    $nivel4 = Nivel4::find($proc->id_nivel_final);
+                    if ($nivel4 && $nivel4->id_nivel3) {
+                        $idNivel3 = $nivel4->id_nivel3;
+                    }
+                }
+                
+                if ($idNivel3) {
+                    $nivel3 = Nivel3::find($idNivel3);
+                    if ($nivel3) {
+                        $nivelesDerivacion[] = $nivel3->nombre;
+                    }
+                }
+            }
+            
+            // Nivel 4 (si corresponde)
+            if ($proc->nivel_final == '4') {
+                $nivel4 = Nivel4::find($proc->id_nivel_final);
+                if ($nivel4) {
+                    $nivelesDerivacion[] = $nivel4->nombre;
+                }
+            }
+        }
+
+        // Si no hay niveles, mostrar "NINGUNO"
+        if (empty($nivelesDerivacion)) {
+            $nivelesDerivacion[] = 'NINGUNO';
+        }
+
         return view('mesa-partes.voucher', [
             'tramite' => $tramite,
+            'nivelesDerivacion' => $nivelesDerivacion,
         ]);
     }
 
