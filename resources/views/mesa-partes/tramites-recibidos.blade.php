@@ -83,21 +83,12 @@
                                 <label for="estado" class="form-label">Estado</label>
                                 <select class="form-select" id="estado" name="estado">
                                     <option value="">Todos los estados</option>
-                                    <option value="pendiente_asignacion" {{ request('estado') == 'pendiente_asignacion' ? 'selected' : '' }}>Pendiente de Asignación</option>
-                                    <option value="asignado" {{ request('estado') == 'asignado' ? 'selected' : '' }}>Asignado</option>
-                                    <option value="en_proceso" {{ request('estado') == 'en_proceso' ? 'selected' : '' }}>En Proceso</option>
-                                    <option value="observado" {{ request('estado') == 'observado' ? 'selected' : '' }}>Observado</option>
-                                    <option value="por_firmar" {{ request('estado') == 'por_firmar' ? 'selected' : '' }}>Por Firmar</option>
-                                    <option value="finalizado" {{ request('estado') == 'finalizado' ? 'selected' : '' }}>Finalizado</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label for="prioridad" class="form-label">Prioridad</label>
-                                <select class="form-select" id="prioridad" name="prioridad">
-                                    <option value="">Todas las prioridades</option>
-                                    <option value="alta" {{ request('prioridad') == 'alta' ? 'selected' : '' }}>Alta</option>
-                                    <option value="media" {{ request('prioridad') == 'media' ? 'selected' : '' }}>Media</option>
-                                    <option value="baja" {{ request('prioridad') == 'baja' ? 'selected' : '' }}>Baja</option>
+                                    <option value="PENDIENTE" {{ request('estado') == 'PENDIENTE' ? 'selected' : '' }}>Pendiente</option>
+                                    <option value="OBSERVADO" {{ request('estado') == 'OBSERVADO' ? 'selected' : '' }}>Observado</option>
+                                    <option value="EN_PROCESO" {{ request('estado') == 'EN_PROCESO' ? 'selected' : '' }}>En Proceso</option>
+                                    <option value="VERIFICADO" {{ request('estado') == 'VERIFICADO' ? 'selected' : '' }}>Verificado</option>
+                                    <option value="FINALIZADO" {{ request('estado') == 'FINALIZADO' ? 'selected' : '' }}>Finalizado</option>
+                                    <option value="RECHAZADO" {{ request('estado') == 'RECHAZADO' ? 'selected' : '' }}>Rechazado</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -225,7 +216,7 @@
                                         <th>N° de Trámite</th>
                                         <th>Prioridad</th>
                                         <th>Remitente</th>
-                                        <th>Asunto</th>
+                                        <th>Procedimiento</th>
                                         <th>Fecha de Ingreso</th>
                                         <th>Días Transcurridos</th>
                                         <th>Estado</th>
@@ -234,50 +225,48 @@
                                 </thead>
                                 <tbody>
                                     @foreach($tramites as $tramite)
-                                        <tr class="{{ $tramite->esUrgente() ? 'table-danger' : '' }}">
+                                        <tr class="{{ $tramite->fecha_creacion->diffInDays(now()) > 7 && $tramite->estado == 'PENDIENTE' ? 'table-danger' : '' }}">
                                             <td>
                                                 <input type="checkbox" class="seleccionar-tramite" 
                                                        value="{{ $tramite->id }}">
                                             </td>
                                             <td>
-                                                <strong>{{ $tramite->numero_tramite }}</strong>
+                                                <strong>{{ $tramite->id }}-{{ $tramite->periodo ?? date('Y') }}</strong>
                                                 <br>
-                                                <small class="text-muted">{{ $tramite->codigo_seguimiento }}</small>
+                                                <small class="text-muted">ID: {{ $tramite->id }}</small>
                                             </td>
                                             <td>
-                                                <span class="badge bg-{{ $tramite->prioridad_color }}">
-                                                    {{ ucfirst($tramite->prioridad) }}
-                                                </span>
-                                                @if($tramite->esUrgente())
-                                                    <i class="fas fa-exclamation-triangle text-danger" 
-                                                       title="Trámite urgente"></i>
+                                                @if($tramite->fecha_creacion->diffInDays(now()) > 7 && $tramite->estado == 'PENDIENTE')
+                                                    <span class="badge bg-danger">Urgente</span>
+                                                @else
+                                                    <span class="badge bg-secondary">Normal</span>
                                                 @endif
                                             </td>
                                             <td>
-                                                {{ $tramite->remitente_nombre }}
+                                                {{ $tramite->usuario->nombres }} {{ $tramite->usuario->apellido_paterno }}
                                                 <br>
-                                                <small class="text-muted">{{ $tramite->remitente_dni }}</small>
+                                                <small class="text-muted">DNI: {{ $tramite->usuario->dni }}</small>
                                             </td>
                                             <td>
                                                 <div style="max-width: 300px;">
-                                                    {{ Str::limit($tramite->asunto, 80) }}
+                                                    {{ $tramite->procedimiento->nombre ?? 'N/A' }}
                                                 </div>
-                                                @if($tramite->tieneArchivos())
+                                                @if($tramite->archivo_adjunto)
                                                     <small class="text-muted">
                                                         <i class="fas fa-paperclip"></i> Con adjuntos
                                                     </small>
                                                 @endif
                                             </td>
                                             <td>
-                                                {{ $tramite->created_at->format('d/m/Y') }}
+                                                {{ $tramite->fecha_creacion->format('d/m/Y') }}
                                                 <br>
-                                                <small class="text-muted">{{ $tramite->created_at->format('H:i') }}</small>
+                                                <small class="text-muted">{{ $tramite->fecha_creacion->format('H:i') }}</small>
                                             </td>
                                             <td>
-                                                <span class="{{ $tramite->dias_transcurridos > 7 ? 'text-danger' : 'text-muted' }}">
-                                                    {{ $tramite->dias_transcurridos }} días
+                                                <span class="{{ $tramite->fecha_creacion->diffInDays(now()) > 7 ? 'text-danger' : 'text-muted' }}">
+                                                    {{ $tramite->fecha_creacion->diffInDays(now()) }} días
                                                 </span>
-                                                @if($tramite->estaPorVencer())
+                                                @if($tramite->estado == 'OBSERVADO' && $tramite->limite_observacion && $tramite->limite_observacion->isBefore(now()->addDays(3)))
                                                     <br>
                                                     <small class="text-warning">
                                                         <i class="fas fa-clock"></i> Por vencer
@@ -285,48 +274,36 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                <span class="badge bg-{{ $tramite->estado_color }}" 
-                                                      data-bs-toggle="tooltip" 
-                                                      title="{{ $tramite->estado_descripcion }}">
-                                                    {{ $tramite->estado_nombre }}
+                                                <span class="badge bg-{{ $tramite->estado == 'PENDIENTE' ? 'warning' : ($tramite->estado == 'FINALIZADO' ? 'success' : ($tramite->estado == 'OBSERVADO' ? 'danger' : 'info')) }}">
+                                                    {{ $tramite->estado }}
                                                 </span>
-                                                @if($tramite->estaAsignado())
-                                                    <br>
-                                                    <small class="text-muted">
-                                                        Asignado a: {{ $tramite->usuario_asignado_nombre }}
-                                                    </small>
-                                                @endif
                                             </td>
                                             <td>
                                                 <div class="btn-group" role="group">
-                                                    <a href="{{ route('mesa-partes.rastrear', ['codigo' => $tramite->codigo_seguimiento]) }}" 
-                                                       class="btn btn-sm btn-outline-primary" 
-                                                       title="Ver detalles">
-                                                        <i class="fas fa-eye"></i>
-                                                    </a>
-                                                    @if($tramite->puedeAsignar())
+                                                    <button onclick="verDocumento('{{ $tramite->archivo_adjunto }}')" 
+                                                            class="btn btn-sm btn-outline-primary" 
+                                                            title="Ver Documento">
+                                                        <i class="fas fa-file-pdf"></i>
+                                                    </button>
+                                                    @if($tramite->estado == 'PENDIENTE')
                                                         <button type="button" 
                                                                 class="btn btn-sm btn-outline-success" 
-                                                                onclick="asignarTramite({{ $tramite->id }})"
-                                                                title="Asignar trámite">
-                                                            <i class="fas fa-user-check"></i>
+                                                                onclick="procesarTramite({{ $tramite->id }})"
+                                                                title="Procesar trámite">
+                                                            <i class="fas fa-check"></i>
                                                         </button>
                                                     @endif
-                                                    @if($tramite->puedeProcesar())
-                                                        <a href="{{ route('mesa-partes.tramite.procesar', ['id' => $tramite->id]) }}" 
-                                                           class="btn btn-sm btn-outline-info" 
-                                                           title="Procesar trámite">
-                                                            <i class="fas fa-cogs"></i>
-                                                        </a>
-                                                    @endif
-                                                    @if($tramite->puedeDescargarVoucher())
-                                                        <a href="{{ route('mesa-partes.voucher', ['id' => $tramite->id]) }}" 
-                                                           class="btn btn-sm btn-outline-secondary" 
-                                                           title="Descargar voucher"
-                                                           target="_blank">
-                                                            <i class="fas fa-download"></i>
-                                                        </a>
-                                                    @endif
+                                                    <button onclick="verHojaRuta({{ $tramite->id }})" 
+                                                            class="btn btn-sm btn-outline-info" 
+                                                            title="Hoja de Ruta">
+                                                        <i class="fas fa-route"></i>
+                                                    </button>
+                                                    <a href="{{ route('mesa-partes.voucher', ['id' => $tramite->id]) }}" 
+                                                       class="btn btn-sm btn-outline-secondary" 
+                                                       title="Descargar voucher"
+                                                       target="_blank">
+                                                        <i class="fas fa-download"></i>
+                                                    </a>
                                                 </div>
                                             </td>
                                         </tr>
@@ -506,6 +483,74 @@
         checkboxes.forEach(function(checkbox) {
             checkbox.checked = seleccionarTodos;
         });
+    }
+
+    function verDocumento(archivo) {
+        if (archivo) {
+            window.open('/storage/uploads/tramites/' + archivo, '_blank');
+        } else {
+            alert('No hay archivo adjunto');
+        }
+    }
+
+    function verHojaRuta(idTramite) {
+        fetch('/mesa-partes/hoja-ruta/' + idTramite, {
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                let html = '';
+                if (data.niveles && data.niveles.length > 0) {
+                    data.niveles.forEach(function(nivel) {
+                        html += `<tr>
+                            <th>Nivel ${nivel.nivel}</th>
+                            <td>${nivel.nombre || '-'}</td>
+                        </tr>`;
+                    });
+                }
+                // Crear modal temporal para mostrar hoja de ruta
+                let modalHtml = `
+                    <div class="modal fade" id="modalHojaRuta" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Hoja de Ruta</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <table class="table table-bordered">
+                                        <tbody>${html}</tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modalHtml);
+                $('#modalHojaRuta').modal('show');
+                $('#modalHojaRuta').on('hidden.bs.modal', function() {
+                    $(this).remove();
+                });
+            } else {
+                alert('Error al cargar la hoja de ruta');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al cargar la hoja de ruta');
+        });
+    }
+
+    function procesarTramite(idTramite) {
+        if (confirm('¿Desea procesar este trámite?')) {
+            // Aquí se implementaría la lógica para procesar el trámite
+            alert('Funcionalidad de procesar trámite pendiente de implementar');
+        }
     }
 
     function asignarTramite(tramiteId) {

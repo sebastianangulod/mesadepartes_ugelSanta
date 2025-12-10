@@ -14,42 +14,72 @@
                 </div>
                 <div class="card-body">
                     <!-- Formulario de búsqueda -->
-                    <form id="formRastrear" method="POST" action="{{ route('mesa-partes.rastrear.buscar') }}">
+                    <form id="searchForm" method="POST" action="{{ route('mesa-partes.rastrear.buscar') }}">
                         @csrf
                         <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="numero_tramite">Número de Trámite</label>
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label for="numeroVoucher" class="form-label">Número de Voucher</label>
                                     <input type="text" 
                                            class="form-control" 
-                                           id="numero_tramite" 
-                                           name="numero_tramite" 
-                                           placeholder="Ingrese el número de trámite (ej: 123-2024)"
-                                           required>
-                                    <small class="form-text text-muted">
-                                        Formato: Número-Año (ej: 123-2024)
-                                    </small>
+                                           id="numeroVoucher" 
+                                           name="numero_voucher" 
+                                           placeholder="Ingrese el número de voucher"
+                                           value="{{ request('numero_voucher') }}">
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="dni_solicitante">DNI del Solicitante (Opcional)</label>
-                                    <input type="text" 
-                                           class="form-control" 
-                                           id="dni_solicitante" 
-                                           name="dni_solicitante" 
-                                           placeholder="Ingrese el DNI del solicitante"
-                                           maxlength="8">
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label for="tipoProcedimiento" class="form-label">Tipo de Procedimiento</label>
+                                    <select id="tipoProcedimiento" name="tipo_procedimiento" class="form-select">
+                                        <option value="">Todos</option>
+                                        @foreach($procedimientos as $procedimiento)
+                                            <option value="{{ $procedimiento->id }}" {{ request('tipo_procedimiento') == $procedimiento->id ? 'selected' : '' }}>
+                                                {{ $procedimiento->nombre }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label for="estado" class="form-label">Estado</label>
+                                    <select id="estado" name="estado" class="form-select">
+                                        <option value="">Todos</option>
+                                        <option value="PENDIENTE" {{ request('estado') == 'PENDIENTE' ? 'selected' : '' }}>Pendiente</option>
+                                        <option value="OBSERVADO" {{ request('estado') == 'OBSERVADO' ? 'selected' : '' }}>Observado</option>
+                                        <option value="EN_PROCESO" {{ request('estado') == 'EN_PROCESO' ? 'selected' : '' }}>En Proceso</option>
+                                        <option value="VERIFICADO" {{ request('estado') == 'VERIFICADO' ? 'selected' : '' }}>Verificado</option>
+                                        <option value="FINALIZADO" {{ request('estado') == 'FINALIZADO' ? 'selected' : '' }}>Finalizado</option>
+                                        <option value="RECHAZADO" {{ request('estado') == 'RECHAZADO' ? 'selected' : '' }}>Rechazado</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-12">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-search"></i> Buscar Trámite
-                                </button>
-                                <button type="reset" class="btn btn-secondary">
-                                    <i class="fas fa-eraser"></i> Limpiar
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label for="fechaDesde" class="form-label">Fecha Desde</label>
+                                    <input type="date" 
+                                           class="form-control" 
+                                           id="fechaDesde" 
+                                           name="fecha_desde" 
+                                           value="{{ request('fecha_desde') }}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label for="fechaHasta" class="form-label">Fecha Hasta</label>
+                                    <input type="date" 
+                                           class="form-control" 
+                                           id="fechaHasta" 
+                                           name="fecha_hasta" 
+                                           value="{{ request('fecha_hasta') }}">
+                                </div>
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-search"></i> Buscar
                                 </button>
                             </div>
                         </div>
@@ -60,6 +90,101 @@
     </div>
 
     <!-- Resultados de búsqueda -->
+    <div id="resultadosBusqueda" class="mt-4">
+        @if(isset($tramites) && $tramites->count() > 0)
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Resultados de Búsqueda</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>N° Trámite</th>
+                                    <th>Procedimiento</th>
+                                    <th>Estado</th>
+                                    <th>Fecha</th>
+                                    <th>Voucher</th>
+                                    <th>Hoja de Ruta</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($tramites as $tramite)
+                                    <tr>
+                                        <td>{{ $tramite->id }}</td>
+                                        <td>{{ $tramite->id }}-{{ $tramite->periodo ?? date('Y') }}</td>
+                                        <td>{{ $tramite->procedimiento->nombre ?? 'N/A' }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ $tramite->estado == 'PENDIENTE' ? 'warning' : ($tramite->estado == 'FINALIZADO' ? 'success' : 'info') }}">
+                                                {{ $tramite->estado }}
+                                            </span>
+                                        </td>
+                                        <td>{{ $tramite->fecha_creacion->format('d/m/Y H:i') }}</td>
+                                        <td>
+                                            @if($tramite->numero_voucher)
+                                                <a href="{{ route('mesa-partes.voucher', $tramite->id) }}" class="btn btn-sm btn-outline-secondary" target="_blank">
+                                                    <i class="fas fa-download"></i> Voucher
+                                                </a>
+                                            @else
+                                                <span class="text-muted">-</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <button onclick="verHojaRuta({{ $tramite->id }})" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-route"></i> Ver
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <a href="{{ route('mesa-partes.voucher', $tramite->id) }}" class="btn btn-sm btn-outline-info" target="_blank">
+                                                <i class="fas fa-eye"></i> Ver
+                                            </a>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        @elseif(isset($tramites) && $tramites->count() == 0)
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                No se encontraron trámites con los criterios de búsqueda especificados.
+            </div>
+        @endif
+    </div>
+
+    <!-- Indicador de carga -->
+    <div id="loadingIndicator" class="hidden text-center py-4">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Buscando...</span>
+        </div>
+        <p class="mt-2 text-muted">Buscando trámites...</p>
+    </div>
+
+    <!-- Modal Hoja de Ruta -->
+    <div id="hojaRutaModal" class="modal fade" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Hoja de Ruta</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-bordered">
+                        <tbody id="hr-tbody">
+                            <!-- Se llenará dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resultados de búsqueda (versión antigua, mantener por compatibilidad) -->
     <div id="resultados" class="row" style="display: none;">
         <div class="col-12">
             <div class="card">
@@ -183,8 +308,41 @@ $(document).ready(function() {
         }
     });
 
+    // Función para ver hoja de ruta
+    window.verHojaRuta = function(idTramite) {
+        fetch('{{ url("/mesa-partes/hoja-ruta") }}/' + idTramite, {
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                let html = '';
+                if (data.niveles && data.niveles.length > 0) {
+                    data.niveles.forEach(function(nivel) {
+                        html += `<tr>
+                            <th>Nivel ${nivel.nivel}</th>
+                            <td>${nivel.nombre || '-'}</td>
+                        </tr>`;
+                    });
+                }
+                $('#hr-tbody').html(html);
+                $('#hojaRutaModal').modal('show');
+            } else {
+                alert('Error al cargar la hoja de ruta');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al cargar la hoja de ruta');
+        });
+    };
+
     // Manejar envío del formulario de búsqueda
-    $('#formRastrear').on('submit', function(e) {
+    $('#searchForm').on('submit', function(e) {
         e.preventDefault();
         
         const formData = new FormData(this);
@@ -350,7 +508,7 @@ $(document).ready(function() {
                     alert('Trámite subsanado exitosamente.');
                     $('#modalSubsanar').modal('hide');
                     // Recargar resultados
-                    $('#formRastrear').submit();
+                    $('#searchForm').submit();
                 } else {
                     alert(response.message || 'Error al subsanar el trámite.');
                 }

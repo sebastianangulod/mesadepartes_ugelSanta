@@ -115,13 +115,127 @@ class MesaPartesController extends Controller
 
     /**
      * Muestra trámites recibidos para procesar
+     * Equivalente a tramitesRecibidos.php del PHP puro
      */
-    public function tramitesRecibidos()
+    public function tramitesRecibidos(Request $request)
     {
-        // Por ahora retornamos directamente la vista diseñada para trámites recibidos.
-        // Más adelante se puede conectar con TramiteWorkflowService para listar los
-        // trámites reales asignados al usuario interno.
-        return view('mesa-partes.tramites-recibidos');
+        $usuario = auth()->user();
+        
+        // Obtener filtros de la solicitud
+        $filtros = $request->only([
+            'numero_tramite',
+            'estado',
+            'fecha_desde',
+            'fecha_hasta',
+            'remitente',
+        ]);
+
+        // Construir query base
+        $query = Tramite::with(['procedimiento', 'usuario']);
+
+        // Si es usuario interno, obtener trámites según su nivel asignado
+        if ($usuario->tipo_user == 2) {
+            // Obtener niveles asignados al usuario
+            $nivelesUsuario = \App\Models\UsuariosNiveles::where('id_usuario', $usuario->id)->get();
+            
+            if ($nivelesUsuario->count() > 0) {
+                // Obtener procedimientos asignados al usuario o que coincidan con sus niveles
+                $procedimientosIds = [];
+                
+                foreach ($nivelesUsuario as $nivelUsuario) {
+                    $nivel = $nivelUsuario->nivel;
+                    $idNivel = $nivelUsuario->id_nivel;
+                    
+                    // Buscar procedimientos que coincidan con el nivel del usuario
+                    $procedimientos = Procedimiento::where(function($q) use ($nivel, $idNivel) {
+                        if ($nivel == 1) {
+                            $q->where('id_area', $idNivel);
+                        } elseif ($nivel == 2) {
+                            $q->where('id_subarea', $idNivel);
+                        } elseif ($nivel == 3) {
+                            $q->where('nivel_final', '3')->where('id_nivel_final', $idNivel)
+                              ->orWhere('nivel_final', '4')
+                              ->whereHas('nivelFinal', function($q2) use ($idNivel) {
+                                  $q2->where('id_nivel3', $idNivel);
+                              });
+                        } elseif ($nivel == 4) {
+                            $q->where('nivel_final', '4')->where('id_nivel_final', $idNivel);
+                        }
+                    })->pluck('id');
+                    
+                    $procedimientosIds = array_merge($procedimientosIds, $procedimientos->toArray());
+                }
+                
+                if (count($procedimientosIds) > 0) {
+                    $query->whereIn('id_procedimiento', array_unique($procedimientosIds));
+                } else {
+                    // Si no hay procedimientos asignados, no mostrar trámites
+                    $query->whereRaw('1 = 0');
+                }
+            } else {
+                // Si no tiene niveles asignados, mostrar todos los trámites pendientes
+                // (comportamiento por defecto para administradores o usuarios sin asignación específica)
+            }
+        } else {
+            // Usuario externo: solo sus propios trámites
+            $query->where('id_usuario', $usuario->id);
+        }
+
+        // Aplicar filtros
+        if (!empty($filtros['numero_tramite'])) {
+            $query->where('id', 'like', '%' . $filtros['numero_tramite'] . '%');
+        }
+
+        if (!empty($filtros['estado'])) {
+            $query->where('estado', $filtros['estado']);
+        }
+
+        if (!empty($filtros['fecha_desde'])) {
+            $query->whereDate('fecha_creacion', '>=', $filtros['fecha_desde']);
+        }
+
+        if (!empty($filtros['fecha_hasta'])) {
+            $query->whereDate('fecha_creacion', '<=', $filtros['fecha_hasta']);
+        }
+
+        if (!empty($filtros['remitente'])) {
+            $query->whereHas('usuario', function($q) use ($filtros) {
+                $q->where('dni', 'like', '%' . $filtros['remitente'] . '%')
+                  ->orWhere('nombres', 'like', '%' . $filtros['remitente'] . '%')
+                  ->orWhere('apellido_paterno', 'like', '%' . $filtros['remitente'] . '%');
+            });
+        }
+
+        // Ordenar y paginar
+        $tramites = $query->orderByDesc('fecha_creacion')->paginate(15);
+
+        // Calcular resumen
+        $resumen = [
+            'urgentes' => (clone $query)->where('estado', 'PENDIENTE')
+                ->whereDate('fecha_creacion', '<=', now()->subDays(7))
+                ->count(),
+            'por_vencer' => (clone $query)->where('estado', 'OBSERVADO')
+                ->whereDate('limite_observacion', '<=', now()->addDays(3))
+                ->count(),
+            'en_proceso' => (clone $query)->where('estado', 'EN_PROCESO')->count(),
+            'atendidos_hoy' => (clone $query)->whereDate('updated_at', today())->count(),
+        ];
+
+        // Para el badge de pendientes en el sidebar
+        $tramitesPendientes = Tramite::where('estado', 'PENDIENTE')->count();
+
+        // Usuarios disponibles para asignación (solo internos)
+        $usuariosDisponibles = Usuario::where('tipo_user', 2)
+            ->where('id', '!=', $usuario->id)
+            ->get();
+
+        return view('mesa-partes.tramites-recibidos', [
+            'tramites' => $tramites,
+            'resumen' => $resumen,
+            'tramitesPendientes' => $tramitesPendientes,
+            'usuariosDisponibles' => $usuariosDisponibles,
+            'filtros' => $filtros,
+        ]);
     }
 
     /**

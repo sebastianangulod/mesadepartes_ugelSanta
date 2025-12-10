@@ -3,12 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Services\Tramites\TramiteWorkflowService;
+use App\Services\Tramite\TramiteCreacionService;
 use App\DTOs\TramiteDTO;
 use App\Domain\Tramites\EstadoTramite;
 use App\Http\Requests\TramiteRequest;
+use App\Models\Tramite;
+use App\Models\Procedimiento;
+use App\Models\Nivel1;
+use App\Models\Nivel2;
+use App\Models\Nivel3;
+use App\Models\Nivel4;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Controlador de Trámites
@@ -21,15 +29,20 @@ use Illuminate\View\View;
 class TramiteController extends Controller
 {
     private TramiteWorkflowService $tramiteService;
+    private TramiteCreacionService $tramiteCreacionService;
 
     /**
      * Constructor
      * 
      * @param TramiteWorkflowService $tramiteService
+     * @param TramiteCreacionService $tramiteCreacionService
      */
-    public function __construct(TramiteWorkflowService $tramiteService)
-    {
+    public function __construct(
+        TramiteWorkflowService $tramiteService,
+        TramiteCreacionService $tramiteCreacionService
+    ) {
         $this->tramiteService = $tramiteService;
+        $this->tramiteCreacionService = $tramiteCreacionService;
     }
 
     /**
@@ -447,6 +460,274 @@ class TramiteController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener estadísticas: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Mostrar formulario para crear nuevo trámite (solo usuarios externos)
+     * Equivalente a tramiteNuevo.php del PHP puro
+     * 
+     * @return View
+     */
+    public function nuevo(): View
+    {
+        // Solo usuarios externos pueden crear trámites desde esta ruta
+        if (Auth::check() && Auth::user()->tipo_user == 2) {
+            abort(403, 'Los usuarios internos no pueden crear trámites desde esta sección.');
+        }
+
+        $procedimientos = Procedimiento::orderBy('nombre')->get();
+
+        return view('mesa-partes.tramite-nuevo', [
+            'procedimientos' => $procedimientos,
+            'tipoTramite' => Auth::check() && Auth::user()->tipo_user == 2 ? 'PRESENCIAL' : 'VIRTUAL',
+        ]);
+    }
+
+    /**
+     * Guardar nuevo trámite
+     * Equivalente al guardar del PHP puro
+     * 
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function guardar(Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'id_procedimiento' => 'required|exists:procedimientos,id',
+                'archivo' => 'required|file|mimes:pdf|max:10240', // 10MB máximo
+            ]);
+
+            $resultado = $this->tramiteCreacionService->crearTramite([
+                'id_procedimiento' => $validated['id_procedimiento'],
+            ], $request->file('archivo'));
+
+            if ($resultado['success']) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => $resultado['message'],
+                    'id_tramite' => $resultado['id_tramite'],
+                    'redirect' => route('mesa-partes.confirmacion', $resultado['id_tramite']),
+                ]);
+            } else {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $resultado['message'],
+                ], 400);
+            }
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error de validación',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al procesar la solicitud: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Mostrar página de confirmación después de crear trámite
+     * 
+     * @param int $id
+     * @return View
+     */
+    public function confirmacion(int $id): View
+    {
+        $tramite = Tramite::with(['procedimiento', 'usuario'])->findOrFail($id);
+
+        // Verificar que el trámite pertenece al usuario autenticado
+        if (Auth::check() && $tramite->id_usuario != Auth::id()) {
+            abort(403, 'No tiene permiso para ver este trámite.');
+        }
+
+        return view('mesa-partes.confirmacion', [
+            'tramite' => $tramite,
+        ]);
+    }
+
+    /**
+     * Mostrar voucher del trámite
+     * Equivalente a voucher.php del PHP puro
+     * 
+     * @param int $id
+     * @return View
+     */
+    public function voucher(int $id): View
+    {
+        $tramite = Tramite::with(['procedimiento', 'usuario'])->findOrFail($id);
+
+        // Verificar que el trámite pertenece al usuario autenticado o es usuario interno
+        if (Auth::check()) {
+            $usuario = Auth::user();
+            if ($usuario->tipo_user == 1 && $tramite->id_usuario != $usuario->id) {
+                abort(403, 'No tiene permiso para ver este voucher.');
+            }
+        }
+
+        return view('mesa-partes.voucher', [
+            'tramite' => $tramite,
+        ]);
+    }
+
+    /**
+     * Mostrar formulario de rastreo de trámites
+     * Equivalente a rastrearTramites.php del PHP puro
+     * 
+     * @return View
+     */
+    public function rastrear(): View
+    {
+        $procedimientos = Procedimiento::orderBy('nombre')->get();
+        $tramites = collect(); // Inicializar como colección vacía
+
+        return view('mesa-partes.rastrear', [
+            'procedimientos' => $procedimientos,
+            'tramites' => $tramites,
+        ]);
+    }
+
+    /**
+     * Buscar trámites para rastreo
+     * 
+     * @param Request $request
+     * @return JsonResponse|View
+     */
+    public function buscarParaRastreo(Request $request)
+    {
+        $validated = $request->validate([
+            'numero_voucher' => 'nullable|string',
+            'tipo_procedimiento' => 'nullable|exists:procedimientos,id',
+            'estado' => 'nullable|in:PENDIENTE,OBSERVADO,EN_PROCESO,VERIFICADO,FINALIZADO,RECHAZADO',
+            'fecha_desde' => 'nullable|date',
+            'fecha_hasta' => 'nullable|date|after_or_equal:fecha_desde',
+        ]);
+
+        $query = Tramite::with(['procedimiento', 'usuario']);
+
+        // Si hay número de voucher, buscar por ese campo
+        if (!empty($validated['numero_voucher'])) {
+            $query->where('numero_voucher', $validated['numero_voucher']);
+        }
+
+        // Filtros adicionales
+        if (!empty($validated['tipo_procedimiento'])) {
+            $query->where('id_procedimiento', $validated['tipo_procedimiento']);
+        }
+
+        if (!empty($validated['estado'])) {
+            $query->where('estado', $validated['estado']);
+        }
+
+        if (!empty($validated['fecha_desde'])) {
+            $query->whereDate('fecha_creacion', '>=', $validated['fecha_desde']);
+        }
+
+        if (!empty($validated['fecha_hasta'])) {
+            $query->whereDate('fecha_creacion', '<=', $validated['fecha_hasta']);
+        }
+
+        $tramites = $query->orderByDesc('fecha_creacion')->get();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'tramites' => $tramites,
+            ]);
+        }
+
+        return view('mesa-partes.rastrear', [
+            'tramites' => $tramites,
+            'procedimientos' => Procedimiento::orderBy('nombre')->get(),
+            'filtros' => $validated,
+        ]);
+    }
+
+    /**
+     * Obtener hoja de ruta de un trámite
+     * Equivalente a hojaderuta.php del PHP puro
+     * 
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function hojaRuta(int $id): JsonResponse
+    {
+        try {
+            $tramite = Tramite::with(['procedimiento', 'usuario'])->findOrFail($id);
+            
+            $niveles = [];
+            
+            if ($tramite->procedimiento) {
+                $proc = $tramite->procedimiento;
+                
+                // Nivel 1 (Área)
+                if ($proc->id_area) {
+                    $area = Nivel1::find($proc->id_area);
+                    if ($area) {
+                        $niveles[] = ['nivel' => 1, 'nombre' => $area->nombre];
+                    }
+                }
+                
+                // Nivel 2 (Subárea)
+                if ($proc->id_subarea) {
+                    $subarea = Nivel2::find($proc->id_subarea);
+                    if ($subarea) {
+                        $niveles[] = ['nivel' => 2, 'nombre' => $subarea->nombre];
+                    }
+                }
+                
+                // Nivel 3 (si corresponde)
+                if (in_array($proc->nivel_final, ['3', '4'])) {
+                    $idNivel3 = null;
+                    if ($proc->nivel_final == '3') {
+                        $idNivel3 = $proc->id_nivel_final;
+                    } elseif ($proc->nivel_final == '4') {
+                        $nivel4 = Nivel4::find($proc->id_nivel_final);
+                        if ($nivel4 && $nivel4->id_nivel3) {
+                            $idNivel3 = $nivel4->id_nivel3;
+                        }
+                    }
+                    
+                    if ($idNivel3) {
+                        $nivel3 = Nivel3::find($idNivel3);
+                        if ($nivel3) {
+                            $niveles[] = ['nivel' => 3, 'nombre' => $nivel3->nombre];
+                        }
+                    }
+                }
+                
+                // Nivel 4 (si corresponde)
+                if ($proc->nivel_final == '4') {
+                    $nivel4 = Nivel4::find($proc->id_nivel_final);
+                    if ($nivel4) {
+                        $niveles[] = ['nivel' => 4, 'nombre' => $nivel4->nombre];
+                    }
+                }
+            }
+            
+            return response()->json([
+                'success' => true,
+                'niveles' => $niveles,
+                'tramite' => [
+                    'id' => $tramite->id,
+                    'fecha_creacion' => $tramite->fecha_creacion->format('d/m/Y H:i:s'),
+                    'nombres' => $tramite->usuario->nombres,
+                    'apellido_paterno' => $tramite->usuario->apellido_paterno,
+                    'apellido_materno' => $tramite->usuario->apellido_materno,
+                    'procedimiento_nombre' => $tramite->procedimiento->nombre ?? 'N/A',
+                    'estado' => $tramite->estado,
+                    'tramitescol' => $tramite->tramitescol ?? 1,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener la hoja de ruta: ' . $e->getMessage(),
             ], 500);
         }
     }

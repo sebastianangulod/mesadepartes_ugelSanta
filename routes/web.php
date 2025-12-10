@@ -68,6 +68,7 @@ Route::prefix('mesa-partes')->group(function () {
     // Confirmación y voucher
     Route::get('/confirmacion/{id}', [TramiteController::class, 'confirmacion'])->name('mesa-partes.confirmacion');
     Route::get('/voucher/{id}', [TramiteController::class, 'voucher'])->name('mesa-partes.voucher');
+    Route::get('/hoja-ruta/{id}', [TramiteController::class, 'hojaRuta'])->name('mesa-partes.hoja-ruta');
 });
 
 // Grupo de rutas protegidas
