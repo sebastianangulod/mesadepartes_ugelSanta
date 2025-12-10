@@ -213,6 +213,8 @@ Route::middleware(['auth'])->group(function () {
         // Bandeja interna de trámites recibidos (usuarios internos)
         Route::get('/tramites-recibidos', [MesaPartesController::class, 'tramitesRecibidos'])
             ->name('mesa-partes.tramites-recibidos');
+        Route::post('/tramites-recibidos/ajax', [MesaPartesController::class, 'obtenerTramitesPorNivelUsuario'])
+            ->name('mesa-partes.tramites-recibidos.ajax');
     });
     // Rutas API AJAX para administración
     Route::prefix('api')->group(function () {

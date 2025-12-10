@@ -365,4 +365,165 @@ class MesaPartesController extends Controller
         // Incluye estadísticas
         // Descarga archivo generado
     }
+
+    /**
+     * Obtiene trámites por nivel de usuario (AJAX)
+     * Equivalente a obtenerTramitesPorNivelUsuario del PHP puro
+     */
+    public function obtenerTramitesPorNivelUsuario(Request $request)
+    {
+        $usuario = auth()->user();
+        
+        $pagina = $request->input('pagina', 1);
+        $porPagina = $request->input('por_pagina', 10);
+        $filtros = $request->input('filtros', []);
+
+        try {
+            $query = Tramite::with(['procedimiento', 'usuario']);
+
+            // Si es usuario interno, obtener trámites según su nivel asignado
+            if ($usuario->tipo_user == 2) {
+                $nivelesUsuario = \App\Models\UsuariosNiveles::where('id_usuario', $usuario->id)->get();
+                
+                if ($nivelesUsuario->count() > 0) {
+                    $procedimientosIds = [];
+                    
+                    foreach ($nivelesUsuario as $nivelUsuario) {
+                        $nivel = $nivelUsuario->nivel;
+                        $idNivel = $nivelUsuario->id_nivel;
+                        
+                        $procedimientos = Procedimiento::where(function($q) use ($nivel, $idNivel) {
+                            if ($nivel == 1) {
+                                $q->where('id_area', $idNivel);
+                            } elseif ($nivel == 2) {
+                                $q->where('id_subarea', $idNivel);
+                            } elseif ($nivel == 3) {
+                                $q->where(function($q2) use ($idNivel) {
+                                    $q2->where('nivel_final', '3')->where('id_nivel_final', $idNivel)
+                                       ->orWhere(function($q3) use ($idNivel) {
+                                           $q3->where('nivel_final', '4')
+                                              ->whereHas('nivel4', function($q4) use ($idNivel) {
+                                                  $q4->where('id_nivel3', $idNivel);
+                                              });
+                                       });
+                                });
+                            } elseif ($nivel == 4) {
+                                $q->where('nivel_final', '4')->where('id_nivel_final', $idNivel);
+                            }
+                        })->pluck('id');
+                        
+                        $procedimientosIds = array_merge($procedimientosIds, $procedimientos->toArray());
+                    }
+                    
+                    if (count($procedimientosIds) > 0) {
+                        $query->whereIn('id_procedimiento', array_unique($procedimientosIds));
+                    } else {
+                        $query->whereRaw('1 = 0');
+                    }
+                }
+            } else {
+                // Usuario externo: solo sus propios trámites
+                $query->where('id_usuario', $usuario->id);
+            }
+
+            // Aplicar filtros
+            if (!empty($filtros['estado'])) {
+                $query->where('estado', $filtros['estado']);
+            }
+
+            if (!empty($filtros['fecha_desde'])) {
+                $query->whereDate('fecha_creacion', '>=', $filtros['fecha_desde']);
+            }
+
+            if (!empty($filtros['fecha_hasta'])) {
+                $query->whereDate('fecha_creacion', '<=', $filtros['fecha_hasta']);
+            }
+
+            // Contar total
+            $total = $query->count();
+            
+            // Obtener trámites paginados
+            $tramites = $query->orderByDesc('fecha_creacion')
+                ->skip(($pagina - 1) * $porPagina)
+                ->take($porPagina)
+                ->get();
+
+            // Agregar acciones permitidas para cada trámite
+            $tramites->transform(function($tramite) use ($usuario) {
+                $acciones = [];
+                $nivelUsuario = $usuario->usuariosNiveles->first()->nivel ?? null;
+                $nivelFinalProcedimiento = $tramite->procedimiento->nivel_final ?? null;
+
+                // Lógica de acciones permitidas según estado y nivel
+                switch($tramite->estado) {
+                    case 'PENDIENTE':
+                        if ($usuario->tipo_user == 2) {
+                            $acciones[] = 'ACEPTAR';
+                            $acciones[] = 'RECHAZAR';
+                            $acciones[] = 'OBSERVAR';
+                        }
+                        break;
+                    case 'EN_PROCESO':
+                        if ($usuario->tipo_user == 2) {
+                            if ($nivelUsuario && $nivelUsuario < $nivelFinalProcedimiento) {
+                                $acciones[] = 'DERIVAR';
+                            }
+                            if ($nivelUsuario == $nivelFinalProcedimiento) {
+                                $acciones[] = 'DERIVAR_ESPECIALISTA';
+                            }
+                            $acciones[] = 'OBSERVAR';
+                            $acciones[] = 'OBSERVAR_CON_OFICIO';
+                            if ($nivelUsuario == $nivelFinalProcedimiento) {
+                                $acciones[] = 'VERIFICAR';
+                            }
+                        }
+                        break;
+                    case 'OBSERVADO':
+                        if ($usuario->tipo_user == 1) {
+                            $acciones[] = 'CORREGIR';
+                        } else {
+                            $acciones[] = 'VERIFICAR';
+                        }
+                        break;
+                    case 'VERIFICADO':
+                        if ($usuario->tipo_user == 2 && $nivelUsuario == $nivelFinalProcedimiento) {
+                            $acciones[] = 'PROCESAR';
+                        }
+                        break;
+                }
+
+                $tramite->accionesPermitidas = $acciones;
+                return $tramite;
+            });
+
+            return response()->json([
+                'status' => 'success',
+                'tramites' => $tramites->map(function($t) {
+                    return [
+                        'id' => $t->id,
+                        'procedimiento_nombre' => $t->procedimiento->nombre ?? 'N/A',
+                        'estado' => $t->estado,
+                        'fecha_creacion' => $t->fecha_creacion->format('Y-m-d H:i:s'),
+                        'archivo_adjunto' => $t->archivo_adjunto,
+                        'voucher' => $t->voucher,
+                        'oficio' => $t->oficio,
+                        'numero_voucher' => $t->numero_voucher,
+                        'tramitescol' => $t->tramitescol,
+                        'accionesPermitidas' => $t->accionesPermitidas ?? [],
+                    ];
+                }),
+                'total' => $total,
+                'paginas' => ceil($total / $porPagina),
+                'pagina_actual' => $pagina,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+                'tramites' => [],
+                'total' => 0,
+                'paginas' => 0,
+            ], 500);
+        }
+    }
 }
