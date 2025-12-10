@@ -53,8 +53,11 @@ class MesaPartesController extends Controller
             ->limit(5)
             ->get();
 
-        // Cantidad de trámites pendientes para mostrar en badge del área interna
-        $tramitesPendientes = Tramite::where('estado', 'PENDIENTE')->count();
+        // Cantidad de trámites pendientes para mostrar en badge del área interna (solo para usuarios internos)
+        $tramitesPendientes = 0;
+        if ($usuario->tipo_user == 2) {
+            $tramitesPendientes = Tramite::where('estado', 'PENDIENTE')->count();
+        }
 
         return view('mesa-partes.index', [
             'estadisticas' => $estadisticas,
@@ -88,27 +91,26 @@ class MesaPartesController extends Controller
 
     /**
      * Muestra trámites enviados por el usuario
+     * Equivalente a documentosEnviados.php del PHP puro
      */
     public function documentosEnviados()
     {
         $usuario = auth()->user();
 
-        $filtros = request()->only([
-            'numero_tramite',
-            'estado',
-            'fecha_desde',
-            'fecha_hasta',
-            'asunto',
-        ]);
+        // Obtener documentos enviados por el usuario
+        $documentos = Tramite::where('id_usuario', $usuario->id)
+            ->with('procedimiento')
+            ->orderByDesc('fecha_creacion')
+            ->get();
 
-        // Incluir el ID de usuario en los filtros para reutilizar lógica de repositorio
-        $tramites = $this->tramiteRepository->obtenerPorUsuario($usuario->id, $filtros);
-
-        // Para el badge de pendientes en el sidebar
-        $tramitesPendientes = Tramite::where('estado', 'PENDIENTE')->count();
+        // Para el badge de pendientes en el sidebar (solo para usuarios internos)
+        $tramitesPendientes = 0;
+        if ($usuario->tipo_user == 2) {
+            $tramitesPendientes = Tramite::where('estado', 'PENDIENTE')->count();
+        }
 
         return view('mesa-partes.documentos-enviados', [
-            'tramites' => $tramites,
+            'documentos' => $documentos,
             'tramitesPendientes' => $tramitesPendientes,
         ]);
     }

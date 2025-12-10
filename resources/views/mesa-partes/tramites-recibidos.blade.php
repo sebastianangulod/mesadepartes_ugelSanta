@@ -18,7 +18,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ route('mesa-partes.tramite.create') }}">
+                        <a class="nav-link" href="{{ route('mesa-partes.nuevo') }}">
                             <i class="fas fa-file-alt"></i> Nuevo Trámite
                         </a>
                     </li>

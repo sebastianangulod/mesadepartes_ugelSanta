@@ -18,7 +18,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ route('mesa-partes.tramite.create') }}">
+                        <a class="nav-link" href="{{ route('mesa-partes.nuevo') }}">
                             <i class="fas fa-file-alt"></i> Nuevo Trámite
                         </a>
                     </li>
@@ -59,7 +59,7 @@
                 <h1 class="h2">Dashboard - Mesa de Partes</h1>
                 <div class="btn-toolbar mb-2 mb-md-0">
                     <div class="btn-group me-2">
-                        <a href="{{ route('mesa-partes.tramite.create') }}" class="btn btn-sm btn-outline-primary">
+                        <a href="{{ route('mesa-partes.nuevo') }}" class="btn btn-sm btn-outline-primary">
                             <i class="fas fa-plus"></i> Nuevo Trámite
                         </a>
                     </div>
@@ -160,7 +160,7 @@
                         </div>
                         <div class="card-body">
                             <div class="d-grid gap-2">
-                                <a href="{{ route('mesa-partes.tramite.create') }}" class="btn btn-primary">
+                                <a href="{{ route('mesa-partes.nuevo') }}" class="btn btn-primary">
                                     <i class="fas fa-file-alt"></i> Iniciar Nuevo Trámite
                                 </a>
                                 <a href="{{ route('mesa-partes.rastrear') }}" class="btn btn-outline-secondary">
@@ -258,7 +258,7 @@
                                 <div class="text-center py-4">
                                     <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
                                     <p class="text-muted">No tienes trámites recientes.</p>
-                                    <a href="{{ route('mesa-partes.tramite.create') }}" class="btn btn-primary">
+                                    <a href="{{ route('mesa-partes.nuevo') }}" class="btn btn-primary">
                                         <i class="fas fa-plus"></i> Crear tu primer trámite
                                     </a>
                                 </div>

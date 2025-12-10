@@ -3,75 +3,11 @@
 @section('title', 'Nuevo Trámite - Mesa de Partes')
 
 @section('content')
-<div class="container-fluid">
-    <div class="row">
-        <!-- Sidebar -->
-        <nav class="col-md-3 col-lg-2 d-md-block bg-dark sidebar">
-            <div class="position-sticky pt-3">
-                <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-white">
-                    <span>Mesa de Partes UGEL</span>
-                </h6>
-                <div class="mb-4 px-3">
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button type="submit" class="btn btn-danger btn-sm w-100">
-                            <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
-                        </button>
-                    </form>
-                </div>
-                <div class="mb-4 px-3 text-center text-white">
-                    <svg class="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                    </svg>
-                    <p class="mb-0">{{ Auth::user()->nombres }} {{ Auth::user()->apellido_paterno }}</p>
-                    <p class="mb-0 small">
-                        @if(Auth::user()->tipo_persona == 1)
-                            Persona Natural
-                        @elseif(Auth::user()->tipo_persona == 2)
-                            Persona Jurídica
-                        @elseif(Auth::user()->tipo_persona == 3)
-                            Entidad Pública
-                        @endif
-                    </p>
-                </div>
-                <ul class="nav flex-column px-3">
-                    @if(Auth::user()->tipo_user == 1)
-                        <li class="nav-item mb-2">
-                            <a class="nav-link text-white active" href="{{ route('mesa-partes.nuevo') }}">
-                                <i class="fas fa-plus"></i> Trámite Nuevo
-                            </a>
-                        </li>
-                    @endif
-                    
-                    @if(Auth::user()->es_administrador)
-                        <li class="nav-item mb-2">
-                            <a class="nav-link text-white" href="{{ route('dashboard') }}">
-                                <i class="fas fa-cog"></i> Administrador
-                            </a>
-                        </li>
-                    @endif
-                    
-                    <li class="nav-item mb-2">
-                        <a class="nav-link text-white" href="{{ route('mesa-partes.tramites-recibidos') }}">
-                            <i class="fas fa-inbox"></i> Recepción de Trámites
-                        </a>
-                    </li>
-                    <li class="nav-item mb-2">
-                        <a class="nav-link text-white" href="{{ route('mesa-partes.rastrear') }}">
-                            <i class="fas fa-search"></i> Rastrear Trámites
-                        </a>
-                    </li>
-                    <li class="nav-item mb-2">
-                        <a class="nav-link text-white" href="{{ route('mesa-partes.documentos-enviados') }}">
-                            <i class="fas fa-paper-plane"></i> Documentos Enviados
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </nav>
-
-        <!-- Contenido principal -->
-        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+<div class="flex">
+    <x-mesa-partes-sidebar :tramitesPendientes="0" />
+    
+    <!-- Contenido principal -->
+    <main class="ml-64 flex-1 p-8">
             <x-alerts />
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                 <h1 class="h2">Mesa de Partes Virtual</h1>

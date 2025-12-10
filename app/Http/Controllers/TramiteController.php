@@ -586,9 +586,16 @@ class TramiteController extends Controller
         $procedimientos = Procedimiento::orderBy('nombre')->get();
         $tramites = collect(); // Inicializar como colección vacía
 
+        // Para el badge de pendientes en el sidebar (solo para usuarios internos)
+        $tramitesPendientes = 0;
+        if (Auth::check() && Auth::user()->tipo_user == 2) {
+            $tramitesPendientes = Tramite::where('estado', 'PENDIENTE')->count();
+        }
+
         return view('mesa-partes.rastrear', [
             'procedimientos' => $procedimientos,
             'tramites' => $tramites,
+            'tramitesPendientes' => $tramitesPendientes,
         ]);
     }
 
@@ -602,6 +609,7 @@ class TramiteController extends Controller
     {
         $validated = $request->validate([
             'numero_voucher' => 'nullable|string',
+            'dni_remitente' => 'nullable|string|size:8',
             'tipo_procedimiento' => 'nullable|exists:procedimientos,id',
             'estado' => 'nullable|in:PENDIENTE,OBSERVADO,EN_PROCESO,VERIFICADO,FINALIZADO,RECHAZADO',
             'fecha_desde' => 'nullable|date',
@@ -612,7 +620,14 @@ class TramiteController extends Controller
 
         // Si hay número de voucher, buscar por ese campo
         if (!empty($validated['numero_voucher'])) {
-            $query->where('numero_voucher', $validated['numero_voucher']);
+            $query->where('numero_voucher', 'like', '%' . $validated['numero_voucher'] . '%');
+        }
+
+        // Si hay DNI del remitente, buscar por ese campo
+        if (!empty($validated['dni_remitente'])) {
+            $query->whereHas('usuario', function ($q) use ($validated) {
+                $q->where('dni', $validated['dni_remitente']);
+            });
         }
 
         // Filtros adicionales
@@ -632,12 +647,29 @@ class TramiteController extends Controller
             $query->whereDate('fecha_creacion', '<=', $validated['fecha_hasta']);
         }
 
+        // Si es usuario externo, solo mostrar sus propios trámites
+        if (Auth::check() && Auth::user()->tipo_user == 1) {
+            $query->where('id_usuario', Auth::id());
+        }
+
         $tramites = $query->orderByDesc('fecha_creacion')->get();
 
-        if ($request->expectsJson()) {
+        // Formatear datos para la respuesta
+        $tramitesFormateados = $tramites->map(function ($tramite) {
+            return [
+                'id' => $tramite->id,
+                'numero_voucher' => $tramite->numero_voucher ?? ($tramite->id . '-' . ($tramite->periodo ?? date('Y'))),
+                'procedimiento_nombre' => $tramite->procedimiento->nombre ?? 'N/A',
+                'estado' => $tramite->estado,
+                'fecha_creacion' => $tramite->fecha_creacion->format('Y-m-d H:i:s'),
+                'fecha_formateada' => $tramite->fecha_creacion->format('d/m/Y H:i'),
+            ];
+        });
+
+        if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
-                'success' => true,
-                'tramites' => $tramites,
+                'status' => 'success',
+                'tramites' => $tramitesFormateados,
             ]);
         }
 
@@ -710,6 +742,30 @@ class TramiteController extends Controller
                 }
             }
             
+            // Obtener información adicional del trámite
+            $areaNombre = '';
+            $subareaNombre = '';
+            $especialidadNombre = '';
+            
+            if ($tramite->procedimiento) {
+                if ($tramite->procedimiento->id_area) {
+                    $area = Nivel1::find($tramite->procedimiento->id_area);
+                    $areaNombre = $area ? $area->nombre : '';
+                }
+                if ($tramite->procedimiento->id_subarea) {
+                    $subarea = Nivel2::find($tramite->procedimiento->id_subarea);
+                    $subareaNombre = $subarea ? $subarea->nombre : '';
+                }
+                // Especialidad es el nivel final (3 o 4)
+                if ($tramite->procedimiento->nivel_final == '3') {
+                    $nivel3 = Nivel3::find($tramite->procedimiento->id_nivel_final);
+                    $especialidadNombre = $nivel3 ? $nivel3->nombre : '';
+                } elseif ($tramite->procedimiento->nivel_final == '4') {
+                    $nivel4 = Nivel4::find($tramite->procedimiento->id_nivel_final);
+                    $especialidadNombre = $nivel4 ? $nivel4->nombre : '';
+                }
+            }
+            
             return response()->json([
                 'success' => true,
                 'niveles' => $niveles,
@@ -718,6 +774,13 @@ class TramiteController extends Controller
                     'fecha_creacion' => $tramite->fecha_creacion->format('d/m/Y H:i:s'),
                     'nombres' => $tramite->usuario->nombres,
                     'apellido_paterno' => $tramite->usuario->apellido_paterno,
+                    'apellido_materno' => $tramite->usuario->apellido_materno,
+                    'procedimiento_nombre' => $tramite->procedimiento->nombre ?? 'N/A',
+                    'area_nombre' => $areaNombre,
+                    'subarea_nombre' => $subareaNombre,
+                    'especialidad_nombre' => $especialidadNombre,
+                    'estado' => $tramite->estado,
+                    'tramitescol' => $tramite->tramitescol ?? '1',
                     'apellido_materno' => $tramite->usuario->apellido_materno,
                     'procedimiento_nombre' => $tramite->procedimiento->nombre ?? 'N/A',
                     'estado' => $tramite->estado,
