@@ -218,7 +218,8 @@ $(document).ready(function() {
                     mensaje = xhr.responseJSON.message;
                 }
                 
-                alert(mensaje);
+                // Mostrar mensaje de error en el bloque de alerta estandarizado
+                $('#no-encontrado .alert').text(mensaje);
                 $('#no-encontrado').show();
             },
             complete: function() {

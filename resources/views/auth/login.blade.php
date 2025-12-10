@@ -23,27 +23,7 @@
         <form class="mt-8 space-y-6" action="{{ route('login') }}" method="POST">
             @csrf
             
-            @if (session('success'))
-                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative">
-                    {{ session('success') }}
-                </div>
-            @endif
-
-            @if (session('info'))
-                <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative">
-                    {{ session('info') }}
-                </div>
-            @endif
-
-            @if ($errors->any())
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
-                    <ul class="list-disc list-inside">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
+            <x-alerts :errors-bag="$errors" />
 
             <div class="rounded-md shadow-sm space-y-4">
                 <div>

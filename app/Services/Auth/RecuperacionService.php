@@ -373,4 +373,169 @@ class RecuperacionService
         
         return $intentos < $limite;
     }
+
+    /**
+     * Crear token de recuperación para DNI (como en PHP puro)
+     * 
+     * @param string $dni
+     * @return string|null
+     */
+    public function crearTokenRecuperacionPorDni($dni)
+    {
+        try {
+            $usuario = Usuario::where('dni', $dni)->first();
+            
+            if (!$usuario) {
+                return null;
+            }
+
+            // Eliminar tokens anteriores para el mismo usuario
+            ResetPasswordRequest::where('user_id', $usuario->id)->delete();
+
+            // Generar token único
+            $token = $this->generarToken();
+
+            // Guardar token en la base de datos
+            ResetPasswordRequest::create([
+                'user_id' => $usuario->id,
+                'token' => $token,
+                'created_at' => now(),
+            ]);
+
+            return $token;
+        } catch (\Exception $e) {
+            Log::error("Error al crear token de recuperación por DNI: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Obtener usuario por DNI
+     * 
+     * @param string $dni
+     * @return \App\Models\Usuario|null
+     */
+    public function obtenerUsuarioPorDni($dni)
+    {
+        return Usuario::where('dni', $dni)->first();
+    }
+
+    /**
+     * Verificar si DNI existe en el sistema
+     * 
+     * @param string $dni
+     * @return bool
+     */
+    public function dniExiste($dni)
+    {
+        return $this->obtenerUsuarioPorDni($dni) !== null;
+    }
+
+    /**
+     * Enviar correo de recuperación usando DNI
+     * 
+     * @param string $dni
+     * @param string $token
+     * @return bool
+     */
+    public function enviarCorreoRecuperacionPorDni($dni, $token)
+    {
+        try {
+            $usuario = Usuario::where('dni', $dni)->first();
+            
+            if (!$usuario || !$usuario->email) {
+                return false;
+            }
+
+            // El Mailable RecuperarPassword genera la URL internamente
+            Mail::to($usuario->email)->send(new RecuperarPassword($usuario, $token));
+            
+            Log::info("Correo de recuperación enviado a: {$usuario->email} (DNI: {$dni})");
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Error al enviar correo de recuperación por DNI: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Redefinir contraseña usando DNI y token
+     * 
+     * @param string $dni
+     * @param string $token
+     * @param string $nuevaContrasena
+     * @return bool
+     */
+    public function redefinirContrasenaPorDni($dni, $token, $nuevaContrasena)
+    {
+        try {
+            $usuario = Usuario::where('dni', $dni)->first();
+            
+            if (!$usuario) {
+                return false;
+            }
+
+            // Validar token
+            $resetRequest = ResetPasswordRequest::where('token', $token)
+                ->where('user_id', $usuario->id)
+                ->first();
+            
+            if (!$resetRequest) {
+                return false;
+            }
+
+            // Verificar que el token no haya expirado
+            $minutosTranscurridos = $resetRequest->created_at->diffInMinutes(now());
+            if ($minutosTranscurridos > $this->tiempoExpiracion) {
+                return false;
+            }
+
+            // Actualizar contraseña
+            if (!$this->actualizarContrasena($usuario, $nuevaContrasena)) {
+                return false;
+            }
+
+            // Invalidar token
+            $resetRequest->delete();
+
+            Log::info("Contraseña redefinida exitosamente para DNI: {$dni}");
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Error al redefinir contraseña por DNI: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Validar token usando DNI
+     * 
+     * @param string $token
+     * @param string $dni
+     * @return bool
+     */
+    public function validarTokenPorDni($token, $dni)
+    {
+        try {
+            $usuario = Usuario::where('dni', $dni)->first();
+            
+            if (!$usuario) {
+                return false;
+            }
+
+            $resetRequest = ResetPasswordRequest::where('token', $token)
+                ->where('user_id', $usuario->id)
+                ->first();
+            
+            if (!$resetRequest) {
+                return false;
+            }
+
+            // Verificar que el token no haya expirado
+            $minutosTranscurridos = $resetRequest->created_at->diffInMinutes(now());
+            return $minutosTranscurridos <= $this->tiempoExpiracion;
+        } catch (\Exception $e) {
+            Log::error("Error al validar token por DNI: " . $e->getMessage());
+            return false;
+        }
+    }
 }

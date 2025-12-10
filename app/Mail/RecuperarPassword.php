@@ -184,15 +184,16 @@ class RecuperarPassword extends Mailable implements ShouldQueue
 
     /**
      * Generar URL de restablecimiento
+     * NOTA: En el sistema PHP puro se usa DNI, no email
      *
      * @return string
      */
     protected function generarUrlRestablecimiento()
     {
         $baseUrl = config('app.url');
-        $ruta = '/recuperar-password/reset';
+        $ruta = route('password.reset', ['token' => $this->token]);
         
-        return $baseUrl . $ruta . '?token=' . $this->token . '&email=' . urlencode($this->usuario->email);
+        return $baseUrl . $ruta . '?token=' . $this->token;
     }
 
     /**

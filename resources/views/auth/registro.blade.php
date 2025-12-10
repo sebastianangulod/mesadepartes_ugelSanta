@@ -19,15 +19,7 @@
             <form action="{{ route('register') }}" method="POST" class="p-6 space-y-6" enctype="multipart/form-data">
                 @csrf
 
-                @if ($errors->any())
-                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
-                        <ul>
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
+                <x-alerts :errors-bag="$errors" />
 
                 {{-- Información Personal --}}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -130,25 +122,42 @@
                                    {{ old('tipo_persona') == '2' ? 'checked' : '' }}>
                             <span class="ml-2">Persona Jurídica</span>
                         </label>
+                        <label class="inline-flex items-center ml-6">
+                            <input type="radio" name="tipo_persona" value="3" 
+                                   class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300"
+                                   {{ old('tipo_persona') == '3' ? 'checked' : '' }}>
+                            <span class="ml-2">Entidad Pública</span>
+                        </label>
                     </div>
                 </div>
 
-                {{-- Datos de Persona Jurídica (opcional) --}}
+                {{-- Datos de Persona Jurídica --}}
                 <div id="datos-juridica" class="hidden">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label for="ruc" class="block text-sm font-medium text-gray-700">RUC</label>
-                            <input type="text" name="ruc" id="ruc" maxlength="11" pattern="[0-9]{11}"
+                            <input type="text" name="ruc" id="ruc" maxlength="45"
                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                                    value="{{ old('ruc') }}">
                         </div>
 
                         <div>
                             <label for="razon_social" class="block text-sm font-medium text-gray-700">Razón Social</label>
-                            <input type="text" name="razon_social" id="razon_social"
+                            <input type="text" name="razon_social" id="razon_social" maxlength="45"
                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                                    value="{{ old('razon_social') }}">
                         </div>
+                    </div>
+                </div>
+
+                {{-- Datos de Entidad Pública --}}
+                <div id="datos-entidad" class="hidden">
+                    <div>
+                        <label for="nombre_entidad" class="block text-sm font-medium text-gray-700">Nombre de Entidad</label>
+                        <input type="text" name="nombre_entidad" id="nombre_entidad" maxlength="45"
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                               value="{{ old('nombre_entidad') }}"
+                               onInput="this.value = this.value.toUpperCase()">
                     </div>
                 </div>
 
@@ -199,26 +208,163 @@
     document.addEventListener('DOMContentLoaded', function() {
         const tipoPersonaRadios = document.querySelectorAll('input[name="tipo_persona"]');
         const datosJuridica = document.getElementById('datos-juridica');
+        const datosEntidad = document.getElementById('datos-entidad');
         
-        function toggleDatosJuridica() {
+        function toggleDatosTipoPersona() {
             const selectedValue = document.querySelector('input[name="tipo_persona"]:checked').value;
+            
+            // Persona Jurídica (tipo 2)
             if (selectedValue === '2') {
                 datosJuridica.classList.remove('hidden');
+                datosEntidad.classList.add('hidden');
                 document.getElementById('ruc').setAttribute('required', 'required');
                 document.getElementById('razon_social').setAttribute('required', 'required');
-            } else {
+                document.getElementById('nombre_entidad').removeAttribute('required');
+            } 
+            // Entidad Pública (tipo 3)
+            else if (selectedValue === '3') {
                 datosJuridica.classList.add('hidden');
+                datosEntidad.classList.remove('hidden');
                 document.getElementById('ruc').removeAttribute('required');
                 document.getElementById('razon_social').removeAttribute('required');
+                document.getElementById('nombre_entidad').setAttribute('required', 'required');
+            } 
+            // Persona Natural (tipo 1)
+            else {
+                datosJuridica.classList.add('hidden');
+                datosEntidad.classList.add('hidden');
+                document.getElementById('ruc').removeAttribute('required');
+                document.getElementById('razon_social').removeAttribute('required');
+                document.getElementById('nombre_entidad').removeAttribute('required');
             }
         }
         
         tipoPersonaRadios.forEach(radio => {
-            radio.addEventListener('change', toggleDatosJuridica);
+            radio.addEventListener('change', toggleDatosTipoPersona);
         });
         
         // Inicializar estado
-        toggleDatosJuridica();
+        toggleDatosTipoPersona();
+
+        // Cargar departamentos al iniciar
+        cargarDepartamentos();
+
+        // Manejar cambio de departamento
+        document.getElementById('departamento').addEventListener('change', function() {
+            const departamentoId = this.value;
+            if (departamentoId) {
+                cargarProvincias(departamentoId);
+            } else {
+                limpiarProvincias();
+                limpiarDistritos();
+            }
+        });
+
+        // Manejar cambio de provincia
+        document.getElementById('provincia').addEventListener('change', function() {
+            const provinciaId = this.value;
+            if (provinciaId) {
+                cargarDistritos(provinciaId);
+            } else {
+                limpiarDistritos();
+            }
+        });
+    });
+
+    // Función para cargar departamentos
+    function cargarDepartamentos() {
+        fetch('{{ route("api.departamentos") }}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const select = document.getElementById('departamento');
+                    select.innerHTML = '<option value="">Seleccione Departamento</option>';
+                    data.data.forEach(depto => {
+                        const option = document.createElement('option');
+                        option.value = depto.id;
+                        option.textContent = depto.nombre;
+                        select.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error al cargar departamentos:', error);
+            });
+    }
+
+    // Función para cargar provincias
+    function cargarProvincias(departamentoId) {
+        fetch(`{{ route("api.provincias", ":id") }}`.replace(':id', departamentoId))
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const select = document.getElementById('provincia');
+                    select.innerHTML = '<option value="">Seleccione Provincia</option>';
+                    select.disabled = false;
+                    data.data.forEach(prov => {
+                        const option = document.createElement('option');
+                        option.value = prov.id;
+                        option.textContent = prov.nombre;
+                        select.appendChild(option);
+                    });
+                    limpiarDistritos();
+                }
+            })
+            .catch(error => {
+                console.error('Error al cargar provincias:', error);
+            });
+    }
+
+    // Función para cargar distritos
+    function cargarDistritos(provinciaId) {
+        fetch(`{{ route("api.distritos", ":id") }}`.replace(':id', provinciaId))
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const select = document.getElementById('distrito');
+                    select.innerHTML = '<option value="">Seleccione Distrito</option>';
+                    select.disabled = false;
+                    data.data.forEach(dist => {
+                        const option = document.createElement('option');
+                        option.value = dist.id;
+                        option.textContent = dist.nombre;
+                        select.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error al cargar distritos:', error);
+            });
+    }
+
+    // Función para limpiar provincias
+    function limpiarProvincias() {
+        const select = document.getElementById('provincia');
+        select.innerHTML = '<option value="">Seleccione Provincia</option>';
+        select.disabled = true;
+    }
+
+    // Función para limpiar distritos
+    function limpiarDistritos() {
+        const select = document.getElementById('distrito');
+        select.innerHTML = '<option value="">Seleccione Distrito</option>';
+        select.disabled = true;
+    }
+
+    // Validar formato DNI en tiempo real
+    document.getElementById('dni').addEventListener('input', function(e) {
+        this.value = this.value.replace(/[^0-9]/g, '');
+        if (this.value.length > 8) {
+            this.value = this.value.slice(0, 8);
+        }
+    });
+
+    // Validar formato teléfono en tiempo real
+    document.getElementById('telefono').addEventListener('input', function(e) {
+        this.value = this.value.replace(/[^0-9]/g, '');
+        if (this.value.length > 9) {
+            this.value = this.value.slice(0, 9);
+        }
     });
 </script>
 @endpush

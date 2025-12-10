@@ -165,8 +165,16 @@ Route::middleware(['auth'])->group(function () {
     
     // Rutas API para dashboard (AJAX)
     
-    // Rutas internas de mesa de partes (usuarios internos)
+    // Rutas internas de mesa de partes (usuarios autenticados)
     Route::prefix('mesa-partes')->group(function () {
+        // Dashboard Mesa de Partes (para externos e internos)
+        Route::get('/', [MesaPartesController::class, 'index'])->name('mesa-partes.index');
+
+        // Documentos enviados por el usuario autenticado
+        Route::get('/documentos-enviados', [MesaPartesController::class, 'documentosEnviados'])
+            ->name('mesa-partes.documentos-enviados');
+
+        // Bandeja interna de trámites recibidos (usuarios internos)
         Route::get('/tramites-recibidos', [MesaPartesController::class, 'tramitesRecibidos'])
             ->name('mesa-partes.tramites-recibidos');
     });

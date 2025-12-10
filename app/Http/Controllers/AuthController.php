@@ -7,10 +7,12 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegistroRequest;
 use App\Services\Auth\RecuperacionService;
 use App\Services\Api\ApiPeruService;
+use App\Mail\BienvenidaUsuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use App\Models\Usuario;
 use App\Models\Departamento;
@@ -183,6 +185,7 @@ class AuthController extends Controller
 
     /**
      * Procesa el login de usuarios internos (administrativos)
+     * NOTA: En el sistema PHP puro se usa DNI, no email
      */
     public function loginInterno(Request $request)
     {
@@ -192,22 +195,22 @@ class AuthController extends Controller
                 $this->validarRecaptcha($request->input('g-recaptcha-response'));
             }
 
-            // Validar credenciales
+            // Validar credenciales - usar DNI como en el sistema PHP puro
             $credentials = $request->validate([
-                'email' => 'required|email|max:255',
+                'dni' => 'required|string|size:8|regex:/^\\d{8}$/',
                 'password' => 'required|string|min:6',
                 'remember' => 'boolean'
             ]);
 
-            // Buscar usuario interno por email
-            $usuario = Usuario::where('email', $credentials['email'])
+            // Buscar usuario interno por DNI (como en PHP puro)
+            $usuario = Usuario::where('dni', $credentials['dni'])
                 ->where('tipo_user', 2) // 2: Usuario interno
                 ->first();
 
             if (!$usuario) {
-                Log::warning("Intento de login interno con email no registrado: {$credentials['email']}");
+                Log::warning("Intento de login interno con DNI no registrado: {$credentials['dni']}");
                 throw ValidationException::withMessages([
-                    'email' => 'El email no está registrado o no corresponde a un usuario interno.'
+                    'dni' => 'El DNI no está registrado o no corresponde a un usuario interno.'
                 ]);
             }
 
@@ -218,8 +221,8 @@ class AuthController extends Controller
                     $usuario->passw = Hash::make($credentials['password']);
                     $usuario->save();
                 } else {
-                    Log::warning("Intento de login interno fallido para email: {$credentials['email']}");
-                    $this->registrarIntentoFallido($credentials['email'], $request->ip());
+                    Log::warning("Intento de login interno fallido para DNI: {$credentials['dni']}");
+                    $this->registrarIntentoFallido($credentials['dni'], $request->ip());
                     
                     throw ValidationException::withMessages([
                         'password' => 'La contraseña es incorrecta.'
@@ -230,7 +233,7 @@ class AuthController extends Controller
             // Verificar si el usuario está bloqueado
             if ($this->estaUsuarioBloqueado($usuario)) {
                 throw ValidationException::withMessages([
-                    'email' => 'La cuenta está temporalmente bloqueada por múltiples intentos fallidos.'
+                    'dni' => 'La cuenta está temporalmente bloqueada por múltiples intentos fallidos.'
                 ]);
             }
 
@@ -238,7 +241,7 @@ class AuthController extends Controller
             Auth::login($usuario, $credentials['remember'] ?? false);
             
             // Limpiar intentos fallidos
-            $this->limpiarIntentosFallidos($credentials['email']);
+            $this->limpiarIntentosFallidos($credentials['dni']);
             
             // Registrar acceso exitoso
             $this->registrarAccesoExitoso($usuario, $request->ip());
@@ -286,9 +289,9 @@ class AuthController extends Controller
                 $this->validarRecaptcha($request->input('g-recaptcha-response'));
             }
 
-            // Validar datos del formulario según estructura SQL
+            // Validar datos del formulario según estructura SQL (como en PHP puro)
             $validated = $request->validate([
-                'dni' => 'required|string|size:8|regex:/^\\d{8}$/|unique:usuarios,dni',
+                'dni' => 'required|string|size:8|regex:/^\\d{8}$/',
                 'nombres' => 'required|string|max:20',
                 'apellido_paterno' => 'required|string|max:20',
                 'apellido_materno' => 'required|string|max:20',
@@ -296,18 +299,36 @@ class AuthController extends Controller
                 'telefono' => 'required|string|size:9|regex:/^\\d{9}$/',
                 'direccion' => 'required|string|max:35',
                 'distrito_id' => 'required|exists:distritos,id',
-                'password' => 'required|string|min:6|confirmed',
-                'tipo_persona' => 'required|in:1,2',
-                'ruc' => 'nullable|string|max:45|unique:usuarios,ruc',
+                'password' => 'required|string|min:8|confirmed|regex:/^(?=.*[A-Z])(?=.*[0-9])(?=.*[\p{P}\p{S}]).{8,}$/u',
+                'tipo_persona' => 'required|in:1,2,3', // 1: Natural, 2: Jurídica, 3: Entidad Pública
+                'ruc' => 'nullable|string|max:45',
                 'razon_social' => 'nullable|string|max:45',
+                'nombre_entidad' => 'nullable|string|max:45',
             ]);
 
-            // Si es persona jurídica, RUC y razón social son requeridos
-            if ($validated['tipo_persona'] == 2) {
+            // Validar que DNI + tipo_persona sea único (como en PHP puro)
+            $existeUsuario = Usuario::where('dni', $validated['dni'])
+                ->where('tipo_persona', $validated['tipo_persona'])
+                ->exists();
+            
+            if ($existeUsuario) {
+                throw ValidationException::withMessages([
+                    'dni' => 'Ya existe un usuario registrado con este DNI y tipo de persona.'
+                ]);
+            }
+
+            // Validaciones según tipo de persona
+            if ($validated['tipo_persona'] == 2) { // Persona Jurídica
                 $request->validate([
-                    'ruc' => 'required|string|max:45|unique:usuarios,ruc',
+                    'ruc' => 'required|string|max:45',
                     'razon_social' => 'required|string|max:45',
                 ]);
+            } elseif ($validated['tipo_persona'] == 3) { // Entidad Pública
+                $request->validate([
+                    'nombre_entidad' => 'required|string|max:45',
+                ]);
+                // Para entidad pública, nombre_entidad se guarda en razon_social
+                $validated['razon_social'] = strtoupper($validated['nombre_entidad']);
             }
 
             // Validar documento con API externa si está habilitado
@@ -320,21 +341,21 @@ class AuthController extends Controller
                 }
             }
 
-            // Crear el usuario
+            // Crear el usuario (convertir nombres a mayúsculas como en PHP puro)
             $usuario = Usuario::create([
                 'dni' => $validated['dni'],
-                'nombres' => $validated['nombres'],
-                'apellido_paterno' => $validated['apellido_paterno'],
-                'apellido_materno' => $validated['apellido_materno'],
+                'nombres' => strtoupper($validated['nombres']),
+                'apellido_paterno' => strtoupper($validated['apellido_paterno']),
+                'apellido_materno' => strtoupper($validated['apellido_materno']),
                 'email' => $validated['email'],
                 'telefono' => $validated['telefono'],
-                'direccion' => $validated['direccion'],
+                'direccion' => strtoupper($validated['direccion']),
                 'distrito_id' => $validated['distrito_id'],
                 'passw' => Hash::make($validated['password']),
                 'tipo_user' => 1, // 1: Usuario externo
                 'tipo_persona' => $validated['tipo_persona'],
-                'ruc' => $validated['ruc'] ?? null,
-                'razon_social' => $validated['razon_social'] ?? null,
+                'ruc' => isset($validated['ruc']) ? strtoupper($validated['ruc']) : null,
+                'razon_social' => isset($validated['razon_social']) ? strtoupper($validated['razon_social']) : null,
                 'fecha_registro' => now(),
             ]);
 
@@ -368,6 +389,7 @@ class AuthController extends Controller
 
     /**
      * Procesa la solicitud de recuperación de contraseña
+     * NOTA: En el sistema PHP puro se usa DNI, no email
      */
     public function recuperar(Request $request)
     {
@@ -377,41 +399,38 @@ class AuthController extends Controller
                 $this->validarRecaptcha($request->input('g-recaptcha-response'));
             }
 
-            // Validar email
+            // Validar DNI (como en PHP puro)
             $validated = $request->validate([
-                'email' => 'required|email|max:255'
+                'dni' => 'required|string|size:8|regex:/^\\d{8}$/'
             ]);
 
-            $email = $validated['email'];
+            $dni = $validated['dni'];
             $ip = $request->ip();
 
             // Verificar límite de intentos por IP
             if (!$this->recuperacionService->verificarLimiteIntentos($ip)) {
-                return back()->withErrors(['email' => 'Ha excedido el límite de intentos. Por favor, intente más tarde.'])->withInput();
+                return back()->withErrors(['dni' => 'Ha excedido el límite de intentos. Por favor, intente más tarde.'])->withInput();
             }
 
-            // Verificar si el email existe (no revelar si existe o no por seguridad)
-            $emailExiste = $this->recuperacionService->emailExiste($email);
+            // Verificar si el DNI existe (no revelar si existe o no por seguridad)
+            $dniExiste = $this->recuperacionService->dniExiste($dni);
             
-            if ($emailExiste) {
+            if ($dniExiste) {
                 // Crear token de recuperación
-                $token = $this->recuperacionService->crearTokenRecuperacion($email);
+                $token = $this->recuperacionService->crearTokenRecuperacionPorDni($dni);
 
                 if ($token) {
                     // Enviar email de recuperación
-                    $enviado = $this->recuperacionService->enviarCorreoRecuperacion($email, $token);
+                    $enviado = $this->recuperacionService->enviarCorreoRecuperacionPorDni($dni, $token);
                     
                     if ($enviado) {
-                        $this->recuperacionService->registrarIntento($email, $ip, true);
-                        Log::info("Solicitud de recuperación enviada para: {$email}");
+                        Log::info("Solicitud de recuperación enviada para DNI: {$dni}");
                     }
                 }
-            } else {
-                $this->recuperacionService->registrarIntento($email, $ip, false);
             }
 
-            // No revelar si el email existe o no por seguridad
-            return back()->with('success', 'Si el email existe en nuestro sistema, recibirá instrucciones para recuperar su contraseña.');
+            // No revelar si el DNI existe o no por seguridad
+            return back()->with('success', 'Si el DNI existe en nuestro sistema, recibirá instrucciones para recuperar su contraseña en su correo electrónico.');
 
         } catch (ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
@@ -427,11 +446,6 @@ class AuthController extends Controller
     public function showRestablecerForm($token)
     {
         try {
-            // Validar que el token existe y no ha expirado
-            if (!$this->recuperacionService->validarToken($token, null)) {
-                return redirect()->route('recuperar')->with('error', 'El enlace de recuperación es inválido o ha expirado.');
-            }
-
             return view('auth.restablecer', [
                 'title' => 'Restablecer Contraseña - Mesa de Partes',
                 'token' => $token,
@@ -447,6 +461,7 @@ class AuthController extends Controller
 
     /**
      * Procesa el restablecimiento de contraseña
+     * NOTA: En el sistema PHP puro se usa DNI, no email
      */
     public function restablecer(Request $request)
     {
@@ -456,27 +471,26 @@ class AuthController extends Controller
                 $this->validarRecaptcha($request->input('g-recaptcha-response'));
             }
 
-            // Validar datos del formulario
+            // Validar datos del formulario - usar DNI como en PHP puro
             $validated = $request->validate([
                 'token' => 'required|string',
-                'email' => 'required|email|max:255',
-                'password' => 'required|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$/',
+                'dni' => 'required|string|size:8|regex:/^\\d{8}$/',
+                'password' => 'required|string|min:8|confirmed|regex:/^(?=.*[A-Z])(?=.*[0-9])(?=.*[\p{P}\p{S}]).{8,}$/u',
                 'password_confirmation' => 'required|string|min:8'
             ]);
 
-            // Intentar restablecer la contraseña
-            $exitoso = $this->recuperacionService->redefinirContrasena(
-                $validated['email'],
+            // Intentar restablecer la contraseña usando DNI
+            $exitoso = $this->recuperacionService->redefinirContrasenaPorDni(
+                $validated['dni'],
                 $validated['token'],
-                $validated['password'],
-                'externo' // Por defecto externo, se puede detectar automáticamente
+                $validated['password']
             );
 
             if (!$exitoso) {
-                throw new \Exception("No se pudo restablecer la contraseña");
+                throw new \Exception("No se pudo restablecer la contraseña. El token puede ser inválido o haber expirado.");
             }
 
-            Log::info("Contraseña restablecida exitosamente para: {$validated['email']}");
+            Log::info("Contraseña restablecida exitosamente para DNI: {$validated['dni']}");
 
             return redirect()->route('login')->with('success', 'Su contraseña ha sido restablecida exitosamente. Por favor, inicie sesión con su nueva contraseña.');
 
@@ -497,9 +511,9 @@ class AuthController extends Controller
             $usuario = Auth::user();
             
             if ($usuario) {
-                $identificador = $usuario->esInterno() ? $usuario->email : $usuario->dni;
+                $identificador = $usuario->dni; // Ambos tipos de usuario usan DNI
                 // Registrar cierre de sesión
-                Log::info("Usuario cerró sesión: {$identificador} (ID: {$usuario->id})");
+                Log::info("Usuario cerró sesión: {$identificador} (ID: {$usuario->id}, Tipo: {$usuario->tipo_user})");
             }
             
             // Cerrar sesión
@@ -590,10 +604,11 @@ class AuthController extends Controller
 
     /**
      * Verificar si el usuario está bloqueado por intentos fallidos
+     * NOTA: Tanto usuarios internos como externos usan DNI
      */
     protected function estaUsuarioBloqueado($usuario)
     {
-        $identificador = $usuario->esInterno() ? $usuario->email : $usuario->dni;
+        $identificador = $usuario->dni; // Ambos tipos de usuario usan DNI
         $intentosFallidos = cache()->get("intentos_fallidos_{$identificador}", 0);
         $tiempoBloqueo = config('auth.lockout_time', 300); // 5 minutos por defecto
         $ultimoIntento = cache()->get("ultimo_intento_{$identificador}");
@@ -632,15 +647,17 @@ class AuthController extends Controller
 
     /**
      * Registrar acceso exitoso
+     * NOTA: Tanto usuarios internos como externos usan DNI en el sistema PHP puro
      */
     protected function registrarAccesoExitoso($usuario, $ip)
     {
-        $identificador = $usuario->esInterno() ? $usuario->email : $usuario->dni;
-        Log::info("Login exitoso para usuario: {$identificador} (ID: {$usuario->id}) desde IP: {$ip}");
+        $identificador = $usuario->dni; // Ambos tipos de usuario usan DNI
+        Log::info("Login exitoso para usuario: {$identificador} (ID: {$usuario->id}, Tipo: {$usuario->tipo_user}) desde IP: {$ip}");
     }
 
     /**
      * Redirigir usuario según su tipo y permisos
+     * NOTA: En PHP puro, usuarios externos redirigen a tramiteNuevo.php
      */
     protected function redirigirUsuario($usuario)
     {
@@ -648,8 +665,8 @@ class AuthController extends Controller
             return redirect()->route('dashboard')->with('success', 'Bienvenido al sistema de administración.');
         }
 
-        // Usuario externo - redirigir a mesa de partes
-        return redirect()->route('mesa-partes.index')->with('success', 'Bienvenido al sistema de mesa de partes.');
+        // Usuario externo - redirigir a crear nuevo trámite (como en PHP puro: tramiteNuevo.php)
+        return redirect()->route('mesa-partes.nuevo')->with('success', 'Bienvenido al sistema de mesa de partes.');
     }
 
     /**
@@ -672,11 +689,11 @@ class AuthController extends Controller
     protected function enviarEmailBienvenida($usuario)
     {
         try {
-            // Implementar envío de email usando Mailable
-            // Por ahora, solo registramos
-            Log::info("Email de bienvenida enviado a: {$usuario->correo}");
+            Mail::to($usuario->email)->send(new BienvenidaUsuario($usuario));
+            Log::info("Email de bienvenida enviado a: {$usuario->email}");
         } catch (\Exception $e) {
             Log::error("Error al enviar email de bienvenida: " . $e->getMessage());
+            // No interrumpir el flujo si falla el envío de email
         }
     }
 }

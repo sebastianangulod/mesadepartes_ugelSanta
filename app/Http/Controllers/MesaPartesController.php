@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Tramite;
 use App\Models\Procedimiento;
 use App\Models\Usuario;
+use App\Repositories\TramiteRepository;
 
 /**
  * Controlador de Mesa de Partes para gestionar:
@@ -20,12 +21,46 @@ use App\Models\Usuario;
 class MesaPartesController extends Controller
 {
     /**
+     * @var TramiteRepository
+     */
+    protected TramiteRepository $tramiteRepository;
+
+    public function __construct(TramiteRepository $tramiteRepository)
+    {
+        $this->tramiteRepository = $tramiteRepository;
+    }
+
+    /**
      * Muestra el dashboard de mesa de partes
      */
     public function index()
     {
-        // Retorna vista: resources/views/mesa-partes/index.blade.php
-        // Muestra estadísticas de trámites
+        $usuario = auth()->user();
+
+        // Estadísticas básicas de los trámites del usuario autenticado
+        $queryBase = Tramite::where('id_usuario', $usuario->id);
+
+        $estadisticas = [
+            'tramites_realizados' => (clone $queryBase)->count(),
+            'tramites_completados' => (clone $queryBase)->where('estado', 'FINALIZADO')->count(),
+            'tramites_proceso' => (clone $queryBase)->where('estado', 'EN_PROCESO')->count(),
+            'tramites_observados' => (clone $queryBase)->where('estado', 'OBSERVADO')->count(),
+        ];
+
+        // Trámites recientes del usuario (máx. 5)
+        $tramitesRecientes = (clone $queryBase)
+            ->orderByDesc('fecha_creacion')
+            ->limit(5)
+            ->get();
+
+        // Cantidad de trámites pendientes para mostrar en badge del área interna
+        $tramitesPendientes = Tramite::where('estado', 'PENDIENTE')->count();
+
+        return view('mesa-partes.index', [
+            'estadisticas' => $estadisticas,
+            'tramitesRecientes' => $tramitesRecientes,
+            'tramitesPendientes' => $tramitesPendientes,
+        ]);
     }
 
     /**
@@ -56,9 +91,26 @@ class MesaPartesController extends Controller
      */
     public function documentosEnviados()
     {
-        // Retorna vista: resources/views/mesa-partes/enviados.blade.php
-        // Lista trámites del usuario autenticado
-        // Incluye filtros por estado
+        $usuario = auth()->user();
+
+        $filtros = request()->only([
+            'numero_tramite',
+            'estado',
+            'fecha_desde',
+            'fecha_hasta',
+            'asunto',
+        ]);
+
+        // Incluir el ID de usuario en los filtros para reutilizar lógica de repositorio
+        $tramites = $this->tramiteRepository->obtenerPorUsuario($usuario->id, $filtros);
+
+        // Para el badge de pendientes en el sidebar
+        $tramitesPendientes = Tramite::where('estado', 'PENDIENTE')->count();
+
+        return view('mesa-partes.documentos-enviados', [
+            'tramites' => $tramites,
+            'tramitesPendientes' => $tramitesPendientes,
+        ]);
     }
 
     /**

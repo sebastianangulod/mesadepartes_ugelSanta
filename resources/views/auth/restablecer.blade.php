@@ -23,29 +23,15 @@
             @csrf
             <input type="hidden" name="token" value="{{ $token }}">
             
-            @if (session('success'))
-                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative">
-                    {{ session('success') }}
-                </div>
-            @endif
-
-            @if ($errors->any())
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
-                    <ul class="list-disc list-inside">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
+            <x-alerts :errors-bag="$errors" />
 
             <div class="rounded-md shadow-sm space-y-4">
                 <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input id="email" name="email" type="email" required autofocus
+                    <label for="dni" class="block text-sm font-medium text-gray-700 mb-1">DNI</label>
+                    <input id="dni" name="dni" type="text" required autofocus maxlength="8" pattern="[0-9]{8}"
                            class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" 
-                           placeholder="Ingrese su email" 
-                           value="{{ old('email', request()->email) }}">
+                           placeholder="Ingrese su DNI (8 dígitos)" 
+                           value="{{ old('dni', request()->dni) }}">
                 </div>
                 
                 <div>
@@ -54,7 +40,7 @@
                            class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" 
                            placeholder="Mínimo 8 caracteres">
                     <p class="mt-1 text-xs text-gray-500">
-                        La contraseña debe tener al menos 8 caracteres, incluyendo mayúsculas, minúsculas y números.
+                        La contraseña debe tener al menos 8 caracteres, incluyendo mayúsculas, números y un carácter especial.
                     </p>
                 </div>
                 
@@ -93,6 +79,14 @@
 @endif
 
 <script>
+// Validar formato DNI en tiempo real
+document.getElementById('dni').addEventListener('input', function(e) {
+    this.value = this.value.replace(/[^0-9]/g, '');
+    if (this.value.length > 8) {
+        this.value = this.value.slice(0, 8);
+    }
+});
+
 // Validar que las contraseñas coincidan
 document.getElementById('password_confirmation').addEventListener('input', function(e) {
     const password = document.getElementById('password').value;

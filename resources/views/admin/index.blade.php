@@ -9,6 +9,7 @@
 
 @section('content')
 <div class="container mx-auto px-4 py-8">
+    <x-alerts />
     <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-900">Panel de Administración</h1>
         <p class="text-gray-600">Bienvenido, {{ Auth::user()->nombres }}</p>
