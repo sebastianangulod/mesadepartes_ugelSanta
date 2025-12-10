@@ -101,6 +101,48 @@ class Procedimiento extends Model
     }
 
     /**
+     * Relación con nivel 1 (alias de area)
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function nivel1()
+    {
+        return $this->belongsTo(Nivel1::class, 'id_area');
+    }
+
+    /**
+     * Relación con nivel 2 (alias de subarea)
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function nivel2()
+    {
+        return $this->belongsTo(Nivel2::class, 'id_subarea');
+    }
+
+    /**
+     * Relación con nivel 3 (cuando nivel_final = 3)
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function nivel3()
+    {
+        return $this->belongsTo(Nivel3::class, 'id_nivel_final')
+                    ->where('nivel_final', '3');
+    }
+
+    /**
+     * Relación con nivel 4 (cuando nivel_final = 4)
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function nivel4()
+    {
+        return $this->belongsTo(Nivel4::class, 'id_nivel_final')
+                    ->where('nivel_final', '4');
+    }
+
+    /**
      * Relación con nivel final según el tipo
      * 
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo

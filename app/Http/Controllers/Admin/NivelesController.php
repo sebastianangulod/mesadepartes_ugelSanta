@@ -39,7 +39,15 @@ class NivelesController extends Controller
      */
     public function index()
     {
-        $niveles1 = Nivel1::with(['nivel2.nivel3.nivel4'])->orderBy('nombre')->get();
+        $niveles1 = Nivel1::with([
+            'nivel2' => function($query) {
+                $query->with([
+                    'nivel3' => function($query) {
+                        $query->with('nivel4');
+                    }
+                ]);
+            }
+        ])->orderBy('nombre')->get();
         
         return view('admin.niveles.index', compact('niveles1'));
     }
@@ -286,6 +294,13 @@ class NivelesController extends Controller
         $validator = Validator::make($request->all(), [
             'nivel' => 'required|string|in:nivel_2,nivel_3,nivel_4',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first()
+            ], 422);
+        }
 
         if ($validator->fails()) {
             return response()->json([

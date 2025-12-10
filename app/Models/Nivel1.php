@@ -36,6 +36,15 @@ class Nivel1 extends Model
     {
         return $this->hasMany(Nivel2::class, 'id_nivel1');
     }
+    
+    /**
+     * Relación con nivel 2 que incluye niveles 3 y 4
+     */
+    public function nivel2ConNiveles()
+    {
+        return $this->hasMany(Nivel2::class, 'id_nivel1')
+                    ->with(['nivel3.nivel4']);
+    }
 
     /**
      * Relación con tipos de grupos
