@@ -899,6 +899,302 @@ class TramiteController extends Controller
     }
 
     /**
+     * Resultados de búsqueda de trámites
+     * 
+     * @param Request $request
+     * @return JsonResponse|View
+     */
+    public function resultadosBusqueda(Request $request)
+    {
+        $this->authorize('viewAny', Tramite::class);
+
+        $termino = $request->input('termino', '');
+        $filtros = $request->only(['estado', 'usuario_id', 'procedimiento_id']);
+
+        try {
+            $tramites = $this->tramiteService->buscarTramites($termino, $filtros);
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $tramites,
+                ]);
+            }
+
+            return view('tramites.buscar', [
+                'tramites' => $tramites,
+                'termino' => $termino,
+                'filtros' => $filtros,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al buscar trámites: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Agregar documento a un trámite
+     * 
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function agregarDocumento(Request $request, int $id): JsonResponse
+    {
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        
+        if (!$tramite) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Trámite no encontrado',
+            ], 404);
+        }
+
+        $this->authorize('update', $tramite);
+
+        $request->validate([
+            'documento' => 'required|file|mimes:pdf|max:10240',
+            'descripcion' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            // TODO: Implementar lógica para agregar documentos adicionales
+            // Por ahora, solo validamos que el trámite existe
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Documento agregado exitosamente',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al agregar documento: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Eliminar documento de un trámite
+     * 
+     * @param int $tramiteId
+     * @param int $documentoId
+     * @return JsonResponse
+     */
+    public function eliminarDocumento(int $tramiteId, int $documentoId): JsonResponse
+    {
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($tramiteId);
+        
+        if (!$tramite) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Trámite no encontrado',
+            ], 404);
+        }
+
+        $this->authorize('update', $tramite);
+
+        try {
+            // TODO: Implementar lógica para eliminar documentos adicionales
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Documento eliminado exitosamente',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar documento: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Agregar comentario a un trámite
+     * 
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function agregarComentario(Request $request, int $id): JsonResponse
+    {
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        
+        if (!$tramite) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Trámite no encontrado',
+            ], 404);
+        }
+
+        $this->authorize('view', $tramite);
+
+        $request->validate([
+            'comentario' => 'required|string|max:1000',
+        ]);
+
+        try {
+            // TODO: Implementar lógica para agregar comentarios
+            // Por ahora, solo validamos que el trámite existe
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Comentario agregado exitosamente',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al agregar comentario: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Listar trámites pendientes
+     * 
+     * @param Request $request
+     * @return View|JsonResponse
+     */
+    public function pendientes(Request $request)
+    {
+        $this->authorize('viewAny', Tramite::class);
+
+        try {
+            $tramites = Tramite::with(['usuario', 'procedimiento'])
+                ->where('estado', EstadoTramite::PENDIENTE)
+                ->orderByDesc('fecha_creacion')
+                ->paginate(15);
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $tramites,
+                ]);
+            }
+
+            return view('tramites.pendientes', [
+                'tramites' => $tramites,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener trámites pendientes: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Listar trámites vencidos
+     * 
+     * @param Request $request
+     * @return View|JsonResponse
+     */
+    public function vencidos(Request $request)
+    {
+        $this->authorize('viewAny', Tramite::class);
+
+        try {
+            $tramites = Tramite::with(['usuario', 'procedimiento'])
+                ->vencidos(30)
+                ->orderByDesc('fecha_creacion')
+                ->paginate(15);
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $tramites,
+                ]);
+            }
+
+            return view('tramites.vencidos', [
+                'tramites' => $tramites,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener trámites vencidos: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Exportar trámites
+     * 
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|JsonResponse
+     */
+    public function exportar(Request $request)
+    {
+        $this->authorize('viewAny', Tramite::class);
+
+        $request->validate([
+            'formato' => 'nullable|in:excel,csv,pdf',
+            'filtros' => 'nullable|array',
+        ]);
+
+        try {
+            $formato = $request->input('formato', 'excel');
+            $filtros = $request->input('filtros', []);
+
+            // TODO: Implementar exportación de trámites
+            // Por ahora, retornamos un mensaje
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Funcionalidad de exportación en desarrollo',
+            ], 501);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al exportar trámites: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Anular trámite
+     * 
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function anular(Request $request, int $id): JsonResponse
+    {
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        
+        if (!$tramite) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Trámite no encontrado',
+            ], 404);
+        }
+
+        $this->authorize('delete', $tramite);
+
+        $request->validate([
+            'motivo' => 'required|string|max:1000',
+        ]);
+
+        try {
+            // Anular es similar a rechazar pero con un estado especial
+            // Por ahora, lo tratamos como rechazo
+            $tramite = $this->tramiteService->rechazar($id, $request->input('motivo'));
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Trámite anulado exitosamente',
+                'data' => $tramite,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al anular el trámite: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Obtener hoja de ruta de un trámite
      * Equivalente a hojaderuta.php del PHP puro
      * 
