@@ -148,10 +148,35 @@ Route::middleware(['auth'])->group(function () {
 
     // Rutas de administración
     Route::prefix('admin')->group(function () {
-        Route::resource('areas', AreasController::class)->only(['index','store','update','destroy']);
-        Route::resource('niveles', NivelesController::class)->only(['index','store','update','destroy']);
-        Route::resource('procedimientos', ProcedimientosController::class)->only(['index','store','update','destroy']);
-        Route::resource('usuarios', UsuariosController::class)->only(['index','store','update','destroy']);
+        // Usuarios
+        Route::get('/usuarios', [UsuariosController::class, 'index'])->name('admin.usuarios');
+        Route::post('/usuarios', [UsuariosController::class, 'store'])->name('admin.usuarios.store');
+        Route::put('/usuarios/{id}', [UsuariosController::class, 'update'])->name('admin.usuarios.update');
+        Route::delete('/usuarios/{id}', [UsuariosController::class, 'destroy'])->name('admin.usuarios.destroy');
+        Route::get('/usuarios/{id}/obtener', [UsuariosController::class, 'obtenerUsuario'])->name('admin.usuarios.obtener');
+        
+        // Áreas (Nivel 1)
+        Route::get('/areas', [AreasController::class, 'index'])->name('admin.areas');
+        Route::post('/areas', [AreasController::class, 'store'])->name('admin.areas.store');
+        Route::put('/areas/{id}', [AreasController::class, 'update'])->name('admin.areas.update');
+        Route::delete('/areas/{id}', [AreasController::class, 'destroy'])->name('admin.areas.destroy');
+        Route::get('/areas/obtener', [AreasController::class, 'obtenerAreas'])->name('admin.areas.obtener');
+        
+        // Niveles
+        Route::get('/niveles', [NivelesController::class, 'index'])->name('admin.niveles');
+        Route::post('/niveles', [NivelesController::class, 'store'])->name('admin.niveles.store');
+        Route::put('/niveles/{id}', [NivelesController::class, 'update'])->name('admin.niveles.update');
+        Route::delete('/niveles/{id}', [NivelesController::class, 'destroy'])->name('admin.niveles.destroy');
+        Route::get('/niveles/nivel2/{nivel1Id}', [NivelesController::class, 'obtenerNivel2'])->name('admin.niveles.nivel2');
+        Route::get('/niveles/nivel3/{nivel2Id}', [NivelesController::class, 'obtenerNivel3'])->name('admin.niveles.nivel3');
+        Route::get('/niveles/nivel4/{nivel3Id}', [NivelesController::class, 'obtenerNivel4'])->name('admin.niveles.nivel4');
+        
+        // Procedimientos
+        Route::get('/procedimientos', [ProcedimientosController::class, 'index'])->name('admin.procedimientos');
+        Route::post('/procedimientos', [ProcedimientosController::class, 'store'])->name('admin.procedimientos.store');
+        Route::put('/procedimientos/{id}', [ProcedimientosController::class, 'update'])->name('admin.procedimientos.update');
+        Route::delete('/procedimientos/{id}', [ProcedimientosController::class, 'destroy'])->name('admin.procedimientos.destroy');
+        Route::get('/procedimientos/{id}/obtener', [ProcedimientosController::class, 'obtener'])->name('admin.procedimientos.obtener');
     });
 
     // Dashboard principal
@@ -179,7 +204,17 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/tramites-recibidos', [MesaPartesController::class, 'tramitesRecibidos'])
             ->name('mesa-partes.tramites-recibidos');
     });
+    // Rutas API AJAX para administración
     Route::prefix('api')->group(function () {
+        // Niveles dinámicos para selects
+        Route::get('/niveles/nivel2/{nivel1Id}', [NivelesController::class, 'obtenerNivel2'])->name('api.niveles.nivel2');
+        Route::get('/niveles/nivel3/{nivel2Id}', [NivelesController::class, 'obtenerNivel3'])->name('api.niveles.nivel3');
+        Route::get('/niveles/nivel4/{nivel3Id}', [NivelesController::class, 'obtenerNivel4'])->name('api.niveles.nivel4');
+        
+        // Áreas
+        Route::get('/areas', [AreasController::class, 'obtenerAreas'])->name('api.areas');
+        
+        // Dashboard
         Route::get('/dashboard/estadisticas', function () {
             // Implementar lógica para estadísticas del dashboard
             return response()->json([

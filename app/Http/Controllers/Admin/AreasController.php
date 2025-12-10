@@ -3,7 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Nivel1;
+use App\Models\Nivel2;
+use App\Models\Procedimiento;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 /**
  * Controlador para la gestión de áreas administrativas
@@ -25,28 +30,39 @@ use Illuminate\Http\Request;
 class AreasController extends Controller
 {
     /**
-     * Mostrar lista de áreas
+     * Mostrar lista de áreas (Nivel 1)
+     * Equivalente a adminAreas.php del PHP puro
      * 
      * @param Request $request
      * @return \Illuminate\View\View
      */
     public function index(Request $request)
     {
-        // Implementar: listar áreas con filtros y búsqueda
-        // Retornar vista: admin.areas.index
+        $areas = Nivel1::orderBy('nombre')->get();
+        
+        return view('admin.areas.index', compact('areas'));
     }
 
     /**
-     * Obtener áreas para AJAX (DataTables)
+     * Obtener todas las áreas (AJAX)
      * 
-     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function obtenerAreas(Request $request)
+    public function obtenerAreas()
     {
-        // Implementar: retornar JSON con áreas para DataTables
-        // Incluir: id, nombre, descripcion, tipo_grupo, estado
-        // Soporte para: búsqueda, ordenamiento, paginación
+        try {
+            $areas = Nivel1::orderBy('nombre')->get(['id', 'nombre']);
+            
+            return response()->json([
+                'success' => true,
+                'data' => $areas
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener áreas: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -62,20 +78,46 @@ class AreasController extends Controller
     }
 
     /**
-     * Crear nueva área
+     * Crear nueva área (Nivel 1)
+     * Equivalente a action=create_nivel1 en adminAreas.php del PHP puro
      * 
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
-        // Implementar: validar y crear nueva área
-        // Validaciones: nombre único, tipo_grupo existe
-        // Retornar: área creada o errores de validación
+        $validator = Validator::make($request->all(), [
+            'nombre' => 'required|string|max:55|unique:nivel_1,nombre',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first()
+            ], 422);
+        }
+
+        try {
+            $area = Nivel1::create([
+                'nombre' => strtoupper(trim($request->nombre)),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Área creada exitosamente',
+                'data' => $area
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear el área: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
-     * Actualizar área existente
+     * Actualizar área existente (Nivel 1)
+     * Equivalente a action=edit_nivel1 en adminAreas.php del PHP puro
      * 
      * @param Request $request
      * @param int $id
@@ -83,23 +125,72 @@ class AreasController extends Controller
      */
     public function update(Request $request, $id)
     {
-        // Implementar: validar y actualizar área
-        // Verificar: no romper relaciones existentes
-        // Retornar: área actualizada o errores
+        $area = Nivel1::findOrFail($id);
+
+        $validator = Validator::make($request->all(), [
+            'nombre' => ['required', 'string', 'max:55', \Illuminate\Validation\Rule::unique('nivel_1', 'nombre')->ignore($id)],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first()
+            ], 422);
+        }
+
+        try {
+            $area->update([
+                'nombre' => strtoupper(trim($request->nombre)),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Área actualizada exitosamente',
+                'data' => $area
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar el área: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
-     * Eliminar área
+     * Eliminar área (Nivel 1)
+     * Equivalente a action=delete_nivel1 en adminAreas.php del PHP puro
      * 
      * @param int $id
      * @return \Illuminate\Http\JsonResponse
      */
     public function destroy($id)
     {
-        // Implementar: eliminar área con verificaciones
-        // Verificar: no tiene usuarios asignados
-        // Verificar: no tiene procedimientos asociados
-        // Soft delete: cambiar estado a inactivo
+        try {
+            $area = Nivel1::findOrFail($id);
+
+            // Verificar dependencias
+            $nivel2Count = Nivel2::where('id_nivel1', $id)->count();
+            $procedimientosCount = Procedimiento::where('id_area', $id)->count();
+
+            if ($nivel2Count > 0 || $procedimientosCount > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se puede eliminar el área porque tiene registros dependientes (Niveles 2: ' . $nivel2Count . ', Procedimientos: ' . $procedimientosCount . ')'
+                ], 422);
+            }
+
+            $area->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Área eliminada exitosamente'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar el área: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -143,8 +234,23 @@ class AreasController extends Controller
      */
     public function verificarDependencias($id)
     {
-        // Implementar: contar usuarios y procedimientos relacionados
-        // Retornar: conteo de dependencias
-        // Usar en: confirmación antes de eliminar
+        try {
+            $nivel2Count = Nivel2::where('id_nivel1', $id)->count();
+            $procedimientosCount = Procedimiento::where('id_area', $id)->count();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'nivel2_count' => $nivel2Count,
+                    'procedimientos_count' => $procedimientosCount,
+                    'total' => $nivel2Count + $procedimientosCount
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al verificar dependencias: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

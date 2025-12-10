@@ -3,9 +3,21 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Usuario;
+use App\Models\UsuariosNiveles;
+use App\Models\Administrador;
+use App\Models\Nivel1;
+use App\Models\Nivel2;
+use App\Models\Nivel3;
+use App\Models\Nivel4;
+use App\Models\Departamento;
+use App\Models\Provincia;
+use App\Models\Distrito;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 /**
  * Controlador para la gestión de usuarios internos
@@ -30,29 +42,125 @@ class UsuariosController extends Controller
 {
     /**
      * Mostrar lista de usuarios
+     * Equivalente a adminUsuarios.php del PHP puro
      * 
      * @param Request $request
      * @return \Illuminate\View\View
      */
     public function index(Request $request)
     {
-        // Implementar: listar usuarios con filtros y búsqueda
-        // Incluir: paginación, ordenamiento, filtros por estado
-        // Retornar: vista admin.usuarios.index
+        $usuarios = Usuario::where('tipo_user', 2)
+            ->with(['usuariosNiveles' => function($query) {
+                $query->with(['nivel']);
+            }])
+            ->orderBy('nombres')
+            ->get();
+
+        // Obtener nombres de niveles para cada usuario
+        foreach ($usuarios as $usuario) {
+            if ($usuario->usuariosNiveles->isNotEmpty()) {
+                $nivel = $usuario->usuariosNiveles->first();
+                $nombreNivel = null;
+                
+                switch ($nivel->nivel) {
+                    case 1:
+                        $nivelModel = Nivel1::find($nivel->id_nivel);
+                        $nombreNivel = $nivelModel ? $nivelModel->nombre : null;
+                        break;
+                    case 2:
+                        $nivelModel = Nivel2::find($nivel->id_nivel);
+                        $nombreNivel = $nivelModel ? $nivelModel->nombre : null;
+                        break;
+                    case 3:
+                        $nivelModel = Nivel3::find($nivel->id_nivel);
+                        $nombreNivel = $nivelModel ? $nivelModel->nombre : null;
+                        break;
+                    case 4:
+                        $nivelModel = Nivel4::find($nivel->id_nivel);
+                        $nombreNivel = $nivelModel ? $nivelModel->nombre : null;
+                        break;
+                }
+                
+                $usuario->nombre_nivel = $nombreNivel;
+            }
+        }
+
+        return view('admin.usuarios.index', compact('usuarios'));
     }
 
     /**
-     * Obtener usuarios para AJAX (DataTables)
+     * Obtener usuario por ID (AJAX)
+     * Equivalente a action=getUser en adminUsuarios.php del PHP puro
      * 
-     * @param Request $request
+     * @param int $id
      * @return \Illuminate\Http\JsonResponse
      */
-    public function obtenerUsuarios(Request $request)
+    public function obtenerUsuario($id)
     {
-        // Implementar: retornar JSON con usuarios para DataTables
-        // Incluir: id, nombre, email, dni, nivel, estado, fecha_creacion
-        // Soporte: búsqueda, ordenamiento, paginación
-        // Formato: optimizado para DataTables server-side
+        try {
+            $usuario = Usuario::with(['distrito.provincia.departamento', 'usuariosNiveles'])
+                ->findOrFail($id);
+
+            $data = $usuario->toArray();
+
+            // Obtener jerarquía completa de niveles si tiene nivel asignado
+            if ($usuario->usuariosNiveles->isNotEmpty()) {
+                $nivel = $usuario->usuariosNiveles->first();
+                
+                switch ($nivel->nivel) {
+                    case 4:
+                        $nivel4 = Nivel4::with('nivel3.nivel2.nivel1')->find($nivel->id_nivel);
+                        if ($nivel4) {
+                            $data['nivel4_id'] = $nivel4->id;
+                            if ($nivel4->nivel3) {
+                                $data['nivel3_id'] = $nivel4->nivel3->id;
+                                if ($nivel4->nivel3->nivel2) {
+                                    $data['nivel2_id'] = $nivel4->nivel3->nivel2->id;
+                                    if ($nivel4->nivel3->nivel2->nivel1) {
+                                        $data['nivel1_id'] = $nivel4->nivel3->nivel2->nivel1->id;
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    case 3:
+                        $nivel3 = Nivel3::with('nivel2.nivel1')->find($nivel->id_nivel);
+                        if ($nivel3) {
+                            $data['nivel3_id'] = $nivel3->id;
+                            if ($nivel3->nivel2) {
+                                $data['nivel2_id'] = $nivel3->nivel2->id;
+                                if ($nivel3->nivel2->nivel1) {
+                                    $data['nivel1_id'] = $nivel3->nivel2->nivel1->id;
+                                }
+                            }
+                        }
+                        break;
+                    case 2:
+                        $nivel2 = Nivel2::with('nivel1')->find($nivel->id_nivel);
+                        if ($nivel2) {
+                            $data['nivel2_id'] = $nivel2->id;
+                            if ($nivel2->nivel1) {
+                                $data['nivel1_id'] = $nivel2->nivel1->id;
+                            }
+                        }
+                        break;
+                    case 1:
+                        $data['nivel1_id'] = $nivel->id_nivel;
+                        break;
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuario obtenido correctamente',
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener usuario: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -69,18 +177,73 @@ class UsuariosController extends Controller
 
     /**
      * Crear nuevo usuario interno
+     * Equivalente a action=create en adminUsuarios.php del PHP puro
      * 
      * @param Request $request
-     * @return \Illuminate\Http\RedirectResponse
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
-        // Implementar: validar y crear nuevo usuario
-        // Validar: email único, DNI único, formato correcto
-        // Crear: usuario con contraseña temporal
-        // Asignar: niveles según solicitud
-        // Enviar: correo de bienvenida con credenciales
-        // Retornar: redirección con mensaje de éxito
+        $validator = Validator::make($request->all(), [
+            'dniUsuario' => 'required|string|size:8|unique:usuarios,dni',
+            'nombreUsuario' => 'required|string|max:20',
+            'apellidoPaternoUsuario' => 'required|string|max:20',
+            'apellidoMaternoUsuario' => 'required|string|max:20',
+            'correoUsuario' => 'required|email|unique:usuarios,email',
+            'contrasenaUsuario' => 'required|string|min:8|regex:/^(?=.*[A-Z])(?=.*[0-9])(?=.*[\p{P}\p{S}]).{8,}$/u',
+            'direccionUsuario' => 'required|string|max:35',
+            'telefonoUsuario' => 'required|string|size:9',
+            'distritoUsuario' => 'required|exists:distritos,id',
+            'nivel' => 'required|integer|in:1,2,3,4',
+            'id_nivel' => 'required|integer',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first()
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Crear usuario
+            $usuario = Usuario::create([
+                'dni' => $request->dniUsuario,
+                'nombres' => strtoupper($request->nombreUsuario),
+                'apellido_paterno' => strtoupper($request->apellidoPaternoUsuario),
+                'apellido_materno' => strtoupper($request->apellidoMaternoUsuario),
+                'email' => $request->correoUsuario,
+                'passw' => Hash::make($request->contrasenaUsuario),
+                'direccion' => strtoupper($request->direccionUsuario),
+                'telefono' => $request->telefonoUsuario,
+                'distrito_id' => $request->distritoUsuario,
+                'tipo_user' => 2, // Usuario interno
+                'tipo_persona' => 1, // Persona natural por defecto
+            ]);
+
+            // Asignar nivel
+            UsuariosNiveles::create([
+                'id_usuario' => $usuario->id,
+                'nivel' => $request->nivel,
+                'id_nivel' => $request->id_nivel,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuario creado exitosamente',
+                'data' => ['id' => $usuario->id]
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear el usuario: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -98,34 +261,129 @@ class UsuariosController extends Controller
 
     /**
      * Actualizar usuario existente
+     * Equivalente a action=update en adminUsuarios.php del PHP puro
      * 
      * @param Request $request
      * @param int $id
-     * @return \Illuminate\Http\RedirectResponse
+     * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, $id)
     {
-        // Implementar: validar y actualizar usuario
-        // Validar: email único (excluyendo usuario actual)
-        // Actualizar: datos básicos del usuario
-        // Gestionar: cambios en niveles asignados
-        // Auditoría: registrar cambios importantes
-        // Retornar: redirección con mensaje de éxito
+        $usuario = Usuario::findOrFail($id);
+
+        $validator = Validator::make($request->all(), [
+            'nombres' => 'required|string|max:20',
+            'apellido_paterno' => 'required|string|max:20',
+            'apellido_materno' => 'required|string|max:20',
+            'email' => ['required', 'email', Rule::unique('usuarios')->ignore($id)],
+            'telefono' => 'required|string|size:9',
+            'direccion' => 'required|string|max:35',
+            'distrito_id' => 'required|exists:distritos,id',
+            'nivel' => 'nullable|integer|in:1,2,3,4',
+            'id_nivel' => 'nullable|integer',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first()
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Actualizar datos básicos
+            $usuario->update([
+                'nombres' => strtoupper($request->nombres),
+                'apellido_paterno' => strtoupper($request->apellido_paterno),
+                'apellido_materno' => strtoupper($request->apellido_materno),
+                'email' => $request->email,
+                'telefono' => $request->telefono,
+                'direccion' => strtoupper($request->direccion),
+                'distrito_id' => $request->distrito_id,
+            ]);
+
+            // Actualizar nivel si se proporciona
+            if ($request->has('nivel') && $request->has('id_nivel') && 
+                !empty($request->nivel) && !empty($request->id_nivel)) {
+                
+                $nivelExistente = UsuariosNiveles::where('id_usuario', $id)->first();
+                
+                if ($nivelExistente) {
+                    $nivelExistente->update([
+                        'nivel' => $request->nivel,
+                        'id_nivel' => $request->id_nivel,
+                    ]);
+                } else {
+                    UsuariosNiveles::create([
+                        'id_usuario' => $id,
+                        'nivel' => $request->nivel,
+                        'id_nivel' => $request->id_nivel,
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            // Obtener usuario actualizado con nivel
+            $usuarioActualizado = Usuario::with('usuariosNiveles')->find($id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuario actualizado exitosamente',
+                'data' => $usuarioActualizado
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar el usuario: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
-     * Eliminar usuario (soft delete)
+     * Eliminar usuario
+     * Equivalente a action=delete en adminUsuarios.php del PHP puro
      * 
      * @param int $id
      * @return \Illuminate\Http\JsonResponse
      */
     public function destroy($id)
     {
-        // Implementar: desactivar usuario (no eliminar físicamente)
-        // Verificar: no tiene trámites pendientes
-        // Verificar: no es el único administrador
-        // Desasignar: niveles y roles
-        // Retornar: JSON con resultado de la operación
+        try {
+            $usuario = Usuario::findOrFail($id);
+
+            // Verificar que no sea el usuario actual
+            if ($usuario->id == auth()->id()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No puede eliminar su propio usuario'
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            // Eliminar nivel asignado
+            UsuariosNiveles::where('id_usuario', $id)->delete();
+
+            // Eliminar usuario
+            $usuario->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuario eliminado exitosamente'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar el usuario: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
