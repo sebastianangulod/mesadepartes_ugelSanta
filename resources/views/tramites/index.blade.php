@@ -155,7 +155,13 @@
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ $tramite->created_at->format('d/m/Y H:i') }}
+                                    @if($tramite->fecha_creacion)
+                                        {{ $tramite->fecha_creacion->format('d/m/Y H:i') }}
+                                    @elseif($tramite->created_at)
+                                        {{ $tramite->created_at->format('d/m/Y H:i') }}
+                                    @else
+                                        <span class="text-gray-400">N/A</span>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     <div class="flex space-x-2">

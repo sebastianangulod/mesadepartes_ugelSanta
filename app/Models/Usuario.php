@@ -44,6 +44,14 @@ class Usuario extends Authenticatable
     protected $table = 'usuarios';
 
     /**
+     * Indica si la tabla usa timestamps
+     * La tabla usuarios no tiene created_at ni updated_at
+     * 
+     * @var bool
+     */
+    public $timestamps = false;
+
+    /**
      * Obtener la contraseña para autenticación
      * Laravel busca 'password' por defecto, pero nuestra BD usa 'passw'
      * 
@@ -93,8 +101,6 @@ class Usuario extends Authenticatable
      */
     protected $casts = [
         'fecha_registro' => 'datetime',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
         'tipo_user' => 'integer',
         'tipo_persona' => 'integer',
     ];
@@ -338,5 +344,51 @@ class Usuario extends Authenticatable
         ];
 
         return $tipos[$this->tipo_persona] ?? 'Desconocido';
+    }
+
+    /**
+     * Verificar si el usuario es personal de mesa de partes
+     * El personal de mesa de partes son usuarios internos (tipo_user = 2) que no son administradores
+     * 
+     * @return bool
+     */
+    public function esPersonalMesaPartes(): bool
+    {
+        return $this->esInterno() && !$this->esAdministrador();
+    }
+
+    /**
+     * Verificar si el usuario está activo
+     * Por defecto, todos los usuarios están activos si no hay campo de estado
+     * 
+     * @return bool
+     */
+    public function estaActivo(): bool
+    {
+        // Si existe un campo 'estado' en la tabla, verificar que sea 'ACTIVO'
+        // Por ahora, retornamos true por defecto ya que la estructura real no tiene campo estado
+        return true;
+    }
+
+    /**
+     * Obtiene el rol formateado (compatibilidad con código existente)
+     * 
+     * @return string
+     */
+    public function getRolFormateadoAttribute(): string
+    {
+        if ($this->esAdministrador()) {
+            return 'Administrador';
+        }
+        
+        if ($this->esPersonalMesaPartes()) {
+            return 'Personal Mesa de Partes';
+        }
+        
+        if ($this->esInterno()) {
+            return 'Usuario Interno';
+        }
+        
+        return 'Usuario Externo';
     }
 }

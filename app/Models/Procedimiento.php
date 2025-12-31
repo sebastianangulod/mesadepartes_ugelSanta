@@ -183,12 +183,13 @@ class Procedimiento extends Model
 
     /**
      * Verificar si el procedimiento está activo
+     * Como la tabla no tiene columna estado, todos los procedimientos se consideran activos
      * 
      * @return bool
      */
     public function estaActivo(): bool
     {
-        return $this->estado === 'ACTIVO';
+        return true; // Todos los procedimientos están activos por defecto
     }
 
     /**
@@ -198,7 +199,8 @@ class Procedimiento extends Model
      */
     public function getNombreCompletoAttribute(): string
     {
-        return "{$this->codigo} - {$this->nombre}";
+        // La tabla no tiene columna 'codigo', solo retornamos el nombre
+        return $this->nombre ?? '';
     }
 
     /**
@@ -208,7 +210,8 @@ class Procedimiento extends Model
      */
     public function getCostoFormateadoAttribute(): string
     {
-        return 'S/ ' . number_format($this->costo, 2);
+        // La tabla no tiene columna 'costo'
+        return 'S/ 0.00';
     }
 
     /**
@@ -218,22 +221,21 @@ class Procedimiento extends Model
      */
     public function getTiempoEstimadoFormateadoAttribute(): string
     {
-        if ($this->tiempo_estimado_dias === 1) {
-            return '1 día';
-        }
-        
-        return "{$this->tiempo_estimado_dias} días";
+        // La tabla no tiene columna 'tiempo_estimado_dias'
+        return 'N/A';
     }
 
     /**
      * Scope para procedimientos activos
+     * Como la tabla no tiene columna estado, retorna todos los procedimientos
      * 
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeActivos($query)
     {
-        return $query->where('estado', 'ACTIVO');
+        // La tabla no tiene columna 'estado', así que retornamos todos los procedimientos
+        return $query;
     }
 
     /**
@@ -270,9 +272,8 @@ class Procedimiento extends Model
     public function scopeBuscar($query, $termino)
     {
         return $query->where(function ($q) use ($termino) {
-            $q->where('codigo', 'like', "%{$termino}%")
-              ->orWhere('nombre', 'like', "%{$termino}%")
-              ->orWhere('descripcion', 'like', "%{$termino}%");
+            // Solo buscamos en 'nombre' ya que 'codigo' y 'descripcion' no existen en la tabla real
+            $q->where('nombre', 'like', "%{$termino}%");
         });
     }
 }

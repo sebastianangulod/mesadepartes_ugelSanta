@@ -538,10 +538,11 @@ class AuthController extends Controller
     {
         try {
             $departamentos = Departamento::orderBy('nombre')->get(['id', 'nombre']);
-            return response()->json(['success' => true, 'data' => $departamentos]);
+            // Retornar lista directa para compatibilidad con pruebas y frontend
+            return response()->json($departamentos);
         } catch (\Exception $e) {
             Log::error("Error al obtener departamentos: " . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Error al obtener departamentos'], 500);
+            return response()->json(['error' => 'Error al obtener departamentos'], 500);
         }
     }
 
@@ -551,6 +552,27 @@ class AuthController extends Controller
     public function obtenerProvincias($departamentoId)
     {
         try {
+            // Validar que el ID sea un entero positivo
+            if (!is_numeric($departamentoId) || (int)$departamentoId <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'ID de departamento inválido',
+                    'data' => []
+                ], 400);
+            }
+
+            $departamentoId = (int)$departamentoId;
+
+            // Verificar que el departamento existe
+            $departamento = Departamento::find($departamentoId);
+            if (!$departamento) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Departamento no encontrado',
+                    'data' => []
+                ], 404);
+            }
+
             $provincias = Provincia::where('departamento_id', $departamentoId)
                 ->orderBy('nombre')
                 ->get(['id', 'nombre']);
@@ -558,7 +580,11 @@ class AuthController extends Controller
             return response()->json(['success' => true, 'data' => $provincias]);
         } catch (\Exception $e) {
             Log::error("Error al obtener provincias: " . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Error al obtener provincias'], 500);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener provincias',
+                'data' => []
+            ], 500);
         }
     }
 
@@ -568,6 +594,27 @@ class AuthController extends Controller
     public function obtenerDistritos($provinciaId)
     {
         try {
+            // Validar que el ID sea un entero positivo
+            if (!is_numeric($provinciaId) || (int)$provinciaId <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'ID de provincia inválido',
+                    'data' => []
+                ], 400);
+            }
+
+            $provinciaId = (int)$provinciaId;
+
+            // Verificar que la provincia existe
+            $provincia = Provincia::find($provinciaId);
+            if (!$provincia) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Provincia no encontrada',
+                    'data' => []
+                ], 404);
+            }
+
             $distritos = Distrito::where('provincia_id', $provinciaId)
                 ->orderBy('nombre')
                 ->get(['id', 'nombre']);
@@ -575,7 +622,136 @@ class AuthController extends Controller
             return response()->json(['success' => true, 'data' => $distritos]);
         } catch (\Exception $e) {
             Log::error("Error al obtener distritos: " . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Error al obtener distritos'], 500);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener distritos',
+                'data' => []
+            ], 500);
+        }
+    }
+
+    /**
+     * Valida DNI mediante API externa (Decolecta/RENIEC)
+     */
+    public function validarDni(Request $request)
+    {
+        try {
+            $request->validate([
+                'dni' => 'required|string|size:8|regex:/^\\d{8}$/'
+            ]);
+
+            $dni = $request->input('dni');
+            Log::info("Iniciando validación de DNI: {$dni}");
+            
+            // Verificar si Decolecta está habilitado
+            $decolectaEnabled = config('services.decolecta.enabled', false);
+            Log::info("Decolecta habilitado: " . ($decolectaEnabled ? 'Sí' : 'No'));
+            
+            if (!$decolectaEnabled) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El servicio de validación de DNI no está habilitado. Contacte al administrador.'
+                ], 503);
+            }
+            
+            $datos = $this->apiPeruService->consultarDni($dni);
+            Log::info("Datos recibidos del servicio: " . json_encode($datos));
+
+            if ($datos) {
+                return response()->json([
+                    'success' => true,
+                    'nombres' => $datos['nombres'] ?? '',
+                    'apellidoPaterno' => $datos['apellido_paterno'] ?? '',
+                    'apellidoMaterno' => $datos['apellido_materno'] ?? '',
+                    'message' => 'DNI validado correctamente'
+                ]);
+            }
+
+            Log::warning("No se encontraron datos para el DNI: {$dni}");
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo validar el DNI. Verifique que el número sea correcto.'
+            ], 404);
+
+        } catch (\Exception $e) {
+            Log::error("Error al validar DNI: " . $e->getMessage());
+            Log::error("Stack trace: " . $e->getTraceAsString());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al validar el DNI: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Valida RUC mediante API externa (Decolecta/SUNAT)
+     */
+    public function validarRuc(Request $request)
+    {
+        try {
+            $request->validate([
+                'ruc' => 'required|string|min:11|max:11|regex:/^\\d{11}$/'
+            ]);
+
+            $ruc = $request->input('ruc');
+            $datos = $this->apiPeruService->consultarRuc($ruc);
+
+            if ($datos) {
+                return response()->json([
+                    'success' => true,
+                    'razonSocial' => $datos['razon_social'] ?? '',
+                    'message' => 'RUC validado correctamente'
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo validar el RUC. Verifique que el número sea correcto.'
+            ], 404);
+
+        } catch (\Exception $e) {
+            Log::error("Error al validar RUC: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al validar el RUC. Por favor, inténtelo nuevamente.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Valida si el email ya existe en el sistema
+     */
+    public function validarEmail(Request $request)
+    {
+        try {
+            $request->validate([
+                'email' => 'required|email|max:45'
+            ]);
+
+            $email = $request->input('email');
+            $existe = Usuario::where('email', $email)->exists();
+
+            return response()->json([
+                'email' => $email,
+                'available' => !$existe,
+                'exists' => $existe,
+                'message' => $existe ? 'El correo electrónico ya está registrado' : 'Correo electrónico disponible'
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'email' => $request->input('email', ''),
+                'available' => false,
+                'errors' => $e->errors(),
+                'message' => 'Error de validación: formato de email inválido'
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error("Error al validar email: " . $e->getMessage());
+            return response()->json([
+                'email' => $request->input('email', ''),
+                'available' => false,
+                'message' => 'Error al validar el correo electrónico'
+            ], 500);
         }
     }
 

@@ -82,16 +82,24 @@ class ApiPeruService
             if ($this->decolectaConfig['enabled']) {
                 $url = $this->decolectaConfig['api_url'] . '/v1/reniec/dni';
                 $token = $this->decolectaConfig['api_token'];
+                
+                Log::info("Consultando DNI: {$dni} con Decolecta API");
+                Log::info("URL: {$url}, Token configurado: " . ($token ? 'Sí' : 'No'));
+                
                 $response = $this->realizarConsultaApiDecolecta($url, $token, ['numero' => $dni]);
                 
                 // Si la respuesta es exitosa, procesarla
                 if ($response) {
+                    Log::info("Respuesta recibida de Decolecta (raw): " . json_encode($response));
                     $datos = $this->procesarDatosReniec($response);
+                    Log::info("Datos procesados después de mapeo: " . json_encode($datos));
                     $cacheTtl = $this->decolectaConfig['cache_ttl'];
                     Cache::put($cacheKey, $datos, $cacheTtl);
                     $this->registrarAuditoria('reniec', $dni, 'success', $datos);
                     return $datos;
                 }
+                
+                Log::warning("No se recibió respuesta válida de Decolecta para DNI: {$dni}");
                 return null;
             } else {
                 // Fallback a API legacy
@@ -266,19 +274,31 @@ class ApiPeruService
                 // Construir URL con query parameters
                 $fullUrl = $url . '?' . http_build_query($params);
                 
-                $response = Http::timeout($this->decolectaConfig['timeout'] ?? 30)
+                Log::info("Consultando Decolecta API: {$fullUrl}");
+                
+                $httpClient = Http::timeout($this->decolectaConfig['timeout'] ?? 30)
                     ->withHeaders([
                         'Authorization' => 'Bearer ' . $token,
                         'Accept' => 'application/json',
                         'Content-Type' => 'application/json',
-                    ])
-                    ->get($fullUrl);
+                    ]);
+                
+                // En desarrollo, ignorar verificación SSL (solo para desarrollo local)
+                if (config('app.env') === 'local' || config('app.debug')) {
+                    $httpClient = $httpClient->withoutVerifying();
+                }
+                
+                $response = $httpClient->get($fullUrl);
+
+                Log::info("Respuesta Decolecta API - Status: " . $response->status() . ", Body: " . $response->body());
 
                 if ($response->successful()) {
-                    return $response->json();
+                    $data = $response->json();
+                    Log::info("DNI/RUC validado exitosamente");
+                    return $data;
                 }
 
-                Log::warning("Decolecta API respondió con código: " . $response->status());
+                Log::warning("Decolecta API respondió con código: " . $response->status() . " - " . $response->body());
                 
                 // Si es error 404 o 422, no reintentar (documento no encontrado)
                 if (in_array($response->status(), [404, 422])) {
@@ -287,6 +307,7 @@ class ApiPeruService
 
             } catch (\Exception $e) {
                 Log::error("Intento " . ($intentos + 1) . " falló: " . $e->getMessage());
+                Log::error("Stack trace: " . $e->getTraceAsString());
             }
 
             $intentos++;
@@ -297,6 +318,7 @@ class ApiPeruService
             }
         }
 
+        Log::error("No se pudo completar la consulta después de {$maxIntentos} intentos");
         return null;
     }
 
@@ -355,28 +377,39 @@ class ApiPeruService
     }
 
     /**
-     * Procesar datos de RENIEC
+     * Procesar datos de RENIEC (adaptado para Decolecta API)
      * 
      * @param array $datos
      * @return array Datos normalizados
      */
     protected function procesarDatosReniec(array $datos): array
     {
-        return [
-            'dni' => $datos['dni'] ?? $datos['numeroDocumento'] ?? '',
-            'nombres' => $datos['nombres'] ?? '',
-            'apellido_paterno' => $datos['apellidoPaterno'] ?? $datos['apellido_paterno'] ?? '',
-            'apellido_materno' => $datos['apellidoMaterno'] ?? $datos['apellido_materno'] ?? '',
-            'nombre_completo' => trim(($datos['apellidoPaterno'] ?? $datos['apellido_paterno'] ?? '') . ' ' . 
-                                 ($datos['apellidoMaterno'] ?? $datos['apellido_materno'] ?? '') . ' ' . 
-                                 ($datos['nombres'] ?? '')),
-            'fecha_nacimiento' => $datos['fechaNacimiento'] ?? $datos['fecha_nacimiento'] ?? null,
-            'sexo' => $datos['sexo'] ?? null,
-            'direccion' => $datos['direccion'] ?? $datos['direccionCompleta'] ?? '',
-            'ubigeo' => $datos['ubigeo'] ?? null,
+        // Decolecta API usa: first_name, first_last_name, second_last_name, document_number
+        // También soporta formato legacy: nombres, apellidoPaterno, apellidoMaterno, dni
+        
+        Log::info("Procesando datos RENIEC - Datos recibidos: " . json_encode($datos));
+        
+        $procesado = [
+            'dni' => $datos['document_number'] ?? $datos['dni'] ?? $datos['numeroDocumento'] ?? '',
+            'nombres' => $datos['first_name'] ?? $datos['nombres'] ?? '',
+            'apellido_paterno' => $datos['first_last_name'] ?? $datos['apellidoPaterno'] ?? $datos['apellido_paterno'] ?? '',
+            'apellido_materno' => $datos['second_last_name'] ?? $datos['apellidoMaterno'] ?? $datos['apellido_materno'] ?? '',
+            'nombre_completo' => $datos['full_name'] ?? trim(
+                ($datos['first_last_name'] ?? $datos['apellidoPaterno'] ?? $datos['apellido_paterno'] ?? '') . ' ' . 
+                ($datos['second_last_name'] ?? $datos['apellidoMaterno'] ?? $datos['apellido_materno'] ?? '') . ' ' . 
+                ($datos['first_name'] ?? $datos['nombres'] ?? '')
+            ),
+            'fecha_nacimiento' => $datos['fechaNacimiento'] ?? $datos['fecha_nacimiento'] ?? $datos['birth_date'] ?? null,
+            'sexo' => $datos['sexo'] ?? $datos['gender'] ?? null,
+            'direccion' => $datos['direccion'] ?? $datos['direccionCompleta'] ?? $datos['address'] ?? '',
+            'ubigeo' => $datos['ubigeo'] ?? $datos['ubigeo_code'] ?? null,
             'estado' => $datos['estado'] ?? 'ACTIVO',
             'fuente' => 'reniec'
         ];
+        
+        Log::info("Datos procesados RENIEC: " . json_encode($procesado));
+        
+        return $procesado;
     }
 
     /**

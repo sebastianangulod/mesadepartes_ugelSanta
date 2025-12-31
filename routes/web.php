@@ -46,11 +46,17 @@ Route::middleware('guest')->group(function () {
     Route::get('/restablecer/{token}', [AuthController::class, 'showRestablecerForm'])->name('password.reset');
     Route::post('/restablecer', [AuthController::class, 'restablecer'])->name('password.update');
     
-    // API para selects anidados (departamentos, provincias, distritos)
-    Route::get('/api/departamentos', [AuthController::class, 'obtenerDepartamentos'])->name('api.departamentos');
-    Route::get('/api/provincias/{departamentoId}', [AuthController::class, 'obtenerProvincias'])->name('api.provincias');
-    Route::get('/api/distritos/{provinciaId}', [AuthController::class, 'obtenerDistritos'])->name('api.distritos');
 });
+    
+// API para selects anidados (departamentos, provincias, distritos) - Públicas
+Route::get('/api/departamentos', [AuthController::class, 'obtenerDepartamentos'])->name('api.departamentos');
+Route::get('/api/provincias/{departamentoId}', [AuthController::class, 'obtenerProvincias'])->name('api.provincias');
+Route::get('/api/distritos/{provinciaId}', [AuthController::class, 'obtenerDistritos'])->name('api.distritos');
+
+// API para validaciones de registro - Públicas (sin middleware guest para permitir peticiones AJAX)
+Route::post('/api/validar-dni', [AuthController::class, 'validarDni'])->name('api.validar-dni');
+Route::post('/api/validar-ruc', [AuthController::class, 'validarRuc'])->name('api.validar-ruc');
+Route::post('/api/validar-email', [AuthController::class, 'validarEmail'])->name('api.validar-email');
 
 // Logout (accesible solo para usuarios autenticados)
 Route::middleware('auth')->post('/logout', [AuthController::class, 'logout'])->name('logout');
@@ -274,6 +280,93 @@ Route::middleware(['auth'])->group(function () {
                 'values' => [25, 45, 80, 10, 5]
             ]);
         })->name('api.dashboard.tramites-por-estado');
+        
+        Route::get('/dashboard/tramites-pendientes', function () {
+            try {
+                $tramites = \App\Models\Tramite::with(['procedimiento'])
+                    ->where('estado', \App\Domain\Tramites\EstadoTramite::PENDIENTE)
+                    ->orderByDesc('created_at')
+                    ->limit(10)
+                    ->get()
+                    ->map(function ($tramite) {
+                        $dias = $tramite->created_at ? $tramite->created_at->diffInDays(now()) : 0;
+                        
+                        return [
+                            'id' => $tramite->id,
+                            'codigo' => 'MP-' . str_pad($tramite->id, 6, '0', STR_PAD_LEFT),
+                            'procedimiento' => $tramite->procedimiento ? $tramite->procedimiento->nombre : 'Sin procedimiento',
+                            'dias' => $dias,
+                            'prioridad' => $dias > 5 ? 'Alta' : ($dias > 3 ? 'Media' : 'Baja')
+                        ];
+                    });
+                
+                return response()->json($tramites);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Error al obtener trámites pendientes: ' . $e->getMessage());
+                return response()->json([], 500);
+            }
+        })->name('api.dashboard.tramites-pendientes');
+        
+        Route::get('/dashboard/alertas', function () {
+            try {
+                $alertas = [];
+                
+                // Alertas de trámites vencidos (más de 30 días)
+                $tramitesVencidos = \App\Models\Tramite::where('estado', '!=', \App\Domain\Tramites\EstadoTramite::FINALIZADO)
+                    ->where('estado', '!=', \App\Domain\Tramites\EstadoTramite::RECHAZADO)
+                    ->where('created_at', '<', now()->subDays(30))
+                    ->count();
+                
+                if ($tramitesVencidos > 0) {
+                    $alertas[] = [
+                        'tipo' => 'danger',
+                        'icono' => 'exclamation-triangle',
+                        'titulo' => 'Trámites Vencidos',
+                        'mensaje' => "Tienes {$tramitesVencidos} trámite(s) vencido(s) que requieren atención inmediata."
+                    ];
+                }
+                
+                // Alertas de trámites pendientes por mucho tiempo (más de 15 días)
+                $tramitesPendientesLargos = \App\Models\Tramite::where('estado', \App\Domain\Tramites\EstadoTramite::PENDIENTE)
+                    ->where('created_at', '<', now()->subDays(15))
+                    ->count();
+                
+                if ($tramitesPendientesLargos > 0) {
+                    $alertas[] = [
+                        'tipo' => 'warning',
+                        'icono' => 'clock',
+                        'titulo' => 'Trámites Pendientes',
+                        'mensaje' => "Hay {$tramitesPendientesLargos} trámite(s) pendiente(s) por más de 15 días."
+                    ];
+                }
+                
+                // Alertas de trámites observados sin respuesta
+                $tramitesObservados = \App\Models\Tramite::where('estado', \App\Domain\Tramites\EstadoTramite::OBSERVADO)
+                    ->whereNotNull('limite_observacion')
+                    ->where('limite_observacion', '<', now())
+                    ->count();
+                
+                if ($tramitesObservados > 0) {
+                    $alertas[] = [
+                        'tipo' => 'warning',
+                        'icono' => 'eye',
+                        'titulo' => 'Observaciones Vencidas',
+                        'mensaje' => "Hay {$tramitesObservados} trámite(s) observado(s) cuyo plazo de corrección ha vencido."
+                    ];
+                }
+                
+                // Si no hay alertas, mostrar mensaje informativo
+                if (empty($alertas)) {
+                    // Opcional: puedes retornar un array vacío o un mensaje positivo
+                    // return response()->json([]);
+                }
+                
+                return response()->json($alertas);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Error al obtener alertas: ' . $e->getMessage());
+                return response()->json([], 500);
+            }
+        })->name('api.dashboard.alertas');
     });
     
 });
