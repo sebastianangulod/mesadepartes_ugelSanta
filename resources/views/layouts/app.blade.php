@@ -59,6 +59,7 @@
                     </div>
                     
                     <!-- Navegación principal -->
+                    @auth
                     <nav class="hidden md:flex space-x-8">
                         <a href="{{ route('dashboard') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
                             Dashboard
@@ -66,7 +67,7 @@
                         <a href="{{ route('tramites.index') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
                             Trámites
                         </a>
-                        @if(auth()->user()->esPersonalMesaPartes())
+                        @if(auth()->user() && auth()->user()->esPersonalMesaPartes())
                             <a href="#" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
                                 Reportes
                             </a>
@@ -90,12 +91,12 @@
                                 <div class="flex items-center space-x-2">
                                     <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                                         <span class="text-white text-sm font-medium">
-                                            {{ substr(auth()->user()->nombre, 0, 1) }}
+                                            {{ substr(auth()->user()->nombre ?? 'U', 0, 1) }}
                                         </span>
                                     </div>
                                     <div class="hidden md:block">
-                                        <div class="text-sm font-medium">{{ auth()->user()->nombre_completo }}</div>
-                                        <div class="text-xs text-gray-500">{{ auth()->user()->rol_formateado }}</div>
+                                        <div class="text-sm font-medium">{{ auth()->user()->nombre_completo ?? 'Usuario' }}</div>
+                                        <div class="text-xs text-gray-500">{{ auth()->user()->rol_formateado ?? 'Invitado' }}</div>
                                     </div>
                                 </div>
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -104,6 +105,17 @@
                             </button>
                         </div>
                     </div>
+                    @else
+                    <!-- Menú para usuarios no autenticados -->
+                    <div class="flex items-center space-x-4">
+                        <a href="{{ route('login') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
+                            Iniciar Sesión
+                        </a>
+                        <a href="{{ route('register') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition duration-200">
+                            Registrarse
+                        </a>
+                    </div>
+                    @endauth
                 </div>
             </div>
         </header>
