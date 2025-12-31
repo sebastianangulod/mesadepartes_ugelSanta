@@ -35,10 +35,20 @@ return [
         ],
     ],
 
-    # Servicios de APIs Peruanas
+    # Servicios de APIs Peruanas - Decolecta API
+    'decolecta' => [
+        'api_url' => env('DECOLECTA_API_URL', 'https://api.decolecta.com'),
+        'api_token' => env('DECOLECTA_API_TOKEN'),
+        'enabled' => env('DECOLECTA_API_ENABLED', false),
+        'timeout' => 30,
+        'retry_attempts' => 3,
+        'cache_ttl' => 3600, // 1 hora
+    ],
+
+    # Configuración legacy (mantener para compatibilidad)
     'reniec' => [
-        'api_url' => env('RENIEC_API_URL', 'https://api.apis.net.pe/v1/dni'),
-        'api_token' => env('RENIEC_API_TOKEN'),
+        'api_url' => env('RENIEC_API_URL', 'https://api.decolecta.com/v1/reniec'),
+        'api_token' => env('DECOLECTA_API_TOKEN'), // Usar el mismo token de Decolecta
         'enabled' => env('RENIEC_API_ENABLED', false),
         'timeout' => 30,
         'retry_attempts' => 3,
@@ -46,8 +56,8 @@ return [
     ],
 
     'sunat' => [
-        'api_url' => env('SUNAT_API_URL', 'https://api.apis.net.pe/v1/ruc'),
-        'api_token' => env('SUNAT_API_TOKEN'),
+        'api_url' => env('SUNAT_API_URL', 'https://api.decolecta.com/v1/sunat'),
+        'api_token' => env('DECOLECTA_API_TOKEN'), // Usar el mismo token de Decolecta
         'enabled' => env('SUNAT_API_ENABLED', false),
         'timeout' => 30,
         'retry_attempts' => 3,
