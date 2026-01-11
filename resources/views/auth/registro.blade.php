@@ -19,7 +19,16 @@
             <form id="registroForm" action="{{ route('register') }}" method="POST" class="p-6 space-y-6" enctype="multipart/form-data">
                 @csrf
 
-                <x-alerts :errors-bag="$errors" />
+                @if($errors->any())
+                    <div class="mb-4 rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
+                        <span class="font-semibold">Se encontraron los siguientes errores:</span>
+                        <ul class="list-disc list-inside mt-1">
+                            @foreach ($errors->all() as $msg)
+                                <li>{{ $msg }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
 
                 <!-- Campos ocultos para controlar validaciones -->
                 <input type="hidden" id="dniValidado" value="false">
@@ -148,7 +157,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                         <label for="departamento" class="block text-sm font-medium text-gray-700">Departamento</label>
-                        <select name="departamento" id="departamento" required
+                        <select name="departamento_id" id="departamento" required
                                 class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="">Seleccione Departamento</option>
                         </select>
@@ -156,7 +165,7 @@
 
                     <div>
                         <label for="provincia" class="block text-sm font-medium text-gray-700">Provincia</label>
-                        <select name="provincia" id="provincia" required
+                        <select name="provincia_id" id="provincia" required
                                 class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                                 disabled>
                             <option value="">Seleccione Provincia</option>

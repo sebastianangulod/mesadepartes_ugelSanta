@@ -58,6 +58,59 @@ Route::post('/api/validar-dni', [AuthController::class, 'validarDni'])->name('ap
 Route::post('/api/validar-ruc', [AuthController::class, 'validarRuc'])->name('api.validar-ruc');
 Route::post('/api/validar-email', [AuthController::class, 'validarEmail'])->name('api.validar-email');
 
+// Ruta de prueba de email (solo para desarrollo - eliminar en producción)
+Route::get('/test-email/{email?}', function ($email = null) {
+    if (!$email) {
+        return response()->json([
+            'error' => 'Debes proporcionar un email. Ejemplo: /test-email/tu-email@ejemplo.com'
+        ], 400);
+    }
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return response()->json([
+            'error' => 'El email proporcionado no es válido.'
+        ], 400);
+    }
+
+    try {
+        \Illuminate\Support\Facades\Mail::raw('Este es un email de prueba del sistema Mesa de Partes UGEL Santa. Si recibes este mensaje, la configuración de correo está funcionando correctamente.', function ($message) use ($email) {
+            $message->to($email)
+                    ->subject('Prueba de Email - Mesa de Partes UGEL Santa');
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Email enviado exitosamente a: ' . $email,
+            'config' => [
+                'mailer' => config('mail.default'),
+                'host' => config('mail.mailers.smtp.host'),
+                'port' => config('mail.mailers.smtp.port'),
+                'encryption' => config('mail.mailers.smtp.encryption'),
+                'from_address' => config('mail.from.address'),
+                'from_name' => config('mail.from.name'),
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'details' => [
+                'type' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ],
+            'config' => [
+                'mailer' => config('mail.default'),
+                'host' => config('mail.mailers.smtp.host'),
+                'port' => config('mail.mailers.smtp.port'),
+                'encryption' => config('mail.mailers.smtp.encryption'),
+                'from_address' => config('mail.from.address'),
+                'from_name' => config('mail.from.name'),
+            ]
+        ], 500);
+    }
+})->name('test.email');
+
 // Logout (accesible solo para usuarios autenticados)
 Route::middleware('auth')->post('/logout', [AuthController::class, 'logout'])->name('logout');
 

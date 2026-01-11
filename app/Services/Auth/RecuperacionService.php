@@ -444,16 +444,25 @@ class RecuperacionService
             $usuario = Usuario::where('dni', $dni)->first();
             
             if (!$usuario || !$usuario->email) {
+                Log::warning("No se puede enviar correo de recuperación: Usuario no encontrado o sin email (DNI: {$dni})");
                 return false;
             }
 
             // El Mailable RecuperarPassword genera la URL internamente
+            // Ahora se envía inmediatamente (sin cola)
             Mail::to($usuario->email)->send(new RecuperarPassword($usuario, $token));
             
-            Log::info("Correo de recuperación enviado a: {$usuario->email} (DNI: {$dni})");
+            Log::info("Correo de recuperación enviado exitosamente a: {$usuario->email} (DNI: {$dni})");
             return true;
         } catch (\Exception $e) {
-            Log::error("Error al enviar correo de recuperación por DNI: " . $e->getMessage());
+            Log::error("Error al enviar correo de recuperación por DNI", [
+                'dni' => $dni,
+                'email' => $usuario->email ?? 'no disponible',
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return false;
         }
     }

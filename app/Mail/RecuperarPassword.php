@@ -3,7 +3,6 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -26,7 +25,7 @@ use App\Models\Usuario;
      * 
  * @package App\Mail
  */
-class RecuperarPassword extends Mailable implements ShouldQueue
+class RecuperarPassword extends Mailable
 {
     use Queueable;
 
@@ -121,15 +120,25 @@ class RecuperarPassword extends Mailable implements ShouldQueue
      */
     public function envelope()
     {
+        $metadata = [
+            'usuario_id' => (string) $this->usuario->id,
+            'token' => $this->token,
+            'fecha_solicitud' => now()->toDateTimeString()
+        ];
+
+        // Solo agregar IP y dispositivo si no son null
+        if ($this->ipSolicitante !== null) {
+            $metadata['ip_solicitante'] = $this->ipSolicitante;
+        }
+
+        if ($this->dispositivoSolicitante !== null) {
+            $metadata['dispositivo_solicitante'] = $this->dispositivoSolicitante;
+        }
+
         return new Envelope(
             subject: 'Solicitud de Recuperación de Contraseña - Mesa de Partes Digital',
             tags: ['recuperacion', 'password', 'seguridad'],
-            metadata: [
-                'usuario_id' => $this->usuario->id,
-                'token' => $this->token,
-                'ip_solicitante' => $this->ipSolicitante,
-                'fecha_solicitud' => now()->toDateTimeString()
-            ]
+            metadata: $metadata
         );
     }
 
@@ -174,12 +183,14 @@ class RecuperarPassword extends Mailable implements ShouldQueue
      */
     public function build()
     {
-        return $this->from(config('mail.from.address'), config('mail.from.name'))
+        $mailable = $this->from(config('mail.from.address'), config('mail.from.name'))
                     ->replyTo(config('mail.from.address'), config('mail.from.name'))
                     ->priority(1) // Alta prioridad por seguridad
                     ->tag('recuperar-password')
-                    ->metadata('usuario_id', $this->usuario->id)
+                    ->metadata('usuario_id', (string) $this->usuario->id)
                     ->metadata('token', $this->token);
+
+        return $mailable;
     }
 
     /**
@@ -190,10 +201,9 @@ class RecuperarPassword extends Mailable implements ShouldQueue
      */
     protected function generarUrlRestablecimiento()
     {
-        $baseUrl = config('app.url');
-        $ruta = route('password.reset', ['token' => $this->token]);
-        
-        return $baseUrl . $ruta . '?token=' . $this->token;
+        // route() ya genera la URL completa con el dominio correcto
+        // La ruta es /restablecer/{token}, así que route() ya incluye el token en la URL
+        return route('password.reset', ['token' => $this->token]);
     }
 
     /**

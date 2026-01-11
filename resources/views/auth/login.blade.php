@@ -10,7 +10,7 @@
 @section('content')
 <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8">
-        <div>
+        <div class="text-center">
             <img class="mx-auto h-12 w-auto" src="{{ asset('img/logo-ugel.png') }}" alt="UGEL">
             <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
                 Sistema de Mesa de Partes
@@ -23,7 +23,16 @@
         <form class="mt-8 space-y-6" action="{{ route('login') }}" method="POST">
             @csrf
             
-            <x-alerts :errors-bag="$errors" />
+            @if($errors->any())
+                <div class="mb-4 rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
+                    <span class="font-semibold">Se encontraron los siguientes errores:</span>
+                    <ul class="list-disc list-inside mt-1">
+                        @foreach ($errors->all() as $msg)
+                            <li>{{ $msg }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
 
             <div class="rounded-md shadow-sm space-y-4">
                 <div>

@@ -538,11 +538,14 @@ class AuthController extends Controller
     {
         try {
             $departamentos = Departamento::orderBy('nombre')->get(['id', 'nombre']);
-            // Retornar lista directa para compatibilidad con pruebas y frontend
-            return response()->json($departamentos);
+            return response()->json(['success' => true, 'data' => $departamentos]);
         } catch (\Exception $e) {
             Log::error("Error al obtener departamentos: " . $e->getMessage());
-            return response()->json(['error' => 'Error al obtener departamentos'], 500);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener departamentos',
+                'data' => []
+            ], 500);
         }
     }
 
