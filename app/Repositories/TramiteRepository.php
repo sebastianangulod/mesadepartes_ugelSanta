@@ -55,7 +55,7 @@ class TramiteRepository
         $this->aplicarFiltros($query, $filtros);
 
         // Ordenar por fecha de creación descendente por defecto
-        $query->orderBy('created_at', 'desc');
+        $query->orderBy('fecha_creacion', 'desc');
 
         // Paginar resultados
         $perPage = $filtros['per_page'] ?? 15;
@@ -98,7 +98,7 @@ class TramiteRepository
             WHEN asunto LIKE '{$termino}%' THEN 2
             ELSE 3
         END")
-        ->orderBy('created_at', 'desc');
+        ->orderBy('fecha_creacion', 'desc');
 
         // Paginar resultados
         $perPage = $filtros['per_page'] ?? 15;
@@ -214,7 +214,7 @@ class TramiteRepository
         $this->aplicarFiltros($query, $filtros);
 
         // Ordenar por fecha de creación descendente
-        $query->orderBy('created_at', 'desc');
+        $query->orderBy('fecha_creacion', 'desc');
 
         // Paginar resultados
         $perPage = $filtros['per_page'] ?? 15;
@@ -232,7 +232,7 @@ class TramiteRepository
         $fechaVencimiento = now()->subDays($diasVencimiento);
 
         return Tramite::whereIn('estado', [EstadoTramite::PENDIENTE, EstadoTramite::EN_PROCESO])
-            ->where('created_at', '<', $fechaVencimiento)
+            ->where('fecha_creacion', '<', $fechaVencimiento)
             ->with(['usuario', 'procedimiento'])
             ->get();
     }
@@ -267,11 +267,11 @@ class TramiteRepository
 
         // Filtrar por rango de fechas
         if (!empty($filtros['fecha_desde'])) {
-            $query->whereDate('created_at', '>=', $filtros['fecha_desde']);
+            $query->whereDate('fecha_creacion', '>=', $filtros['fecha_desde']);
         }
 
         if (!empty($filtros['fecha_hasta'])) {
-            $query->whereDate('created_at', '<=', $filtros['fecha_hasta']);
+            $query->whereDate('fecha_creacion', '<=', $filtros['fecha_hasta']);
         }
 
         // Filtrar por número de expediente

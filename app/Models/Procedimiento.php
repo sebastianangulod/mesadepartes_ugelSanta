@@ -56,9 +56,16 @@ class Procedimiento extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
+        // No hay timestamps en la tabla real
     ];
+    
+    /**
+     * Indica si la tabla usa timestamps
+     * La tabla procedimientos NO tiene created_at ni updated_at en la base de datos real
+     * 
+     * @var bool
+     */
+    public $timestamps = false;
 
     /**
      * Relación con trámites

@@ -32,6 +32,10 @@ class AdminMiddleware
 
         // Verificar si el usuario es administrador
         if (!Auth::user()->esAdministrador()) {
+            // Redirigir según el tipo de usuario
+            if (Auth::user()->esInterno()) {
+                return redirect()->route('mesa-partes.tramites-recibidos')->with('error', 'No tiene permisos de administrador para acceder a esta área.');
+            }
             return redirect()->route('dashboard')->with('error', 'No tiene permisos de administrador para acceder a esta área.');
         }
 

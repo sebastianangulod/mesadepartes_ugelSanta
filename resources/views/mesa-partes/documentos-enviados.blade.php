@@ -3,19 +3,13 @@
     Equivalente a documentosEnviados.php del PHP puro
     Muestra los documentos enviados por el usuario autenticado
 --}}
-@extends('layouts.app')
+@extends('layouts.mesa-partes')
 
 @section('title', 'Documentos Enviados - Mesa de Partes')
 
-@section('content')
-<div class="flex">
-    <x-mesa-partes-sidebar :tramitesPendientes="$tramitesPendientes ?? 0" />
+@section('header', 'Documentos Enviados')
 
-    <!-- Contenido principal -->
-    <main class="ml-64 flex-1 p-8">
-        <x-alerts />
-        
-        <h2 class="text-3xl font-bold mb-6">Documentos Enviados</h2>
+@section('content')
         
         <div class="bg-white rounded-lg shadow p-6">
             @if($documentos->count() > 0)
@@ -94,6 +88,4 @@
                 <p class="text-gray-500 text-center py-8">No hay documentos enviados.</p>
             @endif
         </div>
-    </main>
-</div>
 @endsection

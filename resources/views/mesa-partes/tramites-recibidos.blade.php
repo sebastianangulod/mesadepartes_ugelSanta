@@ -1,16 +1,10 @@
-@extends('layouts.app')
+@extends('layouts.mesa-partes')
 
 @section('title', 'Trámites Recibidos')
 
+@section('header', 'Listado de los Trámites Recibidos')
+
 @section('content')
-<div class="flex">
-    <x-mesa-partes-sidebar :tramitesPendientes="$tramitesPendientes ?? 0" />
-    
-    <!-- Contenido principal -->
-    <main class="ml-64 flex-1 p-8">
-        <x-alerts />
-        
-        <h2 class="text-3xl font-bold mb-6">Listado de los Trámites Recibidos</h2>
         
         <!-- Filtros -->
         <div class="bg-white rounded-lg shadow p-6 mb-6">
@@ -95,8 +89,6 @@
                 </div>
             </div>
         </div>
-    </main>
-            </div>
 
 <!-- Modal Hoja de Ruta -->
 <div id="hojaRutaModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
@@ -339,13 +331,13 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${tramite.id}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     ${tramite.archivo_adjunto ? `
-                        <div class="flex flex-col gap-1">
+                        <div class="flex flex-col gap-1 items-center">
                             <a href="/storage/uploads/tramites/${tramite.archivo_adjunto}" download 
-                               class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-xs" target="_blank">
+                               class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-xs text-center" target="_blank">
                                 Descargar
                             </a>
                             <button onclick="verDocumento('${tramite.archivo_adjunto}')" 
-                                    class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded text-xs">
+                                    class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded text-xs text-center">
                                 Ver
                             </button>
                         </div>
@@ -384,12 +376,7 @@
     window.generarBotonesAccion = function(tramite) {
         let botones = '';
         
-        // Hoja de Ruta visible para todos los estados
-        botones += `<button onclick="verHojaRuta(${tramite.id})" 
-                    class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-2 rounded text-xs mb-1 mr-1">
-                    Hoja de Ruta</button>`;
-        
-        // Si está rechazado, mostrar solo hoja de ruta
+        // Si está rechazado, no mostrar botones de acción (solo se muestra en la columna "Hoja de Ruta")
         if (tramite.estado === 'RECHAZADO') {
             return botones;
         }

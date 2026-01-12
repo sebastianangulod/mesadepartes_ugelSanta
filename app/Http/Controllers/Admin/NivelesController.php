@@ -149,9 +149,9 @@ class NivelesController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'nivel' => 'required|string|in:nivel_2,nivel_3,nivel_4',
+            'nivel' => 'required|string|in:nivel_1,nivel_2,nivel_3,nivel_4',
             'nombre' => 'required|string|max:55',
-            'id_parent' => 'required|integer',
+            'id_parent' => 'nullable|integer',
         ]);
 
         if ($validator->fails()) {
@@ -166,32 +166,48 @@ class NivelesController extends Controller
             $nombre = strtoupper(trim($request->nombre));
             $idParent = $request->id_parent;
 
-            // Validar que el padre existe
-            $parentTable = str_replace('nivel_', 'nivel_', substr($nivel, 0, -1)) . (substr($nivel, -1) - 1);
-            $parentModel = $this->getModelForTable($parentTable);
-            
-            if (!$parentModel::find($idParent)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'El nivel padre no existe'
-                ], 422);
-            }
-
             // Crear el nivel según el tipo
             switch ($nivel) {
+                case 'nivel_1':
+                    // Nivel 1 no tiene padre
+                    $nuevoNivel = Nivel1::create([
+                        'nombre' => $nombre,
+                    ]);
+                    break;
                 case 'nivel_2':
+                    // Validar que el padre existe
+                    if (!$idParent || !Nivel1::find($idParent)) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'El nivel padre (Nivel 1) no existe'
+                        ], 422);
+                    }
                     $nuevoNivel = Nivel2::create([
                         'nombre' => $nombre,
                         'id_nivel1' => $idParent,
                     ]);
                     break;
                 case 'nivel_3':
+                    // Validar que el padre existe
+                    if (!$idParent || !Nivel2::find($idParent)) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'El nivel padre (Nivel 2) no existe'
+                        ], 422);
+                    }
                     $nuevoNivel = Nivel3::create([
                         'nombre' => $nombre,
                         'id_nivel2' => $idParent,
                     ]);
                     break;
                 case 'nivel_4':
+                    // Validar que el padre existe
+                    if (!$idParent || !Nivel3::find($idParent)) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'El nivel padre (Nivel 3) no existe'
+                        ], 422);
+                    }
                     $nuevoNivel = Nivel4::create([
                         'nombre' => $nombre,
                         'id_nivel3' => $idParent,

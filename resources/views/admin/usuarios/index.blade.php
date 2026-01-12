@@ -2,13 +2,74 @@
     Vista de Gestión de Usuarios Internos
     Equivalente a adminUsuarios.php del PHP puro
 --}}
-@extends('layouts.app')
+@extends('layouts.admin')
 
 @section('title', 'Administración de Usuarios - Mesa de Partes')
 
+@push('styles')
+<style>
+    /* Estilos para modales - centrados en el área de contenido (sin sidebar) */
+    #modalAddUser,
+    #modalEditUser,
+    #modalDeleteUser {
+        backdrop-filter: blur(4px);
+        /* Centrar solo en el área de contenido, considerando el sidebar de 250px */
+        left: 250px;
+        width: calc(100% - 250px);
+    }
+    
+    /* Resaltar bordes del modal para mejor visibilidad */
+    #modalAddUser > div,
+    #modalEditUser > div,
+    #modalDeleteUser > div {
+        border: 2px solid #e5e7eb;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    
+    /* Borde más visible en hover o focus */
+    #modalAddUser > div:focus-within,
+    #modalEditUser > div:focus-within,
+    #modalDeleteUser > div:focus-within {
+        border-color: #3b82f6;
+        box-shadow: 0 20px 25px -5px rgba(59, 130, 246, 0.1), 0 10px 10px -5px rgba(59, 130, 246, 0.04);
+    }
+    
+    /* Asegurar que el contenido del modal sea scrollable */
+    .modal-content {
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e0 #f7fafc;
+    }
+    
+    .modal-content::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .modal-content::-webkit-scrollbar-track {
+        background: #f7fafc;
+    }
+    
+    .modal-content::-webkit-scrollbar-thumb {
+        background-color: #cbd5e0;
+        border-radius: 4px;
+    }
+    
+    .modal-content::-webkit-scrollbar-thumb:hover {
+        background-color: #a0aec0;
+    }
+    
+    /* En pantallas pequeñas, el modal debe ocupar toda la pantalla */
+    @media (max-width: 768px) {
+        #modalAddUser,
+        #modalEditUser,
+        #modalDeleteUser {
+            left: 0;
+            width: 100%;
+        }
+    }
+</style>
+@endpush
+
 @section('content')
-<div class="container mx-auto px-4 py-8">
-    <x-alerts />
     
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold text-gray-900">Administración de Usuarios</h2>
@@ -80,11 +141,12 @@
 </div>
 
 <!-- Modal Agregar Usuario -->
-<div id="modalAddUser" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
-    <div class="bg-white p-6 rounded-lg w-full max-w-4xl my-8">
-        <div class="modal-header mb-4">
-            <h3 class="text-xl font-bold">Agregar Usuario</h3>
+<div id="modalAddUser" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="overflow-y: auto;">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl relative my-auto modal-content border-2 border-gray-200" style="max-height: 90vh; overflow-y: auto;">
+        <div class="sticky top-0 bg-white border-b-2 border-gray-300 px-6 py-4 z-10 rounded-t-lg">
+            <h3 class="text-xl font-bold text-gray-900">Agregar Usuario</h3>
         </div>
+        <div class="p-6">
         
         <form id="formCrearUsuario" class="grid grid-cols-2 gap-4" autocomplete="off" onsubmit="crearUsuario(event)">
             @csrf
@@ -226,20 +288,22 @@
                 </select>
             </div>
 
-            <div class="col-span-2 flex justify-end space-x-2 mt-4">
+            <div class="col-span-2 flex justify-end space-x-2 mt-6 pt-4 border-t-2 border-gray-300">
                 <button type="button" onclick="closeModal('modalAddUser')" class="btn-secondary">Cancelar</button>
                 <button type="submit" id="btnGuardarUsuario" class="btn-primary">Guardar</button>
             </div>
         </form>
+        </div>
     </div>
 </div>
 
 <!-- Modal Editar Usuario -->
-<div id="modalEditUser" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
-    <div class="bg-white p-6 rounded-lg w-full max-w-4xl my-8">
-        <div class="modal-header mb-4">
-            <h3 class="text-xl font-bold">Editar Usuario</h3>
+<div id="modalEditUser" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="overflow-y: auto;">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl relative my-auto modal-content border-2 border-gray-200" style="max-height: 90vh; overflow-y: auto;">
+        <div class="sticky top-0 bg-white border-b-2 border-gray-300 px-6 py-4 z-10 rounded-t-lg">
+            <h3 class="text-xl font-bold text-gray-900">Editar Usuario</h3>
         </div>
+        <div class="p-6">
         
         <form id="formEditarUsuario" class="grid grid-cols-2 gap-4">
             @csrf
@@ -345,24 +409,29 @@
                 </select>
             </div>
 
-            <div class="col-span-2 flex justify-end space-x-2 mt-4">
+            <div class="col-span-2 flex justify-end space-x-2 mt-6 pt-4 border-t-2 border-gray-300">
                 <button type="button" onclick="closeModal('modalEditUser')" class="btn-secondary">Cancelar</button>
                 <button type="button" onclick="actualizarUsuario()" class="btn-primary" id="btnEditarUsuario">Guardar Cambios</button>
             </div>
         </form>
+        </div>
     </div>
 </div>
 
 <!-- Modal Eliminar Usuario -->
-<div id="modalDeleteUser" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white p-6 rounded-lg w-full max-w-md">
-        <h2 class="text-2xl font-bold mb-4 text-red-600">Eliminar Usuario</h2>
-        <input type="hidden" id="deleteUserId">
-        <p class="text-lg text-gray-700 mb-4">
-            ¿Está seguro que desea eliminar el usuario <strong id="deleteUserName"></strong>?
-        </p>
-        <p class="text-sm text-gray-500 mb-4">Esta acción no se puede deshacer.</p>
-        <div class="flex justify-end space-x-2">
+<div id="modalDeleteUser" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="backdrop-filter: blur(4px);">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md border-2 border-gray-200">
+        <div class="px-6 py-4 border-b-2 border-gray-300">
+            <h2 class="text-2xl font-bold text-red-600">Eliminar Usuario</h2>
+        </div>
+        <div class="px-6 py-4">
+            <input type="hidden" id="deleteUserId">
+            <p class="text-lg text-gray-700 mb-4">
+                ¿Está seguro que desea eliminar el usuario <strong id="deleteUserName"></strong>?
+            </p>
+            <p class="text-sm text-gray-500 mb-4">Esta acción no se puede deshacer.</p>
+        </div>
+        <div class="px-6 py-4 border-t-2 border-gray-300 flex justify-end space-x-2">
             <button type="button" onclick="closeModal('modalDeleteUser')" class="btn-secondary">Cancelar</button>
             <button type="button" onclick="confirmarEliminarUsuario()" class="btn-danger">Eliminar</button>
         </div>
@@ -373,12 +442,41 @@
 <script>
     // Funciones de modal
     function openModal(modalId) {
-        document.getElementById(modalId).classList.remove('hidden');
+        const modal = document.getElementById(modalId);
+        modal.classList.remove('hidden');
+        // Prevenir scroll del body cuando el modal está abierto
+        document.body.style.overflow = 'hidden';
     }
 
     function closeModal(modalId) {
-        document.getElementById(modalId).classList.add('hidden');
+        const modal = document.getElementById(modalId);
+        modal.classList.add('hidden');
+        // Restaurar scroll del body
+        document.body.style.overflow = 'auto';
     }
+    
+    // Cerrar modal al hacer clic en el backdrop
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('bg-gray-900') || e.target.classList.contains('bg-opacity-75')) {
+            const modal = e.target.closest('[id^="modal"]');
+            if (modal) {
+                closeModal(modal.id);
+            }
+        }
+    });
+    
+    // Cerrar modal con tecla ESC
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modals = ['modalAddUser', 'modalEditUser', 'modalDeleteUser'];
+            modals.forEach(modalId => {
+                const modal = document.getElementById(modalId);
+                if (modal && !modal.classList.contains('hidden')) {
+                    closeModal(modalId);
+                }
+            });
+        }
+    });
 
     function togglePassword(inputId) {
         const input = document.getElementById(inputId);

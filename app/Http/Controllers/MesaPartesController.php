@@ -135,48 +135,40 @@ class MesaPartesController extends Controller
         // Construir query base
         $query = Tramite::with(['procedimiento', 'usuario']);
 
-        // Si es usuario interno, obtener trámites según su nivel asignado
+        // Si es usuario interno, obtener trámites según su nivel asignado (igual que PHP puro)
         if ($usuario->tipo_user == 2) {
             // Obtener niveles asignados al usuario
             $nivelesUsuario = \App\Models\UsuariosNiveles::where('id_usuario', $usuario->id)->get();
             
             if ($nivelesUsuario->count() > 0) {
-                // Obtener procedimientos asignados al usuario o que coincidan con sus niveles
-                $procedimientosIds = [];
+                // Construir condiciones dinámicas para los niveles (igual que PHP puro)
+                $nivelConds = [];
                 
                 foreach ($nivelesUsuario as $nivelUsuario) {
                     $nivel = $nivelUsuario->nivel;
                     $idNivel = $nivelUsuario->id_nivel;
                     
-                    // Buscar procedimientos que coincidan con el nivel del usuario
-                    $procedimientos = Procedimiento::where(function($q) use ($nivel, $idNivel) {
-                        if ($nivel == 1) {
-                            $q->where('id_area', $idNivel);
-                        } elseif ($nivel == 2) {
-                            $q->where('id_subarea', $idNivel);
-                        } elseif ($nivel == 3) {
-                            $q->where('nivel_final', '3')->where('id_nivel_final', $idNivel)
-                              ->orWhere('nivel_final', '4')
-                              ->whereHas('nivelFinal', function($q2) use ($idNivel) {
-                                  $q2->where('id_nivel3', $idNivel);
-                              });
-                        } elseif ($nivel == 4) {
-                            $q->where('nivel_final', '4')->where('id_nivel_final', $idNivel);
-                        }
-                    })->pluck('id');
-                    
-                    $procedimientosIds = array_merge($procedimientosIds, $procedimientos->toArray());
+                    if ($nivel == 1) {
+                        // Coincidencia por área para nivel 1
+                        $nivelConds[] = "(procedimientos.id_area = {$idNivel})";
+                    } elseif (in_array($nivel, [2, 3, 4])) {
+                        // Para niveles 2, 3, 4: buscar por nivel_final e id_nivel_final
+                        $nivelConds[] = "(procedimientos.nivel_final = '{$nivel}' AND procedimientos.id_nivel_final = {$idNivel})";
+                    }
                 }
                 
-                if (count($procedimientosIds) > 0) {
-                    $query->whereIn('id_procedimiento', array_unique($procedimientosIds));
+                if (count($nivelConds) > 0) {
+                    // Incluir trámites donde el usuario es responsable O que coincidan con sus niveles
+                    $query->where(function($q) use ($nivelConds, $usuario) {
+                        $q->whereRaw('(' . implode(' OR ', $nivelConds) . ')')
+                          ->orWhere('tramites.id_usuario', $usuario->id);
+                    });
                 } else {
-                    // Si no hay procedimientos asignados, no mostrar trámites
-                    $query->whereRaw('1 = 0');
+                    // Si no hay condiciones, solo mostrar trámites donde el usuario es responsable
+                    $query->where('tramites.id_usuario', $usuario->id);
                 }
             } else {
-                // Si no tiene niveles asignados, mostrar todos los trámites pendientes
-                // (comportamiento por defecto para administradores o usuarios sin asignación específica)
+                // Si no tiene niveles asignados, mostrar todos los trámites (comportamiento para administradores)
             }
         } else {
             // Usuario externo: solo sus propios trámites
@@ -220,7 +212,7 @@ class MesaPartesController extends Controller
                 ->whereDate('limite_observacion', '<=', now()->addDays(3))
                 ->count(),
             'en_proceso' => (clone $query)->where('estado', 'EN_PROCESO')->count(),
-            'atendidos_hoy' => (clone $query)->whereDate('updated_at', today())->count(),
+            'atendidos_hoy' => (clone $query)->whereDate('fecha_creacion', today())->count(),
         ];
 
         // Para el badge de pendientes en el sidebar
@@ -386,40 +378,34 @@ class MesaPartesController extends Controller
                 $nivelesUsuario = \App\Models\UsuariosNiveles::where('id_usuario', $usuario->id)->get();
                 
                 if ($nivelesUsuario->count() > 0) {
-                    $procedimientosIds = [];
+                    // Construir condiciones dinámicas para los niveles (igual que PHP puro)
+                    $nivelConds = [];
                     
                     foreach ($nivelesUsuario as $nivelUsuario) {
                         $nivel = $nivelUsuario->nivel;
                         $idNivel = $nivelUsuario->id_nivel;
                         
-                        $procedimientos = Procedimiento::where(function($q) use ($nivel, $idNivel) {
-                            if ($nivel == 1) {
-                                $q->where('id_area', $idNivel);
-                            } elseif ($nivel == 2) {
-                                $q->where('id_subarea', $idNivel);
-                            } elseif ($nivel == 3) {
-                                $q->where(function($q2) use ($idNivel) {
-                                    $q2->where('nivel_final', '3')->where('id_nivel_final', $idNivel)
-                                       ->orWhere(function($q3) use ($idNivel) {
-                                           $q3->where('nivel_final', '4')
-                                              ->whereHas('nivel4', function($q4) use ($idNivel) {
-                                                  $q4->where('id_nivel3', $idNivel);
-                                              });
-                                       });
-                                });
-                            } elseif ($nivel == 4) {
-                                $q->where('nivel_final', '4')->where('id_nivel_final', $idNivel);
-                            }
-                        })->pluck('id');
-                        
-                        $procedimientosIds = array_merge($procedimientosIds, $procedimientos->toArray());
+                        if ($nivel == 1) {
+                            // Coincidencia por área para nivel 1
+                            $nivelConds[] = "(procedimientos.id_area = {$idNivel})";
+                        } elseif (in_array($nivel, [2, 3, 4])) {
+                            // Para niveles 2, 3, 4: buscar por nivel_final e id_nivel_final
+                            $nivelConds[] = "(procedimientos.nivel_final = '{$nivel}' AND procedimientos.id_nivel_final = {$idNivel})";
+                        }
                     }
                     
-                    if (count($procedimientosIds) > 0) {
-                        $query->whereIn('id_procedimiento', array_unique($procedimientosIds));
+                    if (count($nivelConds) > 0) {
+                        // Incluir trámites donde el usuario es responsable O que coincidan con sus niveles
+                        $query->where(function($q) use ($nivelConds, $usuario) {
+                            $q->whereRaw('(' . implode(' OR ', $nivelConds) . ')')
+                              ->orWhere('tramites.id_usuario', $usuario->id);
+                        });
                     } else {
-                        $query->whereRaw('1 = 0');
+                        // Si no hay condiciones, solo mostrar trámites donde el usuario es responsable
+                        $query->where('tramites.id_usuario', $usuario->id);
                     }
+                } else {
+                    // Si no tiene niveles asignados, mostrar todos los trámites (comportamiento para administradores)
                 }
             } else {
                 // Usuario externo: solo sus propios trámites
@@ -448,51 +434,56 @@ class MesaPartesController extends Controller
                 ->take($porPagina)
                 ->get();
 
-            // Agregar acciones permitidas para cada trámite
-            $tramites->transform(function($tramite) use ($usuario) {
-                $acciones = [];
-                $nivelUsuario = $usuario->usuariosNiveles->first()->nivel ?? null;
-                $nivelFinalProcedimiento = $tramite->procedimiento->nivel_final ?? null;
-
-                // Lógica de acciones permitidas según estado y nivel
-                switch($tramite->estado) {
-                    case 'PENDIENTE':
-                        if ($usuario->tipo_user == 2) {
-                            $acciones[] = 'ACEPTAR';
-                            $acciones[] = 'RECHAZAR';
-                            $acciones[] = 'OBSERVAR';
-                        }
-                        break;
-                    case 'EN_PROCESO':
-                        if ($usuario->tipo_user == 2) {
-                            if ($nivelUsuario && $nivelUsuario < $nivelFinalProcedimiento) {
-                                $acciones[] = 'DERIVAR';
-                            }
-                            if ($nivelUsuario == $nivelFinalProcedimiento) {
-                                $acciones[] = 'DERIVAR_ESPECIALISTA';
-                            }
-                            $acciones[] = 'OBSERVAR';
-                            $acciones[] = 'OBSERVAR_CON_OFICIO';
-                            if ($nivelUsuario == $nivelFinalProcedimiento) {
-                                $acciones[] = 'VERIFICAR';
-                            }
-                        }
-                        break;
-                    case 'OBSERVADO':
-                        if ($usuario->tipo_user == 1) {
-                            $acciones[] = 'CORREGIR';
-                        } else {
-                            $acciones[] = 'VERIFICAR';
-                        }
-                        break;
-                    case 'VERIFICADO':
-                        if ($usuario->tipo_user == 2 && $nivelUsuario == $nivelFinalProcedimiento) {
-                            $acciones[] = 'PROCESAR';
-                        }
-                        break;
+            // Agregar acciones permitidas para cada trámite (igual que PHP puro)
+            $nivelesUsuario = $usuario->usuariosNiveles;
+            $nivelUsuario = $nivelesUsuario->first()->nivel ?? null;
+            
+            $tramites->transform(function($tramite) use ($usuario, $nivelUsuario) {
+                // Si el trámite está rechazado, no hay acciones disponibles
+                if ($tramite->estado === 'RECHAZADO') {
+                    $tramite->accionesPermitidas = [];
+                    return $tramite;
                 }
-
-                $tramite->accionesPermitidas = $acciones;
+                
+                $estado = $tramite->estado;
+                $tieneOficio = !empty($tramite->oficio);
+                $nivelFinalProcedimiento = $tramite->procedimiento->nivel_final ?? null;
+                
+                // Lógica de acciones permitidas según nivel (igual que PHP puro)
+                $acciones = [];
+                
+                if ($nivelUsuario == 1) {
+                    $acciones = ['OBSERVAR', 'DERIVAR'];
+                } elseif ($nivelUsuario == 2) {
+                    $acciones = ['OBSERVAR', 'DERIVAR', 'ACEPTAR', 'RECHAZAR'];
+                } elseif ($nivelUsuario == 3) {
+                    $acciones = ['VERIFICAR', 'DERIVAR_ESPECIALISTA'];
+                } elseif ($nivelUsuario == 4) {
+                    // El especialista (nivel 4) tiene acciones según el estado
+                    if ($estado === 'EN_PROCESO') {
+                        // El especialista puede observar (simple), observar con oficio o procesar
+                        $acciones = ['OBSERVAR', 'OBSERVAR_CON_OFICIO', 'PROCESAR'];
+                    } elseif ($estado === 'VERIFICADO') {
+                        $acciones = ['PROCESAR', 'RECHAZAR'];
+                    } else {
+                        $acciones = [];
+                    }
+                }
+                
+                // Validaciones adicionales según estado y nivel final
+                if ($usuario->tipo_user == 1 && $estado === 'OBSERVADO') {
+                    // Usuario externo solo puede corregir
+                    $acciones = ['CORREGIR'];
+                }
+                
+                // Si el usuario no es del nivel final, no puede procesar
+                if ($nivelUsuario != $nivelFinalProcedimiento) {
+                    $acciones = array_filter($acciones, function($accion) {
+                        return $accion !== 'PROCESAR';
+                    });
+                }
+                
+                $tramite->accionesPermitidas = array_values($acciones);
                 return $tramite;
             });
 

@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\AreasController;
 use App\Http\Controllers\Admin\NivelesController;
 use App\Http\Controllers\Admin\ProcedimientosController;
 use App\Http\Controllers\Admin\UsuariosController;
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\MesaPartesController;
 
 /*
@@ -215,8 +216,11 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/cache/limpiar', [ConfiguracionController::class, 'limpiarCache'])->name('configuracion.cache.limpiar');
     });
 
-    // Rutas de administración
-    Route::prefix('admin')->group(function () {
+    // Rutas de administración (solo para administradores)
+    Route::prefix('admin')->middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])->group(function () {
+        // Dashboard de administración
+        Route::get('/', [AdminController::class, 'index'])->name('admin.index');
+        
         // Usuarios
         Route::get('/usuarios', [UsuariosController::class, 'index'])->name('admin.usuarios');
         Route::post('/usuarios', [UsuariosController::class, 'store'])->name('admin.usuarios.store');
@@ -338,11 +342,11 @@ Route::middleware(['auth'])->group(function () {
             try {
                 $tramites = \App\Models\Tramite::with(['procedimiento'])
                     ->where('estado', \App\Domain\Tramites\EstadoTramite::PENDIENTE)
-                    ->orderByDesc('created_at')
+                    ->orderByDesc('fecha_creacion')
                     ->limit(10)
                     ->get()
                     ->map(function ($tramite) {
-                        $dias = $tramite->created_at ? $tramite->created_at->diffInDays(now()) : 0;
+                        $dias = $tramite->fecha_creacion ? $tramite->fecha_creacion->diffInDays(now()) : 0;
                         
                         return [
                             'id' => $tramite->id,
@@ -367,7 +371,7 @@ Route::middleware(['auth'])->group(function () {
                 // Alertas de trámites vencidos (más de 30 días)
                 $tramitesVencidos = \App\Models\Tramite::where('estado', '!=', \App\Domain\Tramites\EstadoTramite::FINALIZADO)
                     ->where('estado', '!=', \App\Domain\Tramites\EstadoTramite::RECHAZADO)
-                    ->where('created_at', '<', now()->subDays(30))
+                    ->where('fecha_creacion', '<', now()->subDays(30))
                     ->count();
                 
                 if ($tramitesVencidos > 0) {
@@ -381,7 +385,7 @@ Route::middleware(['auth'])->group(function () {
                 
                 // Alertas de trámites pendientes por mucho tiempo (más de 15 días)
                 $tramitesPendientesLargos = \App\Models\Tramite::where('estado', \App\Domain\Tramites\EstadoTramite::PENDIENTE)
-                    ->where('created_at', '<', now()->subDays(15))
+                    ->where('fecha_creacion', '<', now()->subDays(15))
                     ->count();
                 
                 if ($tramitesPendientesLargos > 0) {

@@ -30,13 +30,17 @@ class ProcedimientosController extends Controller
     {
         $nivel1 = Nivel1::orderBy('nombre')->get();
         
-        $procedimientos = Procedimiento::with(['area', 'subarea', 'nivelFinal'])
+        // Cargar procedimientos con relaciones básicas (sin nivelFinal que causa problemas)
+        $procedimientos = Procedimiento::with(['area', 'subarea'])
             ->orderBy('nombre')
             ->get();
 
-        // Agregar nombres de niveles finales
+        // Agregar nombres de niveles finales manualmente
         foreach ($procedimientos as $proc) {
-            if ($proc->nivel_final == '3') {
+            if ($proc->nivel_final == '2') {
+                // Si el nivel final es 2, usar la subarea (nivel2)
+                $proc->nivel_final_nombre = $proc->subarea ? $proc->subarea->nombre : null;
+            } elseif ($proc->nivel_final == '3') {
                 $nivel3 = Nivel3::find($proc->id_nivel_final);
                 $proc->nivel_final_nombre = $nivel3 ? $nivel3->nombre : null;
             } elseif ($proc->nivel_final == '4') {
@@ -61,7 +65,7 @@ class ProcedimientosController extends Controller
             'nombre' => 'required|string|max:255',
             'id_area' => 'required|exists:nivel_1,id',
             'id_subarea' => 'required|exists:nivel_2,id',
-            'nivel_final' => 'required|in:2,3,4',
+            'nivel_final' => 'required|in:3,4', // Solo nivel 3 o 4
             'id_nivel_final' => 'required|integer',
         ]);
 
@@ -104,7 +108,7 @@ class ProcedimientosController extends Controller
             DB::beginTransaction();
 
             $procedimiento = Procedimiento::create([
-                'nombre' => strtoupper(trim($request->nombre)),
+                'nombre' => trim($request->nombre),
                 'id_area' => $request->id_area,
                 'id_subarea' => $request->id_subarea,
                 'nivel_final' => $nivelFinal,
@@ -143,7 +147,7 @@ class ProcedimientosController extends Controller
             'nombre' => 'required|string|max:255',
             'id_area' => 'required|exists:nivel_1,id',
             'id_subarea' => 'required|exists:nivel_2,id',
-            'nivel_final' => 'required|in:2,3,4',
+            'nivel_final' => 'required|in:3,4', // Solo nivel 3 o 4
             'id_nivel_final' => 'required|integer',
         ]);
 
@@ -178,7 +182,7 @@ class ProcedimientosController extends Controller
             DB::beginTransaction();
 
             $procedimiento->update([
-                'nombre' => strtoupper(trim($request->nombre)),
+                'nombre' => trim($request->nombre),
                 'id_area' => $request->id_area,
                 'id_subarea' => $request->id_subarea,
                 'nivel_final' => $nivelFinal,
@@ -247,7 +251,8 @@ class ProcedimientosController extends Controller
     public function obtener($id)
     {
         try {
-            $procedimiento = Procedimiento::with(['area', 'subarea', 'nivelFinal'])
+            // Cargar procedimiento sin la relación nivelFinal que causa problemas
+            $procedimiento = Procedimiento::with(['area', 'subarea'])
                 ->findOrFail($id);
 
             $data = $procedimiento->toArray();

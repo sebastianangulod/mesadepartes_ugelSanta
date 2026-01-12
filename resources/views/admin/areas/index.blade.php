@@ -2,13 +2,51 @@
     Vista de Administración de Áreas (Nivel 1)
     Equivalente a adminAreas.php del PHP puro
 --}}
-@extends('layouts.app')
+@extends('layouts.admin')
 
 @section('title', 'Administración de Áreas - Mesa de Partes')
 
+@push('styles')
+<style>
+    /* Estilos para modales - centrados en el área de contenido (sin sidebar) */
+    #modalAddArea,
+    #modalEditArea,
+    #modalDeleteArea {
+        backdrop-filter: blur(4px);
+        /* Centrar solo en el área de contenido, considerando el sidebar de 250px */
+        left: 250px;
+        width: calc(100% - 250px);
+    }
+    
+    /* Resaltar bordes del modal para mejor visibilidad */
+    #modalAddArea > div,
+    #modalEditArea > div,
+    #modalDeleteArea > div {
+        border: 2px solid #e5e7eb;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    
+    /* Borde más visible en hover o focus */
+    #modalAddArea > div:focus-within,
+    #modalEditArea > div:focus-within,
+    #modalDeleteArea > div:focus-within {
+        border-color: #3b82f6;
+        box-shadow: 0 20px 25px -5px rgba(59, 130, 246, 0.1), 0 10px 10px -5px rgba(59, 130, 246, 0.04);
+    }
+    
+    /* En pantallas pequeñas, el modal debe ocupar toda la pantalla */
+    @media (max-width: 768px) {
+        #modalAddArea,
+        #modalEditArea,
+        #modalDeleteArea {
+            left: 0;
+            width: 100%;
+        }
+    }
+</style>
+@endpush
+
 @section('content')
-<div class="container mx-auto px-4 py-8">
-    <x-alerts />
     
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-3xl font-bold text-gray-900">Administración de Áreas</h2>
@@ -73,81 +111,123 @@
 </div>
 
 <!-- Modal Añadir Área -->
-<div id="modalAddArea" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white p-6 rounded-lg w-full max-w-md">
-        <h2 class="text-2xl font-bold mb-4">Añadir Área</h2>
-        <form id="formCrearArea" onsubmit="crearArea(event)">
-            @csrf
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="nombreArea">
-                    Nombre del Área
-                </label>
-                <input type="text" id="nombreArea" name="nombre" required
-                       pattern="[A-Za-záéíóúñÁÉÍÓÚÑ\s]{3,55}"
-                       title="El nombre debe contener solo letras y espacios, entre 3 y 55 caracteres"
-                       placeholder="Nombre del Área" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <div id="errorNombreArea" class="text-red-500 text-sm mt-1 hidden"></div>
-            </div>
-            <div class="flex justify-end space-x-2">
-                <button type="submit" class="btn-primary">Guardar</button>
-                <button type="button" onclick="closeModal('modalAddArea')" class="btn-secondary">Cancelar</button>
-            </div>
-        </form>
+<div id="modalAddArea" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="overflow-y: auto;">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md border-2 border-gray-200">
+        <div class="sticky top-0 bg-white border-b-2 border-gray-300 px-6 py-4 z-10 rounded-t-lg">
+            <h2 class="text-xl font-bold text-gray-900">Añadir Área</h2>
+        </div>
+        <div class="p-6">
+            <form id="formCrearArea" onsubmit="crearArea(event)">
+                @csrf
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="nombreArea">
+                        Nombre del Área
+                    </label>
+                    <input type="text" id="nombreArea" name="nombre" required
+                           pattern="[A-Za-záéíóúñÁÉÍÓÚÑ\s]{3,55}"
+                           title="El nombre debe contener solo letras y espacios, entre 3 y 55 caracteres"
+                           placeholder="Nombre del Área" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <div id="errorNombreArea" class="text-red-500 text-sm mt-1 hidden"></div>
+                </div>
+                <div class="flex justify-end space-x-2 mt-6 pt-4 border-t-2 border-gray-300">
+                    <button type="button" onclick="closeModal('modalAddArea')" class="btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
 <!-- Modal Editar Área -->
-<div id="modalEditArea" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white p-6 rounded-lg w-full max-w-md">
-        <h2 class="text-2xl font-bold mb-4">Editar Área</h2>
-        <form id="formEditarArea" onsubmit="actualizarArea(event)">
-            @csrf
-            @method('PUT')
-            <input type="hidden" id="editAreaId" name="id">
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="editAreaName">
-                    Nombre del Área
-                </label>
-                <input type="text" id="editAreaName" name="nombre" required
-                       pattern="[A-Za-záéíóúñÁÉÍÓÚÑ\s]{3,55}"
-                       placeholder="Nombre del Área" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-            <div class="flex justify-end space-x-2">
-                <button type="submit" class="btn-success">Actualizar</button>
-                <button type="button" onclick="closeModal('modalEditArea')" class="btn-secondary">Cancelar</button>
-            </div>
-        </form>
+<div id="modalEditArea" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="overflow-y: auto;">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md border-2 border-gray-200">
+        <div class="sticky top-0 bg-white border-b-2 border-gray-300 px-6 py-4 z-10 rounded-t-lg">
+            <h2 class="text-xl font-bold text-gray-900">Editar Área</h2>
+        </div>
+        <div class="p-6">
+            <form id="formEditarArea" onsubmit="actualizarArea(event)">
+                @csrf
+                @method('PUT')
+                <input type="hidden" id="editAreaId" name="id">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="editAreaName">
+                        Nombre del Área
+                    </label>
+                    <input type="text" id="editAreaName" name="nombre" required
+                           pattern="[A-Za-záéíóúñÁÉÍÓÚÑ\s]{3,55}"
+                           placeholder="Nombre del Área" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="flex justify-end space-x-2 mt-6 pt-4 border-t-2 border-gray-300">
+                    <button type="button" onclick="closeModal('modalEditArea')" class="btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn-primary">Actualizar</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
 <!-- Modal Eliminar Área -->
-<div id="modalDeleteArea" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white p-6 rounded-lg w-full max-w-md">
-        <h2 class="text-2xl font-bold mb-4 text-red-600">Eliminar Área</h2>
-        <form id="formEliminarArea" onsubmit="confirmarEliminarArea(event)">
-            @csrf
-            @method('DELETE')
-            <input type="hidden" id="deleteAreaId" name="id">
-            <p class="mb-4 text-gray-700">¿Estás seguro de que deseas eliminar el área <strong id="deleteAreaName"></strong>?</p>
-            <div class="flex justify-end space-x-2">
-                <button type="submit" class="btn-danger">Eliminar</button>
-                <button type="button" onclick="closeModal('modalDeleteArea')" class="btn-secondary">Cancelar</button>
-            </div>
-        </form>
+<div id="modalDeleteArea" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="backdrop-filter: blur(4px);">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md border-2 border-gray-200">
+        <div class="px-6 py-4 border-b-2 border-gray-300">
+            <h2 class="text-2xl font-bold text-red-600">Eliminar Área</h2>
+        </div>
+        <div class="px-6 py-4">
+            <form id="formEliminarArea" onsubmit="confirmarEliminarArea(event)">
+                @csrf
+                @method('DELETE')
+                <input type="hidden" id="deleteAreaId" name="id">
+                <p class="mb-4 text-gray-700">¿Estás seguro de que deseas eliminar el área <strong id="deleteAreaName"></strong>?</p>
+            </form>
+        </div>
+        <div class="px-6 py-4 border-t-2 border-gray-300 flex justify-end space-x-2">
+            <button type="button" onclick="closeModal('modalDeleteArea')" class="btn-secondary">Cancelar</button>
+            <button type="button" onclick="confirmarEliminarArea(event)" class="btn-danger">Eliminar</button>
+        </div>
     </div>
 </div>
 
 @push('scripts')
 <script>
+    // Funciones de modal
     function openModal(modalId) {
-        document.getElementById(modalId).classList.remove('hidden');
+        const modal = document.getElementById(modalId);
+        modal.classList.remove('hidden');
+        // Prevenir scroll del body cuando el modal está abierto
+        document.body.style.overflow = 'hidden';
     }
 
     function closeModal(modalId) {
-        document.getElementById(modalId).classList.add('hidden');
+        const modal = document.getElementById(modalId);
+        modal.classList.add('hidden');
+        // Restaurar scroll del body
+        document.body.style.overflow = 'auto';
     }
+    
+    // Cerrar modal al hacer clic en el backdrop
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('bg-gray-900') || e.target.classList.contains('bg-opacity-75')) {
+            const modal = e.target.closest('[id^="modal"]');
+            if (modal) {
+                closeModal(modal.id);
+            }
+        }
+    });
+    
+    // Cerrar modal con tecla ESC
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modals = ['modalAddArea', 'modalEditArea', 'modalDeleteArea'];
+            modals.forEach(modalId => {
+                const modal = document.getElementById(modalId);
+                if (modal && !modal.classList.contains('hidden')) {
+                    closeModal(modalId);
+                }
+            });
+        }
+    });
 
     function crearArea(event) {
         event.preventDefault();
@@ -220,8 +300,9 @@
     }
 
     function confirmarEliminarArea(event) {
-        event.preventDefault();
-        const form = event.target;
+        if (event) {
+            event.preventDefault();
+        }
         const id = document.getElementById('deleteAreaId').value;
         
         fetch(`/admin/areas/${id}`, {

@@ -50,9 +50,7 @@ class UsuariosController extends Controller
     public function index(Request $request)
     {
         $usuarios = Usuario::where('tipo_user', 2)
-            ->with(['usuariosNiveles' => function($query) {
-                $query->with(['nivel']);
-            }])
+            ->with('usuariosNiveles')
             ->orderBy('nombres')
             ->get();
 

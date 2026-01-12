@@ -3,19 +3,13 @@
     Equivalente a rastrearTramites.php del PHP puro
     Para usuarios externos e internos
 --}}
-@extends('layouts.app')
+@extends('layouts.mesa-partes')
 
 @section('title', 'Rastrear Trámites - Mesa de Partes')
 
-@section('content')
-<div class="flex">
-    <x-mesa-partes-sidebar :tramitesPendientes="$tramitesPendientes ?? 0" />
+@section('header', 'Rastrear Trámites')
 
-    <!-- Contenido principal -->
-    <main class="ml-64 flex-1 p-8">
-        <x-alerts />
-        
-        <h2 class="text-3xl font-bold mb-6">Rastrear Trámites</h2>
+@section('content')
         
         <div class="bg-white rounded-lg shadow p-6">
             <form id="searchForm" class="mb-6">
@@ -132,8 +126,6 @@
                 <p class="mt-2 text-gray-600">Buscando trámites...</p>
             </div>
         </div>
-    </main>
-</div>
 
 <!-- Modal Hoja de Ruta -->
 <div id="hojaRutaModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">

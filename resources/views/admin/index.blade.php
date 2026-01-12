@@ -3,17 +3,15 @@
     Panel principal para usuarios administradores
     Muestra estadísticas y accesos rápidos
 --}}
-@extends('layouts.app')
+@extends('layouts.admin')
 
 @section('title', 'Panel de Administración - Mesa de Partes')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
-    <x-alerts />
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">Panel de Administración</h1>
-        <p class="text-gray-600">Bienvenido, {{ Auth::user()->nombres }}</p>
-    </div>
+<div class="mb-8">
+    <h2 class="text-3xl font-bold text-gray-900">Panel de Administración</h2>
+    <p class="text-gray-600">Bienvenido, {{ Auth::user()->nombres }}</p>
+</div>
 
     {{-- Estadísticas Generales --}}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -91,9 +89,6 @@
                     <a href="{{ route('admin.usuarios') }}" class="flex-1 text-center bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
                         Ver Usuarios
                     </a>
-                    <a href="{{ route('admin.usuarios.create') }}" class="flex-1 text-center bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-                        Nuevo Usuario
-                    </a>
                 </div>
             </div>
         </div>
@@ -135,8 +130,24 @@
                     <a href="{{ route('admin.procedimientos') }}" class="flex-1 text-center bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
                         Ver Procedimientos
                     </a>
-                    <a href="{{ route('admin.procedimientos.create') }}" class="flex-1 text-center bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-                        Nuevo Procedimiento
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow hover:shadow-lg transition-shadow">
+            <div class="p-6">
+                <div class="flex items-center mb-4">
+                    <div class="p-2 bg-red-100 rounded-lg">
+                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                        </svg>
+                    </div>
+                    <h3 class="ml-3 text-lg font-semibold text-gray-900">Mesa de Partes</h3>
+                </div>
+                <p class="text-gray-600 mb-4">Gestionar trámites recibidos</p>
+                <div class="flex space-x-2">
+                    <a href="{{ route('mesa-partes.tramites-recibidos') }}" class="flex-1 text-center bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                        Ver Trámites
                     </a>
                 </div>
             </div>
@@ -166,24 +177,44 @@
                             @foreach($tramitesRecientes as $tramite)
                                 <tr>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        {{ $tramite->numero_expediente }}
+                                        {{ $tramite->numero_expediente ?? ($tramite->numero_voucher ?? 'MP-' . str_pad($tramite->id, 6, '0', STR_PAD_LEFT)) }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {{ Str::limit($tramite->asunto, 50) }}
+                                        {{ Str::limit($tramite->asunto ?? ($tramite->procedimiento->nombre ?? 'Sin asunto'), 50) }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {{ $tramite->usuario->nombre_completo }}
+                                        {{ $tramite->usuario ? ($tramite->usuario->nombres . ' ' . $tramite->usuario->apellido_paterno) : 'N/A' }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $tramite->estado_clases_css }}">
-                                            {{ $tramite->estado_etiqueta }}
+                                        @php
+                                            $estadoClases = [
+                                                'PENDIENTE' => 'bg-yellow-100 text-yellow-800',
+                                                'EN_PROCESO' => 'bg-blue-100 text-blue-800',
+                                                'OBSERVADO' => 'bg-orange-100 text-orange-800',
+                                                'VERIFICADO' => 'bg-purple-100 text-purple-800',
+                                                'FINALIZADO' => 'bg-green-100 text-green-800',
+                                                'RECHAZADO' => 'bg-red-100 text-red-800'
+                                            ];
+                                            $estadoEtiquetas = [
+                                                'PENDIENTE' => 'Pendiente',
+                                                'EN_PROCESO' => 'En Proceso',
+                                                'OBSERVADO' => 'Observado',
+                                                'VERIFICADO' => 'Verificado',
+                                                'FINALIZADO' => 'Finalizado',
+                                                'RECHAZADO' => 'Rechazado'
+                                            ];
+                                            $clase = $estadoClases[$tramite->estado] ?? 'bg-gray-100 text-gray-800';
+                                            $etiqueta = $estadoEtiquetas[$tramite->estado] ?? $tramite->estado;
+                                        @endphp
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $clase }}">
+                                            {{ $etiqueta }}
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {{ $tramite->created_at->format('d/m/Y H:i') }}
+                                        {{ $tramite->fecha_creacion ? $tramite->fecha_creacion->format('d/m/Y H:i') : 'N/A' }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <a href="{{ route('tramites.show', $tramite) }}" class="text-indigo-600 hover:text-indigo-900">Ver</a>
+                                        <a href="{{ route('mesa-partes.tramites-recibidos') }}?tramite_id={{ $tramite->id }}" class="text-indigo-600 hover:text-indigo-900">Ver</a>
                                     </td>
                                 </tr>
                             @endforeach

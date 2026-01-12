@@ -3,6 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Nivel1;
+use App\Models\Nivel2;
+use App\Models\Nivel3;
+use App\Models\Nivel4;
 
 /**
  * Modelo UsuariosNiveles
@@ -40,18 +44,26 @@ class UsuariosNiveles extends Model
 
     /**
      * Obtiene el modelo del nivel correspondiente según el tipo
+     * Acceso directo al modelo del nivel (no es una relación para evitar conflictos)
      */
-    public function nivel()
+    public function getNivelModeloAttribute()
     {
-        switch ($this->nivel) {
+        $nivelNumero = $this->getAttribute('nivel');
+        $idNivel = $this->getAttribute('id_nivel');
+        
+        if (!$idNivel) {
+            return null;
+        }
+        
+        switch ($nivelNumero) {
             case 1:
-                return $this->belongsTo(Nivel1::class, 'id_nivel');
+                return Nivel1::find($idNivel);
             case 2:
-                return $this->belongsTo(Nivel2::class, 'id_nivel');
+                return Nivel2::find($idNivel);
             case 3:
-                return $this->belongsTo(Nivel3::class, 'id_nivel');
+                return Nivel3::find($idNivel);
             case 4:
-                return $this->belongsTo(Nivel4::class, 'id_nivel');
+                return Nivel4::find($idNivel);
             default:
                 return null;
         }
@@ -62,15 +74,26 @@ class UsuariosNiveles extends Model
      */
     public function getNivelNombreAttribute()
     {
-        switch ($this->nivel) {
+        $nivelNumero = $this->getAttribute('nivel');
+        $idNivel = $this->getAttribute('id_nivel');
+        
+        if (!$idNivel) {
+            return 'N/A';
+        }
+        
+        switch ($nivelNumero) {
             case 1:
-                return $this->belongsTo(Nivel1::class, 'id_nivel')->first()->nombre ?? 'N/A';
+                $modelo = Nivel1::find($idNivel);
+                return $modelo ? $modelo->nombre : 'N/A';
             case 2:
-                return $this->belongsTo(Nivel2::class, 'id_nivel')->first()->nombre ?? 'N/A';
+                $modelo = Nivel2::find($idNivel);
+                return $modelo ? $modelo->nombre : 'N/A';
             case 3:
-                return $this->belongsTo(Nivel3::class, 'id_nivel')->first()->nombre ?? 'N/A';
+                $modelo = Nivel3::find($idNivel);
+                return $modelo ? $modelo->nombre : 'N/A';
             case 4:
-                return $this->belongsTo(Nivel4::class, 'id_nivel')->first()->nombre ?? 'N/A';
+                $modelo = Nivel4::find($idNivel);
+                return $modelo ? $modelo->nombre : 'N/A';
             default:
                 return 'N/A';
         }

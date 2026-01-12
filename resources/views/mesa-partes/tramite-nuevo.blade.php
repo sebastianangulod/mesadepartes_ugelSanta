@@ -1,67 +1,56 @@
-@extends('layouts.app')
+@extends('layouts.mesa-partes')
 
 @section('title', 'Nuevo Trámite - Mesa de Partes')
 
+@section('header', 'Mesa de Partes Virtual')
+
 @section('content')
-<div class="flex">
-    <x-mesa-partes-sidebar :tramitesPendientes="0" />
-    
-    <!-- Contenido principal -->
-    <main class="ml-64 flex-1 p-8">
-            <x-alerts />
-            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                <h1 class="h2">Mesa de Partes Virtual</h1>
+<div class="flex space-x-6">
+    <!-- Datos del Expediente -->
+    <div class="w-full bg-white shadow-md rounded-lg overflow-hidden">
+        <!-- Encabezado destacado -->
+        <div class="bg-gradient-to-r from-purple-600 to-purple-700 text-gray px-6 py-4 border-b-2 border-purple-800">
+            <h2 class="text-xl font-bold">Datos del Expediente</h2>
+        </div>
+        
+        <!-- Contenido del formulario -->
+        <div class="p-6">
+        <form id="tramiteForm" enctype="multipart/form-data">
+            @csrf
+            <input type="hidden" name="action" value="crear_tramite">
+            
+            <div class="mb-4">
+                <label for="id_procedimiento" class="block text-gray-900 font-medium mb-2">
+                    Procedimiento <span class="text-red-500">*</span>
+                </label>
+                <select id="id_procedimiento" name="id_procedimiento" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900" required>
+                    <option value="" disabled selected>Seleccionar un procedimiento</option>
+                    @foreach($procedimientos as $procedimiento)
+                        <option value="{{ $procedimiento->id }}">
+                            {{ $procedimiento->nombre }}
+                        </option>
+                    @endforeach
+                </select>
             </div>
 
-            <div class="row">
-                <div class="col-12">
-                    <div class="card shadow">
-                        <div class="card-header bg-purple text-white">
-                            <h5 class="card-title mb-0">Datos del Expediente</h5>
-                        </div>
-                        <div class="card-body">
-                            <form id="tramiteForm" enctype="multipart/form-data">
-                                @csrf
-                                <input type="hidden" name="action" value="crear_tramite">
-                                
-                                <div class="mb-4">
-                                    <label for="id_procedimiento" class="form-label">
-                                        Procedimiento <span class="text-danger">*</span>
-                                    </label>
-                                    <select id="id_procedimiento" name="id_procedimiento" class="form-select" required>
-                                        <option value="" disabled selected>Seleccionar un procedimiento</option>
-                                        @foreach($procedimientos as $procedimiento)
-                                            <option value="{{ $procedimiento->id }}">
-                                                {{ $procedimiento->nombre }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-
-                                <div class="mb-4">
-                                    <label for="archivo" class="form-label">
-                                        Adjuntar Archivo (PDF) <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="file" id="archivo" name="archivo" class="form-control" required accept=".pdf">
-                                    <div id="archivoError" class="text-danger d-none">
-                                        Por favor, seleccione un archivo PDF.
-                                    </div>
-                                    <small class="form-text text-muted">
-                                        Tamaño máximo: 10MB. Solo archivos PDF.
-                                    </small>
-                                </div>
-
-                                <input type="hidden" name="tipo_tramite" value="{{ $tipoTramite }}">
-                                
-                                <button type="submit" id="submitBtn" class="btn btn-primary" disabled>
-                                    <i class="fas fa-save"></i> Crear Trámite
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+            <div class="mb-4">
+                <label for="archivo" class="block text-gray-900 font-medium mb-2">
+                    Adjuntar Archivo (PDF) <span class="text-red-500">*</span>
+                </label>
+                <input type="file" id="archivo" name="archivo" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900" required accept=".pdf">
+                <p id="archivoError" class="text-red-500 mt-2 hidden">Por favor, seleccione un archivo PDF.</p>
+                <p class="text-gray-600 text-sm mt-2">
+                    Tamaño máximo: 10MB. Solo archivos PDF.
+                </p>
             </div>
-        </main>
+
+            <input type="hidden" name="tipo_tramite" value="{{ $tipoTramite }}">
+            
+            <button type="submit" id="submitBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                Crear Trámite
+            </button>
+        </form>
+        </div>
     </div>
 </div>
 @endsection
@@ -174,10 +163,10 @@
             var match = ['application/pdf'];
             
             if (!file || !match.includes(fileType)) {
-                $('#archivoError').removeClass('d-none');
+                $('#archivoError').removeClass('hidden');
                 $('#submitBtn').prop('disabled', true);
             } else {
-                $('#archivoError').addClass('d-none');
+                $('#archivoError').addClass('hidden');
                 $('#submitBtn').prop('disabled', false);
             }
         });

@@ -10,6 +10,7 @@ use App\Services\Api\ApiPeruService;
 use App\Mail\BienvenidaUsuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -246,9 +247,15 @@ class AuthController extends Controller
             // Registrar acceso exitoso
             $this->registrarAccesoExitoso($usuario, $request->ip());
 
+            // Verificar si es administrador (como en PHP puro: consultar tabla administradores directamente)
+            // Esto es más confiable que usar relaciones que pueden no estar cargadas
+            $esAdmin = DB::table('administradores')->where('id_usuario', $usuario->id)->exists();
+            
+            Log::info("Login interno - Usuario ID: {$usuario->id}, DNI: {$usuario->dni}, Es Admin: " . ($esAdmin ? 'Sí' : 'No'));
+
             // Redirigir según sea administrador o usuario interno operativo
-            if ($usuario->es_administrador) {
-                return redirect()->route('dashboard')->with('success', 'Bienvenido al sistema de administración.');
+            if ($esAdmin) {
+                return redirect()->route('admin.index')->with('success', 'Bienvenido al sistema de administración.');
             }
 
             // Usuario interno no administrador: redirigir a bandeja de trámites internos
@@ -836,16 +843,16 @@ class AuthController extends Controller
 
     /**
      * Redirigir usuario según su tipo y permisos
-     * NOTA: En PHP puro, usuarios externos redirigen a tramiteNuevo.php
+     * Usuarios externos inician en el dashboard de Mesa de Partes
      */
     protected function redirigirUsuario($usuario)
     {
-        if ($usuario->es_administrador) {
-            return redirect()->route('dashboard')->with('success', 'Bienvenido al sistema de administración.');
+        if ($usuario->es_administrador || $usuario->esAdmin()) {
+            return redirect()->route('admin.index')->with('success', 'Bienvenido al sistema de administración.');
         }
 
-        // Usuario externo - redirigir a crear nuevo trámite (como en PHP puro: tramiteNuevo.php)
-        return redirect()->route('mesa-partes.nuevo')->with('success', 'Bienvenido al sistema de mesa de partes.');
+        // Usuario externo - redirigir al dashboard de Mesa de Partes
+        return redirect()->route('mesa-partes.index')->with('success', 'Bienvenido al sistema de mesa de partes.');
     }
 
     /**

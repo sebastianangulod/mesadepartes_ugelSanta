@@ -78,9 +78,15 @@ class Tramite extends Model
         'fecha_creacion' => 'datetime',
         'limite_observacion' => 'date',
         'fecha_rechazo' => 'datetime',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
     ];
+    
+    /**
+     * Indica si la tabla usa timestamps
+     * La tabla tramites NO tiene created_at ni updated_at
+     * 
+     * @var bool
+     */
+    public $timestamps = false;
 
     /**
      * Relación con usuario (solicitante)
@@ -294,7 +300,7 @@ class Tramite extends Model
         $fechaLimite = now()->subDays($dias);
         
         return $query->activos()
-            ->where('created_at', '<', $fechaLimite);
+            ->where('fecha_creacion', '<', $fechaLimite);
     }
 
     /**

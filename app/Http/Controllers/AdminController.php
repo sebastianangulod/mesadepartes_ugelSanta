@@ -8,6 +8,8 @@ use App\Models\Usuario;
 use App\Models\Area;
 use App\Models\Nivel;
 use App\Models\Procedimiento;
+use App\Models\Tramite;
+use App\Domain\Tramites\EstadoTramite;
 
 /**
  * Controlador de administración para gestionar:
@@ -24,8 +26,52 @@ class AdminController extends Controller
      */
     public function index()
     {
-        // Retorna vista: resources/views/admin/index.blade.php
-        // Incluye estadísticas generales del sistema
+        // Estadísticas generales
+        $totalUsuarios = Usuario::count();
+        $totalTramites = Tramite::count();
+        $tramitesActivos = Tramite::whereIn('estado', [
+            EstadoTramite::PENDIENTE,
+            EstadoTramite::EN_PROCESO,
+            EstadoTramite::OBSERVADO,
+            EstadoTramite::VERIFICADO
+        ])->count();
+        $tramitesPendientes = Tramite::where('estado', EstadoTramite::PENDIENTE)->count();
+        $tramitesEnProceso = Tramite::where('estado', EstadoTramite::EN_PROCESO)->count();
+        $tramitesRechazados = Tramite::where('estado', EstadoTramite::RECHAZADO)->count();
+        $tramitesFinalizadosHoy = Tramite::where('estado', EstadoTramite::FINALIZADO)
+            ->whereDate('fecha_creacion', today())
+            ->count();
+        
+        // Trámites recientes (últimos 10)
+        $tramitesRecientes = Tramite::with(['usuario', 'procedimiento'])
+            ->orderByDesc('fecha_creacion')
+            ->limit(10)
+            ->get();
+        
+        // Estadísticas para gráficos
+        $tramitesPorMes = Tramite::selectRaw('DATE_FORMAT(fecha_creacion, "%Y-%m") as mes, COUNT(*) as total')
+            ->whereYear('fecha_creacion', date('Y'))
+            ->groupBy('mes')
+            ->orderBy('mes')
+            ->get();
+        
+        $tramitesPorEstado = Tramite::selectRaw('estado, COUNT(*) as total')
+            ->groupBy('estado')
+            ->pluck('total', 'estado')
+            ->toArray();
+        
+        return view('admin.index', compact(
+            'totalUsuarios',
+            'totalTramites',
+            'tramitesActivos',
+            'tramitesPendientes',
+            'tramitesEnProceso',
+            'tramitesRechazados',
+            'tramitesFinalizadosHoy',
+            'tramitesRecientes',
+            'tramitesPorMes',
+            'tramitesPorEstado'
+        ));
     }
 
     /**
