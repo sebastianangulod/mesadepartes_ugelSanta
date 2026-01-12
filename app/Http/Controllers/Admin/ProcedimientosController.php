@@ -9,6 +9,8 @@ use App\Models\Nivel2;
 use App\Models\Nivel3;
 use App\Models\Nivel4;
 use App\Models\Tramite;
+use App\Models\Usuario;
+use App\Models\UsuariosNiveles;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -283,6 +285,122 @@ class ProcedimientosController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener procedimiento: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener usuarios del nivel final de un procedimiento (especialistas disponibles)
+     * 
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function obtenerEspecialistasDisponibles($id)
+    {
+        try {
+            $procedimiento = Procedimiento::findOrFail($id);
+            
+            // Obtener usuarios internos del nivel final del procedimiento
+            $nivelFinal = (int)$procedimiento->nivel_final;
+            $idNivelFinal = $procedimiento->id_nivel_final;
+            
+            // Obtener usuarios que tienen asignado el nivel final del procedimiento
+            $usuarios = Usuario::where('tipo_user', 2)
+                ->whereHas('usuariosNiveles', function($query) use ($nivelFinal, $idNivelFinal) {
+                    $query->where('nivel', $nivelFinal)
+                          ->where('id_nivel', $idNivelFinal);
+                })
+                ->select('id', 'nombres', 'apellido_paterno', 'apellido_materno', 'email')
+                ->orderBy('nombres')
+                ->orderBy('apellido_paterno')
+                ->get();
+            
+            // Obtener usuarios ya asignados a este procedimiento
+            $usuariosAsignados = DB::table('procedimiento_usuarios')
+                ->where('id_procedimiento', $id)
+                ->pluck('id_usuario')
+                ->toArray();
+            
+            return response()->json([
+                'success' => true,
+                'usuarios' => $usuarios,
+                'usuariosAsignados' => $usuariosAsignados
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener especialistas: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Asignar especialistas a un procedimiento
+     * 
+     * @param Request $request
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function asignarEspecialistas(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'usuarios' => 'required|array',
+            'usuarios.*' => 'required|integer|exists:usuarios,id'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first()
+            ], 422);
+        }
+
+        try {
+            $procedimiento = Procedimiento::findOrFail($id);
+            $usuarios = $request->usuarios;
+
+            DB::beginTransaction();
+
+            // Eliminar asignaciones existentes
+            DB::table('procedimiento_usuarios')
+                ->where('id_procedimiento', $id)
+                ->delete();
+
+            // Crear nuevas asignaciones
+            foreach ($usuarios as $idUsuario) {
+                // Verificar que el usuario sea interno
+                $usuario = Usuario::find($idUsuario);
+                if (!$usuario || $usuario->tipo_user != 2) {
+                    continue; // Saltar usuarios que no son internos
+                }
+
+                // Verificar que el usuario tenga el nivel correcto
+                $usuarioNivel = UsuariosNiveles::where('id_usuario', $idUsuario)
+                    ->where('nivel', $procedimiento->nivel_final)
+                    ->where('id_nivel', $procedimiento->id_nivel_final)
+                    ->first();
+
+                if (!$usuarioNivel) {
+                    continue; // Saltar usuarios que no tienen el nivel correcto
+                }
+
+                DB::table('procedimiento_usuarios')->insert([
+                    'id_procedimiento' => $id,
+                    'id_usuario' => $idUsuario
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Especialistas asignados correctamente'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al asignar especialistas: ' . $e->getMessage()
             ], 500);
         }
     }

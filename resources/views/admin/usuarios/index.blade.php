@@ -66,6 +66,44 @@
             width: 100%;
         }
     }
+    
+    /* Estilos para validación de email */
+    .email-requirement {
+        display: flex;
+        align-items: center;
+        font-size: 0.875rem;
+        margin: 0.25rem 0;
+    }
+    .email-requirement .icon {
+        margin-right: 0.5rem;
+        font-weight: bold;
+    }
+    .email-requirement.valid {
+        color: #10b981;
+    }
+    .email-requirement.invalid {
+        color: #ef4444;
+    }
+    .requirement {
+        display: flex;
+        align-items: center;
+        font-size: 0.875rem;
+        margin: 0.25rem 0;
+    }
+    .requirement .icon {
+        margin-right: 0.5rem;
+        font-weight: bold;
+    }
+    .requirement.valid {
+        color: #10b981;
+    }
+    .requirement.invalid {
+        color: #ef4444;
+    }
+    input[readonly], input[disabled] {
+        background-color: #f3f4f6;
+        cursor: not-allowed;
+    }
 </style>
 @endpush
 
@@ -156,8 +194,8 @@
                 <div class="flex gap-2">
                     <input type="text" id="dniUsuario" name="dniUsuario" 
                            class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                           placeholder="Ingrese el DNI" maxlength="8" required>
-                    <button type="button" onclick="obtenerDNI()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                           placeholder="Ingrese el DNI" maxlength="8" pattern="[0-9]{8}" required>
+                    <button type="button" id="btnBuscarDNI" onclick="obtenerDNI()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200">
                         Buscar
                     </button>
                 </div>
@@ -167,30 +205,33 @@
             <div>
                 <label for="nombreUsuario" class="block text-sm font-medium text-gray-700 mb-1">Nombres</label>
                 <input type="text" id="nombreUsuario" name="nombreUsuario" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                       readonly required>
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-100 cursor-not-allowed" 
+                       readonly disabled maxlength="20" required>
             </div>
 
             <div>
                 <label for="apellidoPaternoUsuario" class="block text-sm font-medium text-gray-700 mb-1">Apellido Paterno</label>
                 <input type="text" id="apellidoPaternoUsuario" name="apellidoPaternoUsuario" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                       readonly required>
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-100 cursor-not-allowed" 
+                       readonly disabled maxlength="20" required>
             </div>
 
             <div>
                 <label for="apellidoMaternoUsuario" class="block text-sm font-medium text-gray-700 mb-1">Apellido Materno</label>
                 <input type="text" id="apellidoMaternoUsuario" name="apellidoMaternoUsuario" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                       readonly required>
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-100 cursor-not-allowed" 
+                       readonly disabled maxlength="20" required>
             </div>
 
             <!-- Correo y Contraseña -->
             <div>
                 <label for="correo_electronico" class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
+                <input type="hidden" id="emailValidado" value="false">
                 <input type="email" id="correo_electronico" name="correoUsuario" 
                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                       placeholder="Ingrese el correo electrónico" required>
+                       placeholder="Ingrese el correo electrónico" maxlength="45" required>
+                <div id="email-feedback" class="mt-1 text-sm"></div>
+                <div id="emailRequirements" class="mt-2 space-y-1"></div>
             </div>
 
             <div>
@@ -198,7 +239,7 @@
                 <div class="relative">
                     <input type="password" id="contrasena" name="contrasenaUsuario" 
                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                           placeholder="Ingrese la contraseña" required>
+                           placeholder="Ingrese la contraseña" maxlength="25" required>
                     <button type="button" onclick="togglePassword('contrasena')" class="absolute right-2 top-2 text-gray-500">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -206,6 +247,7 @@
                         </svg>
                     </button>
                 </div>
+                <div id="passwordRequirements" class="mt-2 space-y-1"></div>
             </div>
 
             <!-- Dirección y Teléfono -->
@@ -213,14 +255,14 @@
                 <label for="direccionUsuario" class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
                 <input type="text" id="direccionUsuario" name="direccionUsuario" 
                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                       required>
+                       maxlength="35" required>
             </div>
 
             <div>
                 <label for="telefonoUsuario" class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-                <input type="text" id="telefonoUsuario" name="telefonoUsuario" 
+                <input type="tel" id="telefonoUsuario" name="telefonoUsuario" 
                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                       required maxlength="9" pattern="\d{9}">
+                       placeholder="9 dígitos" maxlength="9" pattern="[0-9]{9}" required>
             </div>
 
             <!-- Ubicación -->
@@ -446,6 +488,68 @@
         modal.classList.remove('hidden');
         // Prevenir scroll del body cuando el modal está abierto
         document.body.style.overflow = 'hidden';
+        
+        // Si es el modal de agregar usuario, limpiar el formulario
+        if (modalId === 'modalAddUser') {
+            limpiarFormularioAgregar();
+        }
+    }
+    
+    function limpiarFormularioAgregar() {
+        // Limpiar todos los campos
+        document.getElementById('formCrearUsuario').reset();
+        
+        // Limpiar campos readonly y restaurar botón
+        const dniInput = document.getElementById('dniUsuario');
+        const nombreInput = document.getElementById('nombreUsuario');
+        const apellidoPaternoInput = document.getElementById('apellidoPaternoUsuario');
+        const apellidoMaternoInput = document.getElementById('apellidoMaternoUsuario');
+        const btnBuscar = document.querySelector('button[onclick="obtenerDNI()"]');
+        
+        dniInput.readOnly = false;
+        dniInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
+        
+        // Los campos de nombres y apellidos deben estar siempre disabled hasta que se valide el DNI
+        nombreInput.readOnly = true;
+        nombreInput.disabled = true;
+        apellidoPaternoInput.readOnly = true;
+        apellidoPaternoInput.disabled = true;
+        apellidoMaternoInput.readOnly = true;
+        apellidoMaternoInput.disabled = true;
+        
+        // Limpiar valores
+        nombreInput.value = '';
+        apellidoPaternoInput.value = '';
+        apellidoMaternoInput.value = '';
+        
+        // Aplicar estilos de readonly
+        nombreInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+        apellidoPaternoInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+        apellidoMaternoInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+        
+        if (btnBuscar) {
+            btnBuscar.disabled = false;
+            btnBuscar.textContent = 'Buscar';
+            btnBuscar.classList.remove('bg-green-600', 'bg-gray-400');
+            btnBuscar.classList.add('bg-blue-600', 'hover:bg-blue-700', 'transition', 'duration-200');
+        }
+        
+        // Limpiar mensajes de error
+        document.getElementById('dni-error').textContent = '';
+        
+        // Limpiar y resetear dropdowns de ubicación
+        document.getElementById('provinciaUsuario').innerHTML = '<option value="">Seleccione una provincia</option>';
+        document.getElementById('provinciaUsuario').disabled = true;
+        document.getElementById('distritoUsuario').innerHTML = '<option value="">Seleccione un distrito</option>';
+        document.getElementById('distritoUsuario').disabled = true;
+        
+        // Limpiar y resetear dropdowns de niveles
+        document.getElementById('nivel2').innerHTML = '<option value="">Seleccione Nivel 2</option>';
+        document.getElementById('nivel2').disabled = true;
+        document.getElementById('nivel3').innerHTML = '<option value="">Seleccione Nivel 3</option>';
+        document.getElementById('nivel3').disabled = true;
+        document.getElementById('nivel4').innerHTML = '<option value="">Seleccione Nivel 4</option>';
+        document.getElementById('nivel4').disabled = true;
     }
 
     function closeModal(modalId) {
@@ -493,22 +597,87 @@
         cargarEditDepartamentos();
         cargarNivel1();
         cargarEditNivel1();
+        
+        // Validar formato DNI (solo números)
+        const dniInput = document.getElementById('dniUsuario');
+        if (dniInput) {
+            dniInput.addEventListener('input', function(e) {
+                this.value = this.value.replace(/[^0-9]/g, '');
+                if (this.value.length > 8) {
+                    this.value = this.value.slice(0, 8);
+                }
+            });
+        }
+        
+        // Validar formato teléfono (solo números)
+        const telefonoInput = document.getElementById('telefonoUsuario');
+        if (telefonoInput) {
+            telefonoInput.addEventListener('input', function(e) {
+                this.value = this.value.replace(/[^0-9]/g, '');
+                if (this.value.length > 9) {
+                    this.value = this.value.slice(0, 9);
+                }
+            });
+        }
+        
+        // Prevenir edición de nombres y apellidos (doble protección)
+        const nombreInput = document.getElementById('nombreUsuario');
+        const apellidoPaternoInput = document.getElementById('apellidoPaternoUsuario');
+        const apellidoMaternoInput = document.getElementById('apellidoMaternoUsuario');
+        
+        [nombreInput, apellidoPaternoInput, apellidoMaternoInput].forEach(input => {
+            if (input) {
+                // Asegurar que siempre estén deshabilitados y readonly
+                input.readOnly = true;
+                input.disabled = true;
+                input.classList.add('bg-gray-100', 'cursor-not-allowed');
+                
+                // Prevenir cualquier intento de edición
+                input.addEventListener('keydown', function(e) {
+                    e.preventDefault();
+                    return false;
+                });
+                input.addEventListener('paste', function(e) {
+                    e.preventDefault();
+                    return false;
+                });
+                input.addEventListener('cut', function(e) {
+                    e.preventDefault();
+                    return false;
+                });
+                input.addEventListener('focus', function(e) {
+                    this.blur();
+                });
+            }
+        });
+        
+        // Inicializar validación de email
+        initEmailValidation();
+        
+        // Inicializar validación de contraseña
+        initPasswordValidation();
     });
 
-    // Funciones para cargar ubicación
+    // Funciones para cargar ubicación (igual que en el registro)
     function cargarDepartamentos() {
-        fetch('/api/departamentos', {
+        fetch('{{ route("api.departamentos") }}', {
             headers: { 'Accept': 'application/json' }
         })
         .then(response => response.json())
         .then(data => {
-            const select = document.getElementById('departamentoUsuario');
-            data.forEach(dept => {
-                const option = document.createElement('option');
-                option.value = dept.id;
-                option.textContent = dept.nombre;
-                select.appendChild(option);
-            });
+            if (data.success && data.data) {
+                const select = document.getElementById('departamentoUsuario');
+                select.innerHTML = '<option value="">Seleccione un departamento</option>';
+                data.data.forEach(dept => {
+                    const option = document.createElement('option');
+                    option.value = dept.id;
+                    option.textContent = dept.nombre;
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar departamentos:', error);
         });
     }
 
@@ -517,20 +686,29 @@
         select.innerHTML = '<option value="">Seleccione una provincia</option>';
         select.disabled = true;
         
-        if (!departamentoId) return;
+        if (!departamentoId) {
+            limpiarDistritos();
+            return;
+        }
         
-        fetch(`/api/provincias/${departamentoId}`, {
+        fetch(`{{ route("api.provincias", ":id") }}`.replace(':id', departamentoId), {
             headers: { 'Accept': 'application/json' }
         })
         .then(response => response.json())
         .then(data => {
-            data.forEach(prov => {
-                const option = document.createElement('option');
-                option.value = prov.id;
-                option.textContent = prov.nombre;
-                select.appendChild(option);
-            });
-            select.disabled = false;
+            if (data.success && data.data) {
+                data.data.forEach(prov => {
+                    const option = document.createElement('option');
+                    option.value = prov.id;
+                    option.textContent = prov.nombre;
+                    select.appendChild(option);
+                });
+                select.disabled = false;
+            }
+            limpiarDistritos();
+        })
+        .catch(error => {
+            console.error('Error al cargar provincias:', error);
         });
     }
 
@@ -541,19 +719,30 @@
         
         if (!provinciaId) return;
         
-        fetch(`/api/distritos/${provinciaId}`, {
+        fetch(`{{ route("api.distritos", ":id") }}`.replace(':id', provinciaId), {
             headers: { 'Accept': 'application/json' }
         })
         .then(response => response.json())
         .then(data => {
-            data.forEach(dist => {
-                const option = document.createElement('option');
-                option.value = dist.id;
-                option.textContent = dist.nombre;
-                select.appendChild(option);
-            });
-            select.disabled = false;
+            if (data.success && data.data) {
+                data.data.forEach(dist => {
+                    const option = document.createElement('option');
+                    option.value = dist.id;
+                    option.textContent = dist.nombre;
+                    select.appendChild(option);
+                });
+                select.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar distritos:', error);
         });
+    }
+    
+    function limpiarDistritos() {
+        const select = document.getElementById('distritoUsuario');
+        select.innerHTML = '<option value="">Seleccione un distrito</option>';
+        select.disabled = true;
     }
 
     // Funciones para cargar niveles
@@ -649,59 +838,95 @@
 
     // Funciones para edición (similar pero con prefijo edit)
     function cargarEditDepartamentos() {
-        fetch('/api/departamentos', {
+        return fetch('{{ route("api.departamentos") }}', {
             headers: { 'Accept': 'application/json' }
         })
         .then(response => response.json())
         .then(data => {
-            const select = document.getElementById('editDepartamentoUsuario');
-            data.forEach(dept => {
-                const option = document.createElement('option');
-                option.value = dept.id;
-                option.textContent = dept.nombre;
-                select.appendChild(option);
-            });
+            if (data.success && data.data) {
+                const select = document.getElementById('editDepartamentoUsuario');
+                select.innerHTML = '<option value="">Seleccione un departamento</option>';
+                data.data.forEach(dept => {
+                    const option = document.createElement('option');
+                    option.value = dept.id;
+                    option.textContent = dept.nombre;
+                    select.appendChild(option);
+                });
+            }
+            return data;
+        })
+        .catch(error => {
+            console.error('Error al cargar departamentos:', error);
+            throw error;
         });
     }
 
     function cargarProvinciasEdit(departamentoId) {
         const select = document.getElementById('editProvinciaUsuario');
         select.innerHTML = '<option value="">Seleccione una provincia</option>';
+        select.disabled = true;
         
-        if (!departamentoId) return;
+        if (!departamentoId) {
+            limpiarDistritosEdit();
+            return Promise.resolve();
+        }
         
-        fetch(`/api/provincias/${departamentoId}`, {
+        return fetch(`{{ route("api.provincias", ":id") }}`.replace(':id', departamentoId), {
             headers: { 'Accept': 'application/json' }
         })
         .then(response => response.json())
         .then(data => {
-            data.forEach(prov => {
-                const option = document.createElement('option');
-                option.value = prov.id;
-                option.textContent = prov.nombre;
-                select.appendChild(option);
-            });
+            if (data.success && data.data) {
+                data.data.forEach(prov => {
+                    const option = document.createElement('option');
+                    option.value = prov.id;
+                    option.textContent = prov.nombre;
+                    select.appendChild(option);
+                });
+                select.disabled = false;
+            }
+            limpiarDistritosEdit();
+        })
+        .catch(error => {
+            console.error('Error al cargar provincias:', error);
+            throw error;
         });
     }
 
     function cargarDistritosEdit(provinciaId) {
         const select = document.getElementById('editDistritoUsuario');
         select.innerHTML = '<option value="">Seleccione un distrito</option>';
+        select.disabled = true;
         
-        if (!provinciaId) return;
+        if (!provinciaId) {
+            return Promise.resolve();
+        }
         
-        fetch(`/api/distritos/${provinciaId}`, {
+        return fetch(`{{ route("api.distritos", ":id") }}`.replace(':id', provinciaId), {
             headers: { 'Accept': 'application/json' }
         })
         .then(response => response.json())
         .then(data => {
-            data.forEach(dist => {
-                const option = document.createElement('option');
-                option.value = dist.id;
-                option.textContent = dist.nombre;
-                select.appendChild(option);
-            });
+            if (data.success && data.data) {
+                data.data.forEach(dist => {
+                    const option = document.createElement('option');
+                    option.value = dist.id;
+                    option.textContent = dist.nombre;
+                    select.appendChild(option);
+                });
+                select.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar distritos:', error);
+            throw error;
         });
+    }
+    
+    function limpiarDistritosEdit() {
+        const select = document.getElementById('editDistritoUsuario');
+        select.innerHTML = '<option value="">Seleccione un distrito</option>';
+        select.disabled = true;
     }
 
     function cargarEditNivel1() {
@@ -794,59 +1019,154 @@
         });
     }
 
-    // Función para obtener DNI (simulada - necesitarías implementar la API real)
+    // Función para obtener DNI (igual que en el registro)
     function obtenerDNI() {
         const dni = document.getElementById('dniUsuario').value;
+        const btnBuscar = document.getElementById('btnBuscarDNI');
+        
         if (!/^\d{8}$/.test(dni)) {
             document.getElementById('dni-error').textContent = 'El DNI debe tener 8 dígitos';
             return;
         }
         
-        // Aquí deberías llamar a una API para obtener datos del DNI
-        // Por ahora, solo limpiamos el error
         document.getElementById('dni-error').textContent = '';
-        // Nota: En producción, esto debería llamar a una API externa o servicio
+        btnBuscar.disabled = true;
+        btnBuscar.textContent = 'Validando...';
+        
+        fetch('{{ route("api.validar-dni") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ dni: dni })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Habilitar temporalmente los campos para poder establecer los valores
+                const nombreInput = document.getElementById('nombreUsuario');
+                const apellidoPaternoInput = document.getElementById('apellidoPaternoUsuario');
+                const apellidoMaternoInput = document.getElementById('apellidoMaternoUsuario');
+                
+                nombreInput.disabled = false;
+                apellidoPaternoInput.disabled = false;
+                apellidoMaternoInput.disabled = false;
+                
+                // Llenar los campos con los datos obtenidos
+                nombreInput.value = data.nombres || '';
+                apellidoPaternoInput.value = data.apellidoPaterno || '';
+                apellidoMaternoInput.value = data.apellidoMaterno || '';
+                
+                // Hacer los campos readonly y disabled como en el registro (no editables)
+                document.getElementById('dniUsuario').readOnly = true;
+                nombreInput.readOnly = true;
+                nombreInput.disabled = true;
+                apellidoPaternoInput.readOnly = true;
+                apellidoPaternoInput.disabled = true;
+                apellidoMaternoInput.readOnly = true;
+                apellidoMaternoInput.disabled = true;
+                
+                // Aplicar estilo de readonly (bg-gray-100 y cursor-not-allowed)
+                nombreInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+                apellidoPaternoInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+                apellidoMaternoInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+                
+                btnBuscar.disabled = false;
+                btnBuscar.textContent = '✓ Validado';
+                btnBuscar.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                btnBuscar.classList.add('bg-green-600');
+            } else {
+                document.getElementById('dni-error').textContent = data.message || 'No se pudo validar el DNI';
+                btnBuscar.disabled = false;
+                btnBuscar.textContent = 'Buscar';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('dni-error').textContent = 'Error al validar el DNI. Por favor, inténtelo nuevamente.';
+            btnBuscar.disabled = false;
+            btnBuscar.textContent = 'Buscar';
+        });
     }
 
     // Función para crear usuario
     function crearUsuario(event) {
         event.preventDefault();
         const form = event.target;
-        const formData = new FormData(form);
+        
+        // Obtener valores directamente del DOM porque los campos disabled no se envían en FormData
+        const dniUsuario = document.getElementById('dniUsuario').value;
+        const nombreUsuario = document.getElementById('nombreUsuario').value;
+        const apellidoPaternoUsuario = document.getElementById('apellidoPaternoUsuario').value;
+        const apellidoMaternoUsuario = document.getElementById('apellidoMaternoUsuario').value;
+        const correoUsuario = document.getElementById('correo_electronico').value;
+        const contrasenaUsuario = document.getElementById('contrasena').value;
+        const direccionUsuario = document.getElementById('direccionUsuario').value;
+        const telefonoUsuario = document.getElementById('telefonoUsuario').value;
+        const distritoUsuario = document.getElementById('distritoUsuario').value;
+        
+        // Validar que los campos requeridos estén llenos
+        if (!dniUsuario || !nombreUsuario || !apellidoPaternoUsuario || !apellidoMaternoUsuario) {
+            alert('Debe validar el DNI primero para obtener los datos del usuario');
+            return;
+        }
+        
+        // Validar contraseña
+        const passwordValid = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[@$!%*?&_])[A-Za-z\d@$!%*?&_]{8,}$/.test(contrasenaUsuario);
+        if (!passwordValid) {
+            alert('La contraseña no cumple con los requisitos. Debe tener al menos 8 caracteres, una mayúscula, un número y un carácter especial (@$!%*?&_)');
+            return;
+        }
+        
+        // Validar email
+        const emailValidado = document.getElementById('emailValidado').value === 'true';
+        if (!emailValidado) {
+            alert('El correo electrónico no es válido o ya está registrado');
+            return;
+        }
+        
+        // Validar que se haya seleccionado al menos el Nivel 1
+        const nivel1 = document.getElementById('nivel1').value;
+        if (!nivel1 || nivel1 === '') {
+            alert('Debe seleccionar al menos el Nivel 1 para el usuario');
+            document.getElementById('nivel1').focus();
+            return;
+        }
         
         // Determinar nivel y id_nivel según la selección
         let nivel = null;
         let idNivel = null;
         
-        if (formData.get('nivel4')) {
-            nivel = 4;
-            idNivel = formData.get('nivel4');
-        } else if (formData.get('nivel3')) {
-            nivel = 3;
-            idNivel = formData.get('nivel3');
-        } else if (formData.get('nivel2')) {
-            nivel = 2;
-            idNivel = formData.get('nivel2');
-        } else if (formData.get('nivel1')) {
-            nivel = 1;
-            idNivel = formData.get('nivel1');
-        }
+        const nivel4 = document.getElementById('nivel4').value;
+        const nivel3 = document.getElementById('nivel3').value;
+        const nivel2 = document.getElementById('nivel2').value;
         
-        if (!nivel || !idNivel) {
-            alert('Debe seleccionar al menos el Nivel 1');
-            return;
+        if (nivel4) {
+            nivel = 4;
+            idNivel = nivel4;
+        } else if (nivel3) {
+            nivel = 3;
+            idNivel = nivel3;
+        } else if (nivel2) {
+            nivel = 2;
+            idNivel = nivel2;
+        } else {
+            // Si solo hay nivel1, usar ese
+            nivel = 1;
+            idNivel = nivel1;
         }
         
         const data = {
-            dniUsuario: formData.get('dniUsuario'),
-            nombreUsuario: formData.get('nombreUsuario'),
-            apellidoPaternoUsuario: formData.get('apellidoPaternoUsuario'),
-            apellidoMaternoUsuario: formData.get('apellidoMaternoUsuario'),
-            correoUsuario: formData.get('correoUsuario'),
-            contrasenaUsuario: formData.get('contrasenaUsuario'),
-            direccionUsuario: formData.get('direccionUsuario'),
-            telefonoUsuario: formData.get('telefonoUsuario'),
-            distritoUsuario: formData.get('distritoUsuario'),
+            dniUsuario: dniUsuario,
+            nombreUsuario: nombreUsuario,
+            apellidoPaternoUsuario: apellidoPaternoUsuario,
+            apellidoMaternoUsuario: apellidoMaternoUsuario,
+            correoUsuario: correoUsuario,
+            contrasenaUsuario: contrasenaUsuario,
+            direccionUsuario: direccionUsuario,
+            telefonoUsuario: telefonoUsuario,
+            distritoUsuario: distritoUsuario,
             nivel: nivel,
             id_nivel: idNivel
         };
@@ -893,21 +1213,37 @@
                 document.getElementById('editDireccionUsuario').value = user.direccion || '';
                 document.getElementById('editTelefonoUsuario').value = user.telefono || '';
                 
-                // Cargar ubicación si existe
+                // Cargar ubicación si existe (usando promesas para asegurar que se carguen correctamente)
+                console.log('Datos del usuario:', user); // Debug
+                console.log('departamento_id:', user.departamento_id); // Debug
+                console.log('provincia_id:', user.provincia_id); // Debug
+                console.log('distrito_id:', user.distrito_id); // Debug
+                
                 if (user.departamento_id) {
-                    document.getElementById('editDepartamentoUsuario').value = user.departamento_id;
-                    cargarProvinciasEdit(user.departamento_id);
-                    if (user.provincia_id) {
-                        setTimeout(() => {
-                            document.getElementById('editProvinciaUsuario').value = user.provincia_id;
-                            cargarDistritosEdit(user.provincia_id);
-                            if (user.distrito_id) {
-                                setTimeout(() => {
-                                    document.getElementById('editDistritoUsuario').value = user.distrito_id;
-                                }, 500);
-                            }
-                        }, 500);
-                    }
+                    // Asegurar que los departamentos estén cargados primero
+                    cargarEditDepartamentos().then(() => {
+                        const departamentoSelect = document.getElementById('editDepartamentoUsuario');
+                        departamentoSelect.value = user.departamento_id;
+                        console.log('Departamento seleccionado:', departamentoSelect.value); // Debug
+                        return cargarProvinciasEdit(user.departamento_id);
+                    }).then(() => {
+                        if (user.provincia_id) {
+                            const provinciaSelect = document.getElementById('editProvinciaUsuario');
+                            provinciaSelect.value = user.provincia_id;
+                            console.log('Provincia seleccionada:', provinciaSelect.value); // Debug
+                            return cargarDistritosEdit(user.provincia_id);
+                        }
+                    }).then(() => {
+                        if (user.distrito_id) {
+                            const distritoSelect = document.getElementById('editDistritoUsuario');
+                            distritoSelect.value = user.distrito_id;
+                            console.log('Distrito seleccionado:', distritoSelect.value); // Debug
+                        }
+                    }).catch(error => {
+                        console.error('Error al cargar ubicación:', error);
+                    });
+                } else {
+                    console.warn('El usuario no tiene departamento_id asignado');
                 }
                 
                 // Cargar niveles si existen
@@ -1034,6 +1370,135 @@
         .catch(error => {
             console.error('Error:', error);
             alert('Error al eliminar el usuario');
+        });
+    }
+    
+    // Validación de email en tiempo real (igual que en el registro)
+    function initEmailValidation() {
+        const emailInput = document.getElementById('correo_electronico');
+        const emailRequirements = document.getElementById('emailRequirements');
+        const emailFeedback = document.getElementById('email-feedback');
+        
+        if (!emailInput || !emailRequirements || !emailFeedback) {
+            return; // Los elementos no existen aún
+        }
+        
+        const requirements = {
+            format: { text: 'Formato válido (ejemplo@dominio.com)', element: document.createElement('div') },
+            length: { text: 'Máximo 45 caracteres', element: document.createElement('div') },
+            unique: { text: 'Email disponible', element: document.createElement('div') }
+        };
+
+        Object.values(requirements).forEach(req => {
+            req.element.className = 'email-requirement invalid';
+            req.element.innerHTML = `<span class="icon">✕</span> ${req.text}`;
+            emailRequirements.appendChild(req.element);
+        });
+
+        let timeoutId;
+        const debounceTime = 500;
+
+        async function validateEmail(email) {
+            const validations = {
+                format: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
+                length: email.length <= 45,
+                unique: false
+            };
+
+            // Actualizar formato y longitud inmediatamente
+            requirements.format.element.className = `email-requirement ${validations.format ? 'valid' : 'invalid'}`;
+            requirements.format.element.innerHTML = `<span class="icon">${validations.format ? '✓' : '✕'}</span> ${requirements.format.text}`;
+            
+            requirements.length.element.className = `email-requirement ${validations.length ? 'valid' : 'invalid'}`;
+            requirements.length.element.innerHTML = `<span class="icon">${validations.length ? '✓' : '✕'}</span> ${requirements.length.text}`;
+
+            // Verificar disponibilidad si formato y longitud son válidos
+            if (validations.format && validations.length && email.length > 0) {
+                try {
+                    const response = await fetch('{{ route("api.validar-email") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ email: email })
+                    });
+                    const data = await response.json();
+                    validations.unique = !data.exists;
+                    document.getElementById('emailValidado').value = validations.unique ? 'true' : 'false';
+                    
+                    requirements.unique.element.className = `email-requirement ${validations.unique ? 'valid' : 'invalid'}`;
+                    requirements.unique.element.innerHTML = `<span class="icon">${validations.unique ? '✓' : '✕'}</span> ${requirements.unique.text}`;
+                    
+                    if (data.exists) {
+                        emailFeedback.textContent = 'El correo electrónico ya está registrado';
+                        emailFeedback.className = 'text-red-600';
+                    } else {
+                        emailFeedback.textContent = 'Correo electrónico disponible';
+                        emailFeedback.className = 'text-green-600';
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    validations.unique = false;
+                    document.getElementById('emailValidado').value = 'false';
+                }
+            } else {
+                document.getElementById('emailValidado').value = 'false';
+                requirements.unique.element.className = 'email-requirement invalid';
+                requirements.unique.element.innerHTML = `<span class="icon">✕</span> ${requirements.unique.text}`;
+                emailFeedback.textContent = '';
+            }
+        }
+
+        emailInput.addEventListener('input', function() {
+            clearTimeout(timeoutId);
+            const email = this.value;
+            validateEmail(email);
+            timeoutId = setTimeout(() => validateEmail(email), debounceTime);
+        });
+    }
+    
+    // Validación de contraseña en tiempo real (igual que en el registro)
+    function initPasswordValidation() {
+        const passwordInput = document.getElementById('contrasena');
+        const passwordRequirements = document.getElementById('passwordRequirements');
+        
+        if (!passwordInput || !passwordRequirements) {
+            return; // Los elementos no existen aún
+        }
+        
+        const requirements = {
+            length: { text: 'Mínimo 8 caracteres', element: document.createElement('div') },
+            uppercase: { text: 'Al menos una mayúscula', element: document.createElement('div') },
+            number: { text: 'Al menos un número', element: document.createElement('div') },
+            special: { text: 'Al menos un carácter especial (@$!%*?&_)', element: document.createElement('div') }
+        };
+
+        Object.values(requirements).forEach(req => {
+            req.element.className = 'requirement invalid';
+            req.element.innerHTML = `<span class="icon">✕</span> ${req.text}`;
+            passwordRequirements.appendChild(req.element);
+        });
+
+        function validatePassword(password) {
+            const validations = {
+                length: password.length >= 8,
+                uppercase: /[A-Z]/.test(password),
+                number: /[0-9]/.test(password),
+                special: /[@$!%*?&_]/.test(password)
+            };
+
+            Object.entries(validations).forEach(([key, isValid]) => {
+                const req = requirements[key];
+                req.element.className = `requirement ${isValid ? 'valid' : 'invalid'}`;
+                req.element.innerHTML = `<span class="icon">${isValid ? '✓' : '✕'}</span> ${req.text}`;
+            });
+
+            return Object.values(validations).every(v => v);
+        }
+
+        passwordInput.addEventListener('input', function() {
+            validatePassword(this.value);
         });
     }
 </script>

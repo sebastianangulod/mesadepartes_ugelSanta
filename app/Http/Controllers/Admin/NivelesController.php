@@ -254,7 +254,7 @@ class NivelesController extends Controller
     public function update(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'nivel' => 'required|string|in:nivel_2,nivel_3,nivel_4',
+            'nivel' => 'required|string|in:nivel_1,nivel_2,nivel_3,nivel_4',
             'nombre' => 'required|string|max:55',
         ]);
 
@@ -271,6 +271,9 @@ class NivelesController extends Controller
 
             // Obtener y actualizar el nivel según el tipo
             switch ($nivel) {
+                case 'nivel_1':
+                    $nivelModel = Nivel1::findOrFail($id);
+                    break;
                 case 'nivel_2':
                     $nivelModel = Nivel2::findOrFail($id);
                     break;
@@ -308,15 +311,8 @@ class NivelesController extends Controller
     public function destroy(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'nivel' => 'required|string|in:nivel_2,nivel_3,nivel_4',
+            'nivel' => 'required|string|in:nivel_1,nivel_2,nivel_3,nivel_4',
         ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => $validator->errors()->first()
-            ], 422);
-        }
 
         if ($validator->fails()) {
             return response()->json([
@@ -330,6 +326,11 @@ class NivelesController extends Controller
 
             // Obtener el nivel según el tipo
             switch ($nivel) {
+                case 'nivel_1':
+                    $nivelModel = Nivel1::findOrFail($id);
+                    // Verificar hijos (nivel 2)
+                    $hijosCount = Nivel2::where('id_nivel1', $id)->count();
+                    break;
                 case 'nivel_2':
                     $nivelModel = Nivel2::findOrFail($id);
                     // Verificar hijos (nivel 3)

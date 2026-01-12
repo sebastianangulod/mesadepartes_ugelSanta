@@ -250,6 +250,8 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/procedimientos/{id}', [ProcedimientosController::class, 'update'])->name('admin.procedimientos.update');
         Route::delete('/procedimientos/{id}', [ProcedimientosController::class, 'destroy'])->name('admin.procedimientos.destroy');
         Route::get('/procedimientos/{id}/obtener', [ProcedimientosController::class, 'obtener'])->name('admin.procedimientos.obtener');
+        Route::get('/procedimientos/{id}/especialistas', [ProcedimientosController::class, 'obtenerEspecialistasDisponibles'])->name('admin.procedimientos.especialistas');
+        Route::post('/procedimientos/{id}/asignar-especialistas', [ProcedimientosController::class, 'asignarEspecialistas'])->name('admin.procedimientos.asignar-especialistas');
     });
 
     // Dashboard principal

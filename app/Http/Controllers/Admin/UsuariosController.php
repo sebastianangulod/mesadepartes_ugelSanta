@@ -101,6 +101,17 @@ class UsuariosController extends Controller
 
             $data = $usuario->toArray();
 
+            // Agregar IDs de ubicación si existen
+            if ($usuario->distrito) {
+                $data['distrito_id'] = $usuario->distrito->id;
+                if ($usuario->distrito->provincia) {
+                    $data['provincia_id'] = $usuario->distrito->provincia->id;
+                    if ($usuario->distrito->provincia->departamento) {
+                        $data['departamento_id'] = $usuario->distrito->provincia->departamento->id;
+                    }
+                }
+            }
+
             // Obtener jerarquía completa de niveles si tiene nivel asignado
             if ($usuario->usuariosNiveles->isNotEmpty()) {
                 $nivel = $usuario->usuariosNiveles->first();

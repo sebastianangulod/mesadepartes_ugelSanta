@@ -11,7 +11,8 @@
     /* Estilos para modales - centrados en el área de contenido (sin sidebar) */
     #modalAddProcedimiento,
     #modalEditProcedimiento,
-    #modalDeleteProcedimiento {
+    #modalDeleteProcedimiento,
+    #modalAsignarEspecialistas {
         backdrop-filter: blur(4px);
         /* Centrar solo en el área de contenido, considerando el sidebar de 250px */
         left: 250px;
@@ -21,7 +22,8 @@
     /* Resaltar bordes del modal para mejor visibilidad */
     #modalAddProcedimiento > div,
     #modalEditProcedimiento > div,
-    #modalDeleteProcedimiento > div {
+    #modalDeleteProcedimiento > div,
+    #modalAsignarEspecialistas > div {
         border: 2px solid #e5e7eb;
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     }
@@ -29,7 +31,8 @@
     /* Borde más visible en hover o focus */
     #modalAddProcedimiento > div:focus-within,
     #modalEditProcedimiento > div:focus-within,
-    #modalDeleteProcedimiento > div:focus-within {
+    #modalDeleteProcedimiento > div:focus-within,
+    #modalAsignarEspecialistas > div:focus-within {
         border-color: #3b82f6;
         box-shadow: 0 20px 25px -5px rgba(59, 130, 246, 0.1), 0 10px 10px -5px rgba(59, 130, 246, 0.04);
     }
@@ -63,10 +66,33 @@
     @media (max-width: 768px) {
         #modalAddProcedimiento,
         #modalEditProcedimiento,
-        #modalDeleteProcedimiento {
+        #modalDeleteProcedimiento,
+        #modalAsignarEspecialistas {
             left: 0;
             width: 100%;
         }
+    }
+    
+    /* Estilos para checkboxes de especialistas */
+    .especialista-item {
+        padding: 0.75rem;
+        border-bottom: 1px solid #e5e7eb;
+        transition: background-color 0.2s;
+    }
+    
+    .especialista-item:hover {
+        background-color: #f9fafb;
+    }
+    
+    .especialista-item:last-child {
+        border-bottom: none;
+    }
+    
+    .especialista-checkbox {
+        margin-right: 0.75rem;
+        width: 1.25rem;
+        height: 1.25rem;
+        cursor: pointer;
     }
 </style>
 @endpush
@@ -108,18 +134,26 @@
                         (Nivel {{ $procedimiento->nivel_final }})
                     </td>
                     <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                        <button onclick="editarProcedimiento({{ $procedimiento->id }})" 
-                                class="text-green-500 hover:text-green-700 mr-2" title="Editar">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                            </svg>
-                        </button>
-                        <button onclick="eliminarProcedimiento({{ $procedimiento->id }}, '{{ $procedimiento->nombre }}')" 
-                                class="text-red-500 hover:text-red-700" title="Eliminar">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                            </svg>
-                        </button>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="editarProcedimiento({{ $procedimiento->id }})" 
+                                    class="text-green-500 hover:text-green-700" title="Editar">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                            </button>
+                            <button onclick="asignarEspecialistas({{ $procedimiento->id }}, '{{ $procedimiento->nombre }}')" 
+                                    class="text-blue-500 hover:text-blue-700" title="Asignar Especialistas">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                                </svg>
+                            </button>
+                            <button onclick="eliminarProcedimiento({{ $procedimiento->id }}, '{{ $procedimiento->nombre }}')" 
+                                    class="text-red-500 hover:text-red-700" title="Eliminar">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 @empty
@@ -278,6 +312,37 @@
     </div>
 </div>
 
+<!-- Modal Asignar Especialistas -->
+<div id="modalAsignarEspecialistas" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="overflow-y: auto;">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl relative my-auto modal-content-procedimiento border-2 border-gray-200">
+        <div class="sticky top-0 bg-white border-b-2 border-gray-300 px-6 py-4 z-10 rounded-t-lg">
+            <h2 class="text-xl font-bold text-gray-900">Asignar Especialistas</h2>
+            <p class="text-sm text-gray-600 mt-1" id="modalProcedimientoNombre"></p>
+        </div>
+        <div class="p-6">
+            <input type="hidden" id="asignarProcedimientoId" name="id">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Seleccione los especialistas del nivel final del procedimiento:
+                </label>
+                <div id="especialistasContainer" class="max-h-96 overflow-y-auto border border-gray-300 rounded-md p-4">
+                    <div class="text-center text-gray-500 py-8">
+                        <svg class="animate-spin h-8 w-8 mx-auto mb-2" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <p>Cargando especialistas...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-2 mt-6 pt-4 border-t-2 border-gray-300">
+                <button type="button" onclick="closeModal('modalAsignarEspecialistas')" class="btn-secondary">Cancelar</button>
+                <button type="button" onclick="guardarAsignacionEspecialistas(event)" class="btn-primary">Guardar Asignación</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Eliminar Procedimiento -->
 <div id="modalDeleteProcedimiento" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="backdrop-filter: blur(4px);">
     <div class="bg-white rounded-lg shadow-xl w-full max-w-md border-2 border-gray-200">
@@ -325,7 +390,7 @@
     // Cerrar modal con tecla ESC
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
-            const modals = ['modalAddProcedimiento', 'modalEditProcedimiento', 'modalDeleteProcedimiento'];
+            const modals = ['modalAddProcedimiento', 'modalEditProcedimiento', 'modalDeleteProcedimiento', 'modalAsignarEspecialistas'];
             modals.forEach(modalId => {
                 const modal = document.getElementById(modalId);
                 if (modal && !modal.classList.contains('hidden')) {
@@ -334,6 +399,122 @@
             });
         }
     });
+    
+    // Función para asignar especialistas
+    function asignarEspecialistas(id, nombre) {
+        document.getElementById('asignarProcedimientoId').value = id;
+        document.getElementById('modalProcedimientoNombre').textContent = nombre;
+        
+        const container = document.getElementById('especialistasContainer');
+        container.innerHTML = `
+            <div class="text-center text-gray-500 py-8">
+                <svg class="animate-spin h-8 w-8 mx-auto mb-2" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p>Cargando especialistas...</p>
+            </div>
+        `;
+        
+        openModal('modalAsignarEspecialistas');
+        
+        // Cargar especialistas disponibles
+        fetch(`{{ route('admin.procedimientos.especialistas', '') }}/${id}`, {
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const usuarios = data.usuarios || [];
+                const usuariosAsignados = data.usuariosAsignados || [];
+                
+                if (usuarios.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center text-gray-500 py-8">
+                            <p class="text-lg font-medium mb-2">No hay especialistas disponibles</p>
+                            <p class="text-sm">No se encontraron usuarios internos asignados al nivel final de este procedimiento.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                let html = '<div class="space-y-2">';
+                usuarios.forEach(usuario => {
+                    const isChecked = usuariosAsignados.includes(usuario.id);
+                    html += `
+                        <label class="especialista-item flex items-center cursor-pointer">
+                            <input type="checkbox" 
+                                   class="especialista-checkbox" 
+                                   value="${usuario.id}" 
+                                   ${isChecked ? 'checked' : ''}>
+                            <div class="flex-1">
+                                <div class="font-medium text-gray-900">
+                                    ${usuario.nombres} ${usuario.apellido_paterno} ${usuario.apellido_materno || ''}
+                                </div>
+                                <div class="text-sm text-gray-500">${usuario.email}</div>
+                            </div>
+                        </label>
+                    `;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = `
+                    <div class="text-center text-red-500 py-8">
+                        <p class="text-lg font-medium mb-2">Error al cargar especialistas</p>
+                        <p class="text-sm">${data.message || 'Ocurrió un error inesperado'}</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            container.innerHTML = `
+                <div class="text-center text-red-500 py-8">
+                    <p class="text-lg font-medium mb-2">Error al cargar especialistas</p>
+                    <p class="text-sm">No se pudo conectar con el servidor. Intente nuevamente.</p>
+                </div>
+            `;
+        });
+    }
+    
+    // Función para guardar la asignación de especialistas
+    function guardarAsignacionEspecialistas(event) {
+        if (event) {
+            event.preventDefault();
+        }
+        
+        const procedimientoId = document.getElementById('asignarProcedimientoId').value;
+        const checkboxes = document.querySelectorAll('#especialistasContainer input[type="checkbox"]:checked');
+        const usuarios = Array.from(checkboxes).map(cb => parseInt(cb.value));
+        
+        fetch(`{{ route('admin.procedimientos.asignar-especialistas', '') }}/${procedimientoId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                usuarios: usuarios
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Especialistas asignados correctamente');
+                closeModal('modalAsignarEspecialistas');
+            } else {
+                alert('Error: ' + (data.message || 'No se pudieron asignar los especialistas'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al asignar especialistas. Intente nuevamente.');
+        });
+    }
 
     function cargarSubareas(areaId) {
         const subareaSelect = document.getElementById('subareaProcedimiento');

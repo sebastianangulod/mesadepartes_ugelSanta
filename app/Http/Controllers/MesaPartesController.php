@@ -168,11 +168,15 @@ class MesaPartesController extends Controller
                     $procedimientosIds = array_merge($procedimientosIds, $procedimientos->toArray());
                 }
                 
+                // Incluir trámites donde el usuario es responsable O que coincidan con sus niveles
                 if (count($procedimientosIds) > 0) {
-                    $query->whereIn('id_procedimiento', array_unique($procedimientosIds));
+                    $query->where(function($q) use ($procedimientosIds, $usuario) {
+                        $q->whereIn('id_procedimiento', array_unique($procedimientosIds))
+                          ->orWhere('id_usuario', $usuario->id);
+                    });
                 } else {
-                    // Si no hay procedimientos asignados, no mostrar trámites
-                    $query->whereRaw('1 = 0');
+                    // Si no hay procedimientos, solo mostrar trámites donde es responsable
+                    $query->where('id_usuario', $usuario->id);
                 }
             } else {
                 // Si no tiene niveles asignados, mostrar todos los trámites pendientes
@@ -415,10 +419,16 @@ class MesaPartesController extends Controller
                         $procedimientosIds = array_merge($procedimientosIds, $procedimientos->toArray());
                     }
                     
+                    // Incluir trámites donde el usuario es responsable O que coincidan con sus niveles
+                    // Esto es equivalente a: (procedimientos coinciden) OR (t.id_usuario = usuario.id)
                     if (count($procedimientosIds) > 0) {
-                        $query->whereIn('id_procedimiento', array_unique($procedimientosIds));
+                        $query->where(function($q) use ($procedimientosIds, $usuario) {
+                            $q->whereIn('id_procedimiento', array_unique($procedimientosIds))
+                              ->orWhere('id_usuario', $usuario->id);
+                        });
                     } else {
-                        $query->whereRaw('1 = 0');
+                        // Si no hay procedimientos, solo mostrar trámites donde es responsable
+                        $query->where('id_usuario', $usuario->id);
                     }
                 }
             } else {
@@ -454,13 +464,15 @@ class MesaPartesController extends Controller
                 $nivelUsuario = $usuario->usuariosNiveles->first()->nivel ?? null;
                 $nivelFinalProcedimiento = $tramite->procedimiento->nivel_final ?? null;
 
-                // Lógica de acciones permitidas según estado y nivel
+                // Lógica de acciones permitidas según estado y nivel (equivalente al PHP puro)
+                $tieneOficio = !empty($tramite->oficio);
+                
                 switch($tramite->estado) {
                     case 'PENDIENTE':
                         if ($usuario->tipo_user == 2) {
                             $acciones[] = 'ACEPTAR';
                             $acciones[] = 'RECHAZAR';
-                            $acciones[] = 'OBSERVAR';
+                            $acciones[] = 'DERIVAR';
                         }
                         break;
                     case 'EN_PROCESO':
@@ -470,24 +482,39 @@ class MesaPartesController extends Controller
                             }
                             if ($nivelUsuario == $nivelFinalProcedimiento) {
                                 $acciones[] = 'DERIVAR_ESPECIALISTA';
+                                // PROCESAR solo si no hay oficio requerido
+                                if (!$tieneOficio) {
+                                    $acciones[] = 'PROCESAR';
+                                }
                             }
-                            $acciones[] = 'OBSERVAR';
-                            $acciones[] = 'OBSERVAR_CON_OFICIO';
+                            // OBSERVAR disponible para nivel final
                             if ($nivelUsuario == $nivelFinalProcedimiento) {
-                                $acciones[] = 'VERIFICAR';
+                                $acciones[] = 'OBSERVAR';
+                                $acciones[] = 'OBSERVAR_CON_OFICIO';
+                                // VERIFICAR si hay oficio
+                                if ($tieneOficio) {
+                                    $acciones[] = 'VERIFICAR';
+                                }
                             }
+                            // RECHAZAR disponible para todos los niveles en EN_PROCESO
+                            $acciones[] = 'RECHAZAR';
                         }
                         break;
                     case 'OBSERVADO':
                         if ($usuario->tipo_user == 1) {
                             $acciones[] = 'CORREGIR';
-                        } else {
-                            $acciones[] = 'VERIFICAR';
+                        } else if ($usuario->tipo_user == 2) {
+                            // Usuario interno puede verificar tras subsanación
+                            if ($nivelUsuario == $nivelFinalProcedimiento || $nivelUsuario == 2) {
+                                $acciones[] = 'VERIFICAR';
+                            }
+                            $acciones[] = 'OBSERVAR';
                         }
                         break;
                     case 'VERIFICADO':
                         if ($usuario->tipo_user == 2 && $nivelUsuario == $nivelFinalProcedimiento) {
                             $acciones[] = 'PROCESAR';
+                            $acciones[] = 'RECHAZAR';
                         }
                         break;
                 }
