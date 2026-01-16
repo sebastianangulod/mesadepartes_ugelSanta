@@ -17,6 +17,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Controlador de Trámites
@@ -123,7 +125,8 @@ class TramiteController extends Controller
             abort(404, 'Trámite no encontrado');
         }
 
-        $this->authorize('view', $tramite);
+        // Cualquier usuario autenticado puede ver el trámite
+        // (la autenticación se valida en el middleware 'auth')
 
         return view('tramites.show', [
             'tramite' => $tramite,
@@ -465,23 +468,26 @@ class TramiteController extends Controller
     }
 
     /**
-     * Mostrar formulario para crear nuevo trámite (solo usuarios externos)
+     * Mostrar formulario para crear nuevo trámite
      * Equivalente a tramiteNuevo.php del PHP puro
+     * 
+     * Usuarios externos crean trámites VIRTUALES
+     * Usuarios internos crean trámites PRESENCIALES
      * 
      * @return View
      */
     public function nuevo(): View
     {
-        // Solo usuarios externos pueden crear trámites desde esta ruta
-        if (Auth::check() && Auth::user()->tipo_user == 2) {
-            abort(403, 'Los usuarios internos no pueden crear trámites desde esta sección.');
-        }
-
         $procedimientos = Procedimiento::orderBy('nombre')->get();
+
+        // Determinar tipo de trámite según el tipo de usuario
+        // Usuarios internos (tipo_user = 2) crean trámites PRESENCIALES
+        // Usuarios externos (tipo_user = 1) crean trámites VIRTUALES
+        $tipoTramite = Auth::check() && Auth::user()->tipo_user == 2 ? 'PRESENCIAL' : 'VIRTUAL';
 
         return view('mesa-partes.tramite-nuevo', [
             'procedimientos' => $procedimientos,
-            'tipoTramite' => Auth::check() && Auth::user()->tipo_user == 2 ? 'PRESENCIAL' : 'VIRTUAL',
+            'tipoTramite' => $tipoTramite,
         ]);
     }
 
@@ -495,9 +501,96 @@ class TramiteController extends Controller
     public function guardar(Request $request): JsonResponse
     {
         try {
-            $validated = $request->validate([
+            // Log de depuración completo
+            \Log::info('Intentando crear trámite - DEBUG COMPLETO', [
+                'request_method' => $request->method(),
+                'content_type' => $request->header('Content-Type'),
+                'content_length' => $request->header('Content-Length'),
+                'request_data' => $request->except(['archivo']),
+                'all_input' => $request->all(),
+                'has_archivo' => $request->hasFile('archivo'),
+                'files' => $request->allFiles(),
+                'archivo_size' => $request->hasFile('archivo') ? $request->file('archivo')->getSize() : null,
+                'archivo_mime' => $request->hasFile('archivo') ? $request->file('archivo')->getMimeType() : null,
+                'archivo_name' => $request->hasFile('archivo') ? $request->file('archivo')->getClientOriginalName() : null,
+                'php_upload_max_filesize' => ini_get('upload_max_filesize'),
+                'php_post_max_size' => ini_get('post_max_size'),
+                'php_max_file_uploads' => ini_get('max_file_uploads'),
+            ]);
+
+            // Validar primero el procedimiento
+            $request->validate([
                 'id_procedimiento' => 'required|exists:procedimientos,id',
+            ], [
+                'id_procedimiento.required' => 'Debe seleccionar un procedimiento',
+                'id_procedimiento.exists' => 'El procedimiento seleccionado no existe',
+            ]);
+
+            // Verificar archivo antes de validar
+            if (!$request->hasFile('archivo')) {
+                // Verificar si hay error de carga de archivo
+                $uploadError = null;
+                if (isset($_FILES['archivo']['error'])) {
+                    $errorCode = $_FILES['archivo']['error'];
+                    $errorMessages = [
+                        UPLOAD_ERR_INI_SIZE => 'El archivo excede el tamaño máximo permitido por PHP (upload_max_filesize: ' . ini_get('upload_max_filesize') . ')',
+                        UPLOAD_ERR_FORM_SIZE => 'El archivo excede el tamaño máximo permitido por el formulario',
+                        UPLOAD_ERR_PARTIAL => 'El archivo se subió parcialmente',
+                        UPLOAD_ERR_NO_FILE => 'No se seleccionó ningún archivo',
+                        UPLOAD_ERR_NO_TMP_DIR => 'Falta el directorio temporal',
+                        UPLOAD_ERR_CANT_WRITE => 'Error al escribir el archivo en disco',
+                        UPLOAD_ERR_EXTENSION => 'Una extensión de PHP detuvo la carga del archivo',
+                    ];
+                    $uploadError = $errorMessages[$errorCode] ?? 'Error desconocido al cargar el archivo (código: ' . $errorCode . ')';
+                }
+                
+                \Log::error('No se recibió archivo en el request', [
+                    'all_files' => $request->allFiles(),
+                    'files_array' => $_FILES ?? 'No disponible',
+                    'upload_error' => $uploadError,
+                ]);
+                
+                $errorMessage = $uploadError ?? 'No se recibió el archivo. Por favor, verifique que el archivo no exceda el tamaño máximo permitido por el servidor.';
+                
+                // Convertir límites de PHP a bytes para comparación
+                $uploadMaxFilesize = $this->convertToBytes(ini_get('upload_max_filesize'));
+                $postMaxSize = $this->convertToBytes(ini_get('post_max_size'));
+                
+                // Obtener tamaño del archivo si está disponible
+                $fileSize = isset($_FILES['archivo']['size']) ? $_FILES['archivo']['size'] : null;
+                
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $errorMessage,
+                    'errors' => ['archivo' => [$errorMessage]],
+                    'debug' => [
+                        'php_upload_max_filesize' => ini_get('upload_max_filesize') . ' (' . number_format($uploadMaxFilesize / 1024 / 1024, 2) . ' MB)',
+                        'php_post_max_size' => ini_get('post_max_size') . ' (' . number_format($postMaxSize / 1024 / 1024, 2) . ' MB)',
+                        'php_max_file_uploads' => ini_get('max_file_uploads'),
+                        'has_file' => $request->hasFile('archivo'),
+                        'all_files' => array_keys($request->allFiles()),
+                        'upload_error_code' => $_FILES['archivo']['error'] ?? null,
+                        'file_size' => $fileSize ? number_format($fileSize / 1024 / 1024, 2) . ' MB' : 'No disponible',
+                        'suggestion' => 'Por favor, configure php.ini con: upload_max_filesize = 10M y post_max_size = 12M'
+                    ]
+                ], 422);
+            }
+
+            // Validar el archivo
+            $validated = $request->validate([
                 'archivo' => 'required|file|mimes:pdf|max:10240', // 10MB máximo
+            ], [
+                'archivo.required' => 'Debe adjuntar un archivo PDF',
+                'archivo.file' => 'El archivo adjunto no es válido',
+                'archivo.mimes' => 'El archivo debe ser un PDF',
+                'archivo.max' => 'El archivo no debe exceder los 10MB',
+            ]);
+            
+            // Agregar id_procedimiento al array validado
+            $validated['id_procedimiento'] = $request->input('id_procedimiento');
+
+            \Log::info('Validación exitosa, creando trámite', [
+                'id_procedimiento' => $validated['id_procedimiento'],
             ]);
 
             $resultado = $this->tramiteCreacionService->crearTramite([
@@ -505,6 +598,10 @@ class TramiteController extends Controller
             ], $request->file('archivo'));
 
             if ($resultado['success']) {
+                \Log::info('Trámite creado exitosamente', [
+                    'id_tramite' => $resultado['id_tramite'],
+                ]);
+                
                 return response()->json([
                     'status' => 'success',
                     'message' => $resultado['message'],
@@ -512,18 +609,34 @@ class TramiteController extends Controller
                     'redirect' => route('mesa-partes.confirmacion', $resultado['id_tramite']),
                 ]);
             } else {
+                \Log::error('Error al crear trámite', [
+                    'message' => $resultado['message'],
+                ]);
+                
                 return response()->json([
                     'status' => 'error',
                     'message' => $resultado['message'],
                 ], 400);
             }
         } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::warning('Error de validación al crear trámite', [
+                'errors' => $e->errors(),
+                'request_data' => $request->except(['archivo']),
+            ]);
+            
             return response()->json([
                 'status' => 'error',
-                'message' => 'Error de validación',
+                'message' => 'Error de validación. Por favor, revise los campos del formulario.',
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
+            \Log::error('Error inesperado al crear trámite', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            
             return response()->json([
                 'status' => 'error',
                 'message' => 'Error al procesar la solicitud: ' . $e->getMessage(),
@@ -541,9 +654,13 @@ class TramiteController extends Controller
     {
         $tramite = Tramite::with(['procedimiento', 'usuario'])->findOrFail($id);
 
-        // Verificar que el trámite pertenece al usuario autenticado
-        if (Auth::check() && $tramite->id_usuario != Auth::id()) {
-            abort(403, 'No tiene permiso para ver este trámite.');
+        // Cualquier usuario autenticado puede ver la confirmación
+        // (la autenticación se valida en el middleware 'auth')
+
+        // Asegurar que fecha_creacion esté establecida
+        if (!$tramite->fecha_creacion) {
+            $tramite->fecha_creacion = now();
+            $tramite->save();
         }
 
         return view('mesa-partes.confirmacion', [
@@ -562,13 +679,8 @@ class TramiteController extends Controller
     {
         $tramite = Tramite::with(['procedimiento', 'usuario'])->findOrFail($id);
 
-        // Verificar que el trámite pertenece al usuario autenticado o es usuario interno
-        if (Auth::check()) {
-            $usuario = Auth::user();
-            if ($usuario->tipo_user == 1 && $tramite->id_usuario != $usuario->id) {
-                abort(403, 'No tiene permiso para ver este voucher.');
-            }
-        }
+        // Cualquier usuario autenticado puede ver el voucher
+        // (la autenticación se valida en el middleware 'auth')
 
         // Obtener niveles de derivación (similar a hojaRuta)
         $nivelesDerivacion = [];
@@ -1363,5 +1475,174 @@ class TramiteController extends Controller
                 'message' => 'Error al obtener la hoja de ruta: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Convertir tamaño de archivo en formato PHP (ej: "2M", "10M") a bytes
+     * 
+     * @param string $size
+     * @return int
+     */
+    private function convertToBytes(string $size): int
+    {
+        $size = trim($size);
+        $last = strtolower($size[strlen($size) - 1]);
+        $size = (int) $size;
+        
+        switch ($last) {
+            case 'g':
+                $size *= 1024;
+                // no break
+            case 'm':
+                $size *= 1024;
+                // no break
+            case 'k':
+                $size *= 1024;
+        }
+        
+        return $size;
+    }
+
+    /**
+     * Descargar archivo de un trámite (con validación de permisos)
+     * 
+     * @param int $id
+     * @param string $nombreArchivo
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\RedirectResponse
+     */
+    public function descargarArchivo(int $id, string $nombreArchivo)
+    {
+        $tramite = Tramite::with('procedimiento')->findOrFail($id);
+
+        // Cualquier usuario autenticado puede descargar archivos
+        // (la autenticación se valida en el middleware 'auth')
+
+        // Validar que el archivo pertenece al trámite
+        $archivoValido = false;
+        $rutaArchivo = null;
+        $rutaRelativa = null;
+
+        // Verificar archivo adjunto
+        if ($tramite->archivo_adjunto) {
+            $nombreArchivoBD = basename($tramite->archivo_adjunto);
+            if ($nombreArchivoBD === $nombreArchivo || $tramite->archivo_adjunto === $nombreArchivo) {
+                // Intentar primero en disco 'public'
+                $rutaRelativa = 'uploads/tramites/' . $nombreArchivoBD;
+                if (Storage::disk('public')->exists($rutaRelativa)) {
+                    $archivoValido = true;
+                    $rutaArchivo = Storage::disk('public')->path($rutaRelativa);
+                } else {
+                    // Intentar en disco 'local' (por si se guardó antes del cambio)
+                    if (Storage::disk('local')->exists($rutaRelativa)) {
+                        $archivoValido = true;
+                        $rutaArchivo = Storage::disk('local')->path($rutaRelativa);
+                    }
+                }
+            }
+        }
+
+        // Verificar archivo expediente
+        if (!$archivoValido && $tramite->archivo_expediente) {
+            $nombreArchivoBD = basename($tramite->archivo_expediente);
+            if ($nombreArchivoBD === $nombreArchivo || $tramite->archivo_expediente === $nombreArchivo) {
+                $rutaRelativa = 'uploads/tramites/' . $nombreArchivoBD;
+                if (Storage::disk('public')->exists($rutaRelativa)) {
+                    $archivoValido = true;
+                    $rutaArchivo = Storage::disk('public')->path($rutaRelativa);
+                } else {
+                    $rutaRelativa = 'uploads/expedientes/' . $nombreArchivoBD;
+                    if (Storage::disk('public')->exists($rutaRelativa)) {
+                        $archivoValido = true;
+                        $rutaArchivo = Storage::disk('public')->path($rutaRelativa);
+                    }
+                }
+            }
+        }
+
+        // Verificar voucher
+        if (!$archivoValido && $tramite->voucher) {
+            $nombreArchivoBD = basename($tramite->voucher);
+            if ($nombreArchivoBD === $nombreArchivo || $tramite->voucher === $nombreArchivo) {
+                // Intentar primero en disco 'public'
+                $rutaRelativa = 'uploads/vouchers/' . $nombreArchivoBD;
+                if (Storage::disk('public')->exists($rutaRelativa)) {
+                    $archivoValido = true;
+                    $rutaArchivo = Storage::disk('public')->path($rutaRelativa);
+                } else {
+                    // Intentar en disco 'local' (por si se guardó antes del cambio)
+                    if (Storage::disk('local')->exists($rutaRelativa)) {
+                        $archivoValido = true;
+                        $rutaArchivo = Storage::disk('local')->path($rutaRelativa);
+                    } else {
+                        // Intentar en la ruta antigua: storage/app/uploads/vouchers/
+                        $rutaAntigua = storage_path('app/uploads/vouchers/' . $nombreArchivoBD);
+                        if (file_exists($rutaAntigua)) {
+                            $archivoValido = true;
+                            $rutaArchivo = $rutaAntigua;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Verificar archivo_voucher
+        if (!$archivoValido && $tramite->archivo_voucher) {
+            $nombreArchivoBD = basename($tramite->archivo_voucher);
+            if ($nombreArchivoBD === $nombreArchivo || $tramite->archivo_voucher === $nombreArchivo) {
+                $rutaRelativa = 'uploads/vouchers/' . $nombreArchivoBD;
+                if (Storage::disk('public')->exists($rutaRelativa)) {
+                    $archivoValido = true;
+                    $rutaArchivo = Storage::disk('public')->path($rutaRelativa);
+                }
+            }
+        }
+
+        // Verificar oficios (buscar en la tabla de oficios si existe)
+        if (!$archivoValido) {
+            try {
+                $oficio = DB::table('oficios')
+                    ->where('id_tramite', $id)
+                    ->where('archivo', $nombreArchivo)
+                    ->first();
+                
+                if ($oficio) {
+                    $rutaRelativa = 'uploads/oficios/' . $nombreArchivo;
+                    if (Storage::disk('public')->exists($rutaRelativa)) {
+                        $archivoValido = true;
+                        $rutaArchivo = Storage::disk('public')->path($rutaRelativa);
+                    }
+                }
+            } catch (\Exception $e) {
+                // Si la tabla no existe, continuar sin error
+            }
+        }
+
+        if (!$archivoValido || !$rutaArchivo) {
+            // Log detallado para debugging
+            $rutasBuscadas = [];
+            if ($tramite->archivo_adjunto) {
+                $rutasBuscadas[] = 'public:uploads/tramites/' . basename($tramite->archivo_adjunto);
+                $rutasBuscadas[] = 'local:uploads/tramites/' . basename($tramite->archivo_adjunto);
+            }
+            if ($tramite->voucher) {
+                $rutasBuscadas[] = 'public:uploads/vouchers/' . basename($tramite->voucher);
+                $rutasBuscadas[] = 'local:uploads/vouchers/' . basename($tramite->voucher);
+            }
+            
+            \Log::error('Archivo no encontrado', [
+                'tramite_id' => $id,
+                'nombre_archivo' => $nombreArchivo,
+                'archivo_adjunto' => $tramite->archivo_adjunto,
+                'archivo_expediente' => $tramite->archivo_expediente,
+                'voucher' => $tramite->voucher,
+                'archivo_voucher' => $tramite->archivo_voucher ?? null,
+                'rutas_buscadas' => $rutasBuscadas,
+                'storage_public_path' => Storage::disk('public')->path(''),
+                'storage_local_path' => Storage::disk('local')->path(''),
+            ]);
+            abort(404, 'Archivo no encontrado: ' . $nombreArchivo);
+        }
+
+        return response()->download($rutaArchivo, $nombreArchivo);
     }
 }

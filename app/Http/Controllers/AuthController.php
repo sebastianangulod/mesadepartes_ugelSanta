@@ -15,10 +15,12 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
 use App\Models\Usuario;
 use App\Models\Departamento;
 use App\Models\Provincia;
 use App\Models\Distrito;
+use App\Models\ResetPasswordRequest;
 
 /**
  * Controlador de autenticación mejorado para el sistema de mesa de partes
@@ -250,8 +252,6 @@ class AuthController extends Controller
             // Verificar si es administrador (como en PHP puro: consultar tabla administradores directamente)
             // Esto es más confiable que usar relaciones que pueden no estar cargadas
             $esAdmin = DB::table('administradores')->where('id_usuario', $usuario->id)->exists();
-            
-            Log::info("Login interno - Usuario ID: {$usuario->id}, DNI: {$usuario->dni}, Es Admin: " . ($esAdmin ? 'Sí' : 'No'));
 
             // Redirigir según sea administrador o usuario interno operativo
             if ($esAdmin) {
@@ -449,10 +449,49 @@ class AuthController extends Controller
 
     /**
      * Muestra el formulario para restablecer contraseña
+     * Valida que el token sea válido, no haya expirado y sea el más reciente para el usuario
      */
     public function showRestablecerForm($token)
     {
         try {
+            // Buscar el token en la base de datos
+            $resetRequest = ResetPasswordRequest::where('token', $token)->first();
+            
+            // Si el token no existe, mostrar vista de enlace inválido
+            if (!$resetRequest) {
+                return view('auth.enlace-invalido', [
+                    'title' => 'Enlace Inválido - Mesa de Partes',
+                    'mensaje' => 'El enlace de recuperación no es válido o ha sido utilizado.'
+                ]);
+            }
+            
+            // Verificar que el token no haya expirado
+            $minutosTranscurridos = $resetRequest->created_at->diffInMinutes(now());
+            $tiempoExpiracion = config('auth.passwords.users.expire', 60);
+            
+            if ($minutosTranscurridos > $tiempoExpiracion) {
+                // Eliminar token expirado
+                $resetRequest->delete();
+                return view('auth.enlace-invalido', [
+                    'title' => 'Enlace Inválido - Mesa de Partes',
+                    'mensaje' => 'El enlace de recuperación ha expirado. Por favor, solicite un nuevo enlace.'
+                ]);
+            }
+            
+            // Verificar que este token sea el más reciente para el usuario
+            $tokenMasReciente = ResetPasswordRequest::where('user_id', $resetRequest->user_id)
+                ->orderBy('created_at', 'desc')
+                ->first();
+            
+            // Si el token actual no es el más reciente, es inválido
+            if ($tokenMasReciente && $tokenMasReciente->id !== $resetRequest->id) {
+                return view('auth.enlace-invalido', [
+                    'title' => 'Enlace Inválido - Mesa de Partes',
+                    'mensaje' => 'Este enlace ya no es válido. Se ha generado un nuevo enlace de recuperación. Por favor, use el enlace más reciente que recibió por correo.'
+                ]);
+            }
+            
+            // Si todo está bien, mostrar el formulario
             return view('auth.restablecer', [
                 'title' => 'Restablecer Contraseña - Mesa de Partes',
                 'token' => $token,
@@ -462,7 +501,10 @@ class AuthController extends Controller
 
         } catch (\Exception $e) {
             Log::error("Error al mostrar formulario de restablecimiento: " . $e->getMessage());
-            return redirect()->route('recuperar')->with('error', 'Ocurrió un error al procesar la solicitud.');
+            return view('auth.enlace-invalido', [
+                'title' => 'Enlace Inválido - Mesa de Partes',
+                'mensaje' => 'Ocurrió un error al procesar la solicitud. Por favor, intente nuevamente.'
+            ]);
         }
     }
 
@@ -766,7 +808,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Valida reCAPTCHA
+     * Valida reCAPTCHA v2 o v3
      */
     protected function validarRecaptcha($recaptchaResponse)
     {
@@ -776,15 +818,132 @@ class AuthController extends Controller
             ]);
         }
 
-        $response = file_get_contents("https://www.google.com/recaptcha/api/siteverify?secret=" . 
-            config('services.recaptcha.secret_key') . "&response={$recaptchaResponse}");
+        $secretKey = config('services.recaptcha.secret_key');
+        
+        if (empty($secretKey)) {
+            Log::warning('reCAPTCHA secret_key no configurado');
+            throw ValidationException::withMessages([
+                'g-recaptcha-response' => 'Error de configuración del reCAPTCHA. Por favor, contacte al administrador.'
+            ]);
+        }
+
+        // Verificar reCAPTCHA con Google usando cURL (más confiable que file_get_contents)
+        $url = "https://www.google.com/recaptcha/api/siteverify";
+        $data = [
+            'secret' => $secretKey,
+            'response' => $recaptchaResponse,
+            'remoteip' => request()->ip()
+        ];
+
+        // Usar cURL si está disponible, sino usar file_get_contents
+        if (function_exists('curl_init')) {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, config('services.recaptcha.timeout', 10));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/x-www-form-urlencoded'
+            ]);
+            
+            // Configuración SSL: verificar en producción, permitir en desarrollo
+            if (config('app.env') === 'production') {
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+            } else {
+                // En desarrollo local, desactivar verificación SSL
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            }
+            
+            $response = curl_exec($ch);
+            $curlError = curl_error($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if ($response === false || !empty($curlError)) {
+                Log::error('Error cURL al conectar con reCAPTCHA', [
+                    'error' => $curlError,
+                    'http_code' => $httpCode
+                ]);
+                throw ValidationException::withMessages([
+                    'g-recaptcha-response' => 'Error al validar el reCAPTCHA. Por favor, inténtelo nuevamente.'
+                ]);
+            }
+            
+            if ($httpCode !== 200) {
+                Log::error('HTTP error al conectar con reCAPTCHA', [
+                    'http_code' => $httpCode
+                ]);
+                throw ValidationException::withMessages([
+                    'g-recaptcha-response' => 'Error al validar el reCAPTCHA. Por favor, inténtelo nuevamente.'
+                ]);
+            }
+        } else {
+            // Fallback a file_get_contents si cURL no está disponible
+            $options = [
+                'http' => [
+                    'header' => "Content-type: application/x-www-form-urlencoded\r\n",
+                    'method' => 'POST',
+                    'content' => http_build_query($data),
+                    'timeout' => config('services.recaptcha.timeout', 10),
+                    'ignore_errors' => true
+                ],
+                'ssl' => [
+                    'verify_peer' => true,
+                    'verify_peer_name' => true
+                ]
+            ];
+
+            $context = stream_context_create($options);
+            $response = @file_get_contents($url, false, $context);
+            
+            if ($response === false) {
+                Log::error('Error file_get_contents al conectar con reCAPTCHA');
+                throw ValidationException::withMessages([
+                    'g-recaptcha-response' => 'Error al validar el reCAPTCHA. Por favor, inténtelo nuevamente.'
+                ]);
+            }
+        }
         
         $responseKeys = json_decode($response, true);
 
-        if (!intval($responseKeys["success"]) || $responseKeys["score"] < config('services.recaptcha.score_threshold')) {
+        if (!$responseKeys || !isset($responseKeys['success'])) {
+            Log::error('Respuesta inválida del servicio de reCAPTCHA');
             throw ValidationException::withMessages([
-                'g-recaptcha-response' => 'Falló la validación del reCAPTCHA. Por favor, inténtelo nuevamente.'
+                'g-recaptcha-response' => 'Error al procesar la respuesta del reCAPTCHA. Por favor, inténtelo nuevamente.'
             ]);
+        }
+
+        // Para reCAPTCHA v2: success debe ser true
+        // Para reCAPTCHA v3: además verificar el score si está configurado
+        if (!$responseKeys['success']) {
+            $errorCodes = $responseKeys['error-codes'] ?? [];
+            
+            // Mensaje más específico según el error
+            $errorMessage = 'Falló la validación del reCAPTCHA.';
+            if (in_array('invalid-input-secret', $errorCodes)) {
+                $errorMessage = 'Error de configuración del reCAPTCHA. La clave secreta es inválida.';
+            } elseif (in_array('invalid-input-response', $errorCodes)) {
+                $errorMessage = 'La respuesta del reCAPTCHA es inválida. Por favor, complete el reCAPTCHA nuevamente.';
+            } elseif (in_array('timeout-or-duplicate', $errorCodes)) {
+                $errorMessage = 'El reCAPTCHA expiró o ya fue usado. Por favor, complete el reCAPTCHA nuevamente.';
+            }
+            
+            throw ValidationException::withMessages([
+                'g-recaptcha-response' => $errorMessage
+            ]);
+        }
+
+        // Si es reCAPTCHA v3, verificar el score
+        if (isset($responseKeys['score'])) {
+            $scoreThreshold = config('services.recaptcha.score_threshold', 0.5);
+            if ($responseKeys['score'] < $scoreThreshold) {
+                throw ValidationException::withMessages([
+                    'g-recaptcha-response' => 'Actividad sospechosa detectada. Por favor, inténtelo nuevamente.'
+                ]);
+            }
         }
     }
 
@@ -880,6 +1039,162 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             Log::error("Error al enviar email de bienvenida: " . $e->getMessage());
             // No interrumpir el flujo si falla el envío de email
+        }
+    }
+
+    /**
+     * Mostrar formulario para actualizar datos personales
+     */
+    public function showActualizarDatosForm()
+    {
+        $usuario = Auth::user()->load('distrito.provincia.departamento');
+        
+        // Cargar datos de ubicación
+        $departamentos = Departamento::all();
+        
+        // Cargar provincias y distritos si el usuario tiene ubicación
+        $provincias = collect();
+        $distritos = collect();
+        
+        if ($usuario->distrito && $usuario->distrito->provincia && $usuario->distrito->provincia->departamento) {
+            $departamentoId = $usuario->distrito->provincia->departamento_id;
+            $provincias = Provincia::where('departamento_id', $departamentoId)->get();
+            
+            if ($usuario->distrito->provincia_id) {
+                $distritos = Distrito::where('provincia_id', $usuario->distrito->provincia_id)->get();
+            }
+        }
+        
+        // Determinar layout según tipo de usuario
+        // Administradores siempre usan layout admin
+        // Usuarios internos y externos usan layout mesa-partes
+        $layout = $usuario->esAdministrador() ? 'layouts.admin' : 'layouts.mesa-partes';
+        
+        return view('perfil.actualizar-datos', [
+            'title' => 'Actualizar Datos - Mesa de Partes',
+            'usuario' => $usuario,
+            'departamentos' => $departamentos,
+            'provincias' => $provincias,
+            'distritos' => $distritos,
+            'layout' => $layout,
+            'hideAlerts' => true, // Ocultar alerts del layout para mostrar solo la notificación de la vista
+            'tramitesPendientes' => 0, // Para usuarios externos no hay trámites pendientes
+            'recaptcha_enabled' => config('services.recaptcha.enabled'),
+            'recaptcha_site_key' => config('services.recaptcha.site_key')
+        ]);
+    }
+
+    /**
+     * Procesar actualización de datos personales
+     */
+    public function actualizarDatos(Request $request)
+    {
+        $usuario = Auth::user();
+        
+        try {
+            // Validar reCAPTCHA si está habilitado
+            if (config('services.recaptcha.enabled')) {
+                $this->validarRecaptcha($request->input('g-recaptcha-response'));
+            }
+            
+            $validated = $request->validate([
+                'nombres' => 'required|string|max:20',
+                'apellido_paterno' => 'required|string|max:20',
+                'apellido_materno' => 'required|string|max:20',
+                'email' => ['required', 'email', 'max:50', Rule::unique('usuarios')->ignore($usuario->id)],
+                'telefono' => 'required|string|size:9|regex:/^[0-9]{9}$/',
+                'direccion' => 'required|string|max:35',
+                'distrito_id' => 'required|exists:distritos,id',
+            ]);
+
+            $usuario->update([
+                'nombres' => strtoupper($validated['nombres']),
+                'apellido_paterno' => strtoupper($validated['apellido_paterno']),
+                'apellido_materno' => strtoupper($validated['apellido_materno']),
+                'email' => $validated['email'],
+                'telefono' => $validated['telefono'],
+                'direccion' => strtoupper($validated['direccion']),
+                'distrito_id' => $validated['distrito_id'],
+            ]);
+
+            Log::info("Datos actualizados para usuario: {$usuario->email} (ID: {$usuario->id})");
+
+            return redirect()->route('perfil.actualizar-datos')
+                ->with('success', 'Sus datos han sido actualizados exitosamente.');
+
+        } catch (ValidationException $e) {
+            return back()->withErrors($e->errors())->withInput();
+        } catch (\Exception $e) {
+            Log::error("Error al actualizar datos del usuario: " . $e->getMessage());
+            return back()->withErrors(['error' => 'Ocurrió un error al actualizar sus datos. Por favor, inténtelo nuevamente.'])->withInput();
+        }
+    }
+
+    /**
+     * Mostrar formulario para actualizar contraseña
+     */
+    public function showActualizarContraseñaForm()
+    {
+        $usuario = Auth::user();
+        // Determinar layout según tipo de usuario
+        // Administradores siempre usan layout admin
+        // Usuarios internos y externos usan layout mesa-partes
+        $layout = $usuario->esAdministrador() ? 'layouts.admin' : 'layouts.mesa-partes';
+        
+        return view('perfil.actualizar-contraseña', [
+            'title' => 'Actualizar Contraseña - Mesa de Partes',
+            'layout' => $layout,
+            'hideAlerts' => true, // Ocultar alerts del layout para mostrar solo la notificación de la vista
+            'tramitesPendientes' => 0, // Para usuarios externos no hay trámites pendientes
+            'recaptcha_enabled' => config('services.recaptcha.enabled'),
+            'recaptcha_site_key' => config('services.recaptcha.site_key')
+        ]);
+    }
+
+    /**
+     * Procesar actualización de contraseña
+     */
+    public function actualizarContraseña(Request $request)
+    {
+        $usuario = Auth::user();
+        
+        try {
+            // Validar reCAPTCHA si está habilitado
+            if (config('services.recaptcha.enabled')) {
+                $this->validarRecaptcha($request->input('g-recaptcha-response'));
+            }
+            
+            $validated = $request->validate([
+                'password_actual' => 'required|string',
+                'password' => 'required|string|min:8|confirmed|regex:/^(?=.*[A-Z])(?=.*[0-9])(?=.*[\p{P}\p{S}]).{8,}$/u',
+                'password_confirmation' => 'required|string|min:8',
+            ]);
+
+            // Verificar contraseña actual
+            if (!Hash::check($validated['password_actual'], $usuario->passw)) {
+                return back()->withErrors(['password_actual' => 'La contraseña actual es incorrecta.'])->withInput();
+            }
+
+            // Verificar que la nueva contraseña sea diferente
+            if (Hash::check($validated['password'], $usuario->passw)) {
+                return back()->withErrors(['password' => 'La nueva contraseña debe ser diferente a la contraseña actual.'])->withInput();
+            }
+
+            // Actualizar contraseña
+            $usuario->update([
+                'passw' => Hash::make($validated['password']),
+            ]);
+
+            Log::info("Contraseña actualizada para usuario: {$usuario->email} (ID: {$usuario->id})");
+
+            return redirect()->route('perfil.actualizar-contraseña')
+                ->with('success', 'Su contraseña ha sido actualizada exitosamente.');
+
+        } catch (ValidationException $e) {
+            return back()->withErrors($e->errors())->withInput();
+        } catch (\Exception $e) {
+            Log::error("Error al actualizar contraseña del usuario: " . $e->getMessage());
+            return back()->withErrors(['error' => 'Ocurrió un error al actualizar su contraseña. Por favor, inténtelo nuevamente.'])->withInput();
         }
     }
 }

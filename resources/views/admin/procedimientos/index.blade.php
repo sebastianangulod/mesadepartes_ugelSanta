@@ -352,6 +352,18 @@
         <div class="px-6 py-4">
             <input type="hidden" id="deleteProcedimientoId" name="id">
             <p class="mb-4 text-gray-700">¿Estás seguro de que deseas eliminar el procedimiento <strong id="deleteProcedimientoNombre"></strong>?</p>
+            
+            <!-- Información de elementos relacionados -->
+            <div id="deleteProcedimientoDependencias" class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg hidden">
+                <p class="text-sm font-semibold text-yellow-800 mb-2">
+                    <svg class="inline-block w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                    </svg>
+                    Se eliminarán también los siguientes elementos relacionados:
+                </p>
+                <ul id="deleteProcedimientoDependenciasList" class="text-sm text-yellow-700 list-disc list-inside space-y-1">
+                </ul>
+            </div>
         </div>
         <div class="px-6 py-4 border-t-2 border-gray-300 flex justify-end space-x-2">
             <button type="button" onclick="closeModal('modalDeleteProcedimiento')" class="btn-secondary">Cancelar</button>
@@ -419,7 +431,7 @@
         openModal('modalAsignarEspecialistas');
         
         // Cargar especialistas disponibles
-        fetch(`{{ route('admin.procedimientos.especialistas', '') }}/${id}`, {
+        fetch(`/admin/procedimientos/${id}/especialistas`, {
             headers: {
                 'Accept': 'application/json'
             }
@@ -490,7 +502,7 @@
         const checkboxes = document.querySelectorAll('#especialistasContainer input[type="checkbox"]:checked');
         const usuarios = Array.from(checkboxes).map(cb => parseInt(cb.value));
         
-        fetch(`{{ route('admin.procedimientos.asignar-especialistas', '') }}/${procedimientoId}`, {
+        fetch(`/admin/procedimientos/${procedimientoId}/asignar-especialistas`, {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -1021,7 +1033,47 @@
     function eliminarProcedimiento(id, nombre) {
         document.getElementById('deleteProcedimientoId').value = id;
         document.getElementById('deleteProcedimientoNombre').textContent = nombre;
+        
+        // Cargar información de dependencias
+        cargarDependenciasProcedimiento(id);
+        
         openModal('modalDeleteProcedimiento');
+    }
+    
+    // Función para cargar dependencias del procedimiento
+    function cargarDependenciasProcedimiento(id) {
+        fetch(`/admin/procedimientos/${id}/dependencias`)
+            .then(response => response.json())
+            .then(data => {
+                const dependenciasDiv = document.getElementById('deleteProcedimientoDependencias');
+                const dependenciasList = document.getElementById('deleteProcedimientoDependenciasList');
+                
+                if (data.success && data.data.tiene_dependencias) {
+                    dependenciasList.innerHTML = '';
+                    const dependencias = data.data.dependencias;
+                    
+                    const labels = {
+                        'tramites': 'Trámites asociados',
+                        'usuarios_asignados': 'Usuarios especialistas asignados'
+                    };
+                    
+                    Object.keys(dependencias).forEach(key => {
+                        if (dependencias[key] > 0) {
+                            const li = document.createElement('li');
+                            li.textContent = `${labels[key] || key}: ${dependencias[key]}`;
+                            dependenciasList.appendChild(li);
+                        }
+                    });
+                    
+                    dependenciasDiv.classList.remove('hidden');
+                } else {
+                    dependenciasDiv.classList.add('hidden');
+                }
+            })
+            .catch(error => {
+                console.error('Error al cargar dependencias:', error);
+                document.getElementById('deleteProcedimientoDependencias').classList.add('hidden');
+            });
     }
 
     function confirmarEliminarProcedimiento(event) {

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Nivel1;
 use App\Models\Nivel2;
 use App\Models\Procedimiento;
+use App\Models\Tramite;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -152,6 +153,40 @@ class AreasController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al actualizar el área: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener información de elementos relacionados que se eliminarán en cascada
+     * 
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getDependencias($id)
+    {
+        try {
+            $area = Nivel1::findOrFail($id);
+            
+            $dependencias = [
+                'nivel2' => Nivel2::where('id_nivel1', $id)->count(),
+                'procedimientos' => Procedimiento::where('id_area', $id)->count(),
+            ];
+            
+            $total = array_sum($dependencias);
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'dependencias' => $dependencias,
+                    'total' => $total,
+                    'tiene_dependencias' => $total > 0
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener dependencias: ' . $e->getMessage()
             ], 500);
         }
     }

@@ -221,12 +221,14 @@
         
         <!-- Contenido principal -->
         <main class="main-content flex-1 p-8">
-            @if(session('success'))
-                <div class="mb-4 rounded-md bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
-                    <span class="font-semibold">Correcto:</span>
-                    <span>{{ session('success') }}</span>
-                </div>
-            @endif
+            @unless(isset($hideAlerts) && $hideAlerts)
+                @if(session('success'))
+                    <div class="mb-4 rounded-md bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
+                        <span class="font-semibold">Correcto:</span>
+                        <span>{{ session('success') }}</span>
+                    </div>
+                @endif
+            @endunless
             
             @if(session('error'))
                 <div class="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">

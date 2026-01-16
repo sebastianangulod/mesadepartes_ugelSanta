@@ -137,50 +137,139 @@ class MesaPartesController extends Controller
 
         // Si es usuario interno, obtener trámites según su nivel asignado
         if ($usuario->tipo_user == 2) {
-            // Obtener niveles asignados al usuario
+            // EXCEPCIÓN: Los administradores pueden ver TODOS los trámites sin restricciones
+            if ($usuario->esAdministrador()) {
+                // Los administradores ven todos los trámites, sin filtro de nivel
+                // No se aplica ningún filtro adicional aquí
+            } else {
+                // Usuarios internos NO administradores: filtrar según nivel asignado
             $nivelesUsuario = \App\Models\UsuariosNiveles::where('id_usuario', $usuario->id)->get();
             
             if ($nivelesUsuario->count() > 0) {
-                // Obtener procedimientos asignados al usuario o que coincidan con sus niveles
-                $procedimientosIds = [];
-                
-                foreach ($nivelesUsuario as $nivelUsuario) {
-                    $nivel = $nivelUsuario->nivel;
-                    $idNivel = $nivelUsuario->id_nivel;
+                    // Obtener los niveles del usuario
+                    $nivelesDelUsuario = $nivelesUsuario->pluck('nivel')->unique()->toArray();
                     
-                    // Buscar procedimientos que coincidan con el nivel del usuario
-                    $procedimientos = Procedimiento::where(function($q) use ($nivel, $idNivel) {
-                        if ($nivel == 1) {
-                            $q->where('id_area', $idNivel);
-                        } elseif ($nivel == 2) {
-                            $q->where('id_subarea', $idNivel);
-                        } elseif ($nivel == 3) {
-                            $q->where('nivel_final', '3')->where('id_nivel_final', $idNivel)
-                              ->orWhere('nivel_final', '4')
-                              ->whereHas('nivelFinal', function($q2) use ($idNivel) {
-                                  $q2->where('id_nivel3', $idNivel);
-                              });
-                        } elseif ($nivel == 4) {
-                            $q->where('nivel_final', '4')->where('id_nivel_final', $idNivel);
+                    // Lógica especial por nivel:
+                    // - Niveles intermedios (1, 2, 3 cuando no es final): todos los usuarios del mismo nivel/subárea ven todos los trámites
+                    // - Nivel final: solo el usuario asignado ve el trámite
+                    $query->where(function($q) use ($nivelesDelUsuario, $usuario, $nivelesUsuario) {
+                        // Nivel 1: todos los usuarios de la misma área ven todos los trámites de nivel 1
+                        if (in_array(1, $nivelesDelUsuario)) {
+                            $nivel1Usuario = $nivelesUsuario->where('nivel', 1)->first();
+                            if ($nivel1Usuario) {
+                                $idAreaUsuario = $nivel1Usuario->id_nivel; // id_nivel para nivel 1 es el ID del área
+                                $q->where(function($subQ) use ($idAreaUsuario) {
+                                    $subQ->where('nivel_actual', 1)
+                                         ->whereHas('procedimiento', function($procQ) use ($idAreaUsuario) {
+                                             $procQ->where('id_area', $idAreaUsuario);
+                                         });
+                                });
+                            }
                         }
-                    })->pluck('id');
-                    
-                    $procedimientosIds = array_merge($procedimientosIds, $procedimientos->toArray());
-                }
-                
-                // Incluir trámites donde el usuario es responsable O que coincidan con sus niveles
-                if (count($procedimientosIds) > 0) {
-                    $query->where(function($q) use ($procedimientosIds, $usuario) {
-                        $q->whereIn('id_procedimiento', array_unique($procedimientosIds))
-                          ->orWhere('id_usuario', $usuario->id);
+                        
+                        // Nivel 2: si es intermedio (nivel_final != '2'), todos los usuarios de la misma subárea ven todos los trámites
+                        if (in_array(2, $nivelesDelUsuario)) {
+                            $nivel2Usuario = $nivelesUsuario->where('nivel', 2)->first();
+                            if ($nivel2Usuario) {
+                                $idSubareaUsuario = $nivel2Usuario->id_nivel; // id_nivel para nivel 2 es el ID de la subárea
+                                $q->orWhere(function($subQ) use ($idSubareaUsuario) {
+                                    $subQ->where('nivel_actual', 2)
+                                         ->whereHas('procedimiento', function($procQ) use ($idSubareaUsuario) {
+                                             // Solo si nivel 2 NO es el nivel final (es intermedio)
+                                             $procQ->where('id_subarea', $idSubareaUsuario)
+                                                   ->where('nivel_final', '!=', '2');
+                                         });
+                                });
+                            }
+                        }
+                        
+                            // Nivel 3: si es intermedio (nivel_final = '4'), todos los usuarios del mismo nivel 3 ven todos los trámites
+                            if (in_array(3, $nivelesDelUsuario)) {
+                                $nivel3Usuario = $nivelesUsuario->where('nivel', 3)->first();
+                                if ($nivel3Usuario) {
+                                    $idNivel3Usuario = $nivel3Usuario->id_nivel;
+                                    // Obtener la subárea del nivel 3 del usuario
+                                    $nivel3Modelo = \App\Models\Nivel3::find($idNivel3Usuario);
+                                    if ($nivel3Modelo && $nivel3Modelo->id_nivel2) {
+                                        $idSubareaNivel3 = $nivel3Modelo->id_nivel2;
+                                        $q->orWhere(function($subQ) use ($idNivel3Usuario, $idSubareaNivel3) {
+                                            $subQ->where('nivel_actual', 3)
+                                                 ->whereHas('procedimiento', function($procQ) use ($idNivel3Usuario, $idSubareaNivel3) {
+                                                     // Solo si nivel 3 NO es el nivel final (es intermedio cuando nivel_final = '4')
+                                                     // Y pertenece a la misma subárea
+                                                     $procQ->where('nivel_final', '4')
+                                                           ->where('id_subarea', $idSubareaNivel3)
+                                                           ->where('id_nivel_final', '!=', $idNivel3Usuario); // No es el nivel final específico
+                                                 });
+                                        });
+                                    }
+                                }
+                            }
+                        
+                        // Niveles finales: solo el usuario asignado ve el trámite
+                        // Esto incluye: nivel 2 cuando es final, nivel 3 cuando es final, nivel 4 siempre
+                        $nivelesFinales = [];
+                        foreach ($nivelesDelUsuario as $nivel) {
+                            // Nivel 2 es final si el procedimiento tiene nivel_final = '2'
+                            // Nivel 3 es final si el procedimiento tiene nivel_final = '3'
+                            // Nivel 4 siempre es final
+                            if ($nivel == 4) {
+                                $nivelesFinales[] = 4;
+                            } elseif ($nivel == 3) {
+                                // Nivel 3 puede ser final o intermedio, verificamos por procedimiento
+                                $nivel3Usuario = $nivelesUsuario->where('nivel', 3)->first();
+                                if ($nivel3Usuario) {
+                                    $idNivel3Usuario = $nivel3Usuario->id_nivel;
+                                    // Si el procedimiento tiene nivel_final = '3' y id_nivel_final = id_nivel del usuario, es final
+                                    $q->orWhere(function($subQ) use ($idNivel3Usuario, $usuario) {
+                                        $subQ->where('nivel_actual', 3)
+                                             ->where('id_usuario', $usuario->id)
+                                             ->whereHas('procedimiento', function($procQ) use ($idNivel3Usuario) {
+                                                 $procQ->where('nivel_final', '3')
+                                                       ->where('id_nivel_final', $idNivel3Usuario);
+                                             });
+                                    });
+                                }
+                        } elseif ($nivel == 2) {
+                                // Nivel 2 puede ser final o intermedio, verificamos por procedimiento
+                                $nivel2Usuario = $nivelesUsuario->where('nivel', 2)->first();
+                                if ($nivel2Usuario) {
+                                    $idNivel2Usuario = $nivel2Usuario->id_nivel;
+                                    // Si el procedimiento tiene nivel_final = '2' y id_nivel_final = id_nivel del usuario, es final
+                                    $q->orWhere(function($subQ) use ($idNivel2Usuario, $usuario) {
+                                        $subQ->where('nivel_actual', 2)
+                                             ->where('id_usuario', $usuario->id)
+                                             ->whereHas('procedimiento', function($procQ) use ($idNivel2Usuario) {
+                                                 $procQ->where('nivel_final', '2')
+                                                       ->where('id_nivel_final', $idNivel2Usuario);
+                              });
+                                    });
+                                }
+                            }
+                        }
+                        
+                        // Nivel 4 siempre es final: solo el usuario asignado
+                        if (in_array(4, $nivelesDelUsuario)) {
+                            $q->orWhere(function($subQ) use ($usuario) {
+                                $subQ->where('nivel_actual', 4)
+                                     ->where('id_usuario', $usuario->id);
+                            });
+                        }
                     });
+                    
+                    // Log para depuración (solo en desarrollo)
+                    if (config('app.debug')) {
+                        \Log::debug('Filtrado de trámites para usuario interno', [
+                            'usuario_id' => $usuario->id,
+                            'niveles_usuario' => $nivelesDelUsuario,
+                            'query_sql' => $query->toSql(),
+                            'query_bindings' => $query->getBindings()
+                        ]);
+                    }
                 } else {
-                    // Si no hay procedimientos, solo mostrar trámites donde es responsable
-                    $query->where('id_usuario', $usuario->id);
+                    // Si no tiene niveles asignados, no debería ver ningún trámite por defecto
+                    $query->where('id', null); // Retorna un conjunto vacío
                 }
-            } else {
-                // Si no tiene niveles asignados, mostrar todos los trámites pendientes
-                // (comportamiento por defecto para administradores o usuarios sin asignación específica)
             }
         } else {
             // Usuario externo: solo sus propios trámites
@@ -380,55 +469,153 @@ class MesaPartesController extends Controller
         
         $pagina = $request->input('pagina', 1);
         $porPagina = $request->input('por_pagina', 10);
-        $filtros = $request->input('filtros', []);
+        
+        // Decodificar filtros si viene como JSON string
+        $filtrosInput = $request->input('filtros', []);
+        if (is_string($filtrosInput)) {
+            $filtros = json_decode($filtrosInput, true) ?? [];
+        } else {
+            $filtros = $filtrosInput;
+        }
 
         try {
             $query = Tramite::with(['procedimiento', 'usuario']);
 
             // Si es usuario interno, obtener trámites según su nivel asignado
             if ($usuario->tipo_user == 2) {
+                // EXCEPCIÓN: Los administradores pueden ver TODOS los trámites sin restricciones
+                if ($usuario->esAdministrador()) {
+                    // Los administradores ven todos los trámites, sin filtro de nivel
+                    // No se aplica ningún filtro adicional aquí
+                } else {
+                    // Usuarios internos NO administradores: filtrar según nivel asignado
                 $nivelesUsuario = \App\Models\UsuariosNiveles::where('id_usuario', $usuario->id)->get();
                 
                 if ($nivelesUsuario->count() > 0) {
-                    $procedimientosIds = [];
-                    
-                    foreach ($nivelesUsuario as $nivelUsuario) {
-                        $nivel = $nivelUsuario->nivel;
-                        $idNivel = $nivelUsuario->id_nivel;
+                        // Obtener los niveles del usuario
+                        $nivelesDelUsuario = $nivelesUsuario->pluck('nivel')->unique()->toArray();
                         
-                        $procedimientos = Procedimiento::where(function($q) use ($nivel, $idNivel) {
-                            if ($nivel == 1) {
-                                $q->where('id_area', $idNivel);
+                        // Lógica especial por nivel:
+                        // - Niveles intermedios (1, 2, 3 cuando no es final): todos los usuarios del mismo nivel/subárea ven todos los trámites
+                        // - Nivel final: solo el usuario asignado ve el trámite
+                        $query->where(function($q) use ($nivelesDelUsuario, $usuario, $nivelesUsuario) {
+                            // Nivel 1: todos los usuarios de la misma área ven todos los trámites de nivel 1
+                            if (in_array(1, $nivelesDelUsuario)) {
+                                $nivel1Usuario = $nivelesUsuario->where('nivel', 1)->first();
+                                if ($nivel1Usuario) {
+                                    $idAreaUsuario = $nivel1Usuario->id_nivel; // id_nivel para nivel 1 es el ID del área
+                                    $q->where(function($subQ) use ($idAreaUsuario) {
+                                        $subQ->where('nivel_actual', 1)
+                                             ->whereHas('procedimiento', function($procQ) use ($idAreaUsuario) {
+                                                 $procQ->where('id_area', $idAreaUsuario);
+                                             });
+                                    });
+                                }
+                            }
+                            
+                            // Nivel 2: si es intermedio (nivel_final != '2'), todos los usuarios de la misma subárea ven todos los trámites
+                            if (in_array(2, $nivelesDelUsuario)) {
+                                $nivel2Usuario = $nivelesUsuario->where('nivel', 2)->first();
+                                if ($nivel2Usuario) {
+                                    $idSubareaUsuario = $nivel2Usuario->id_nivel; // id_nivel para nivel 2 es el ID de la subárea
+                                    $q->orWhere(function($subQ) use ($idSubareaUsuario) {
+                                        $subQ->where('nivel_actual', 2)
+                                             ->whereHas('procedimiento', function($procQ) use ($idSubareaUsuario) {
+                                                 // Solo si nivel 2 NO es el nivel final (es intermedio)
+                                                 $procQ->where('id_subarea', $idSubareaUsuario)
+                                                       ->where('nivel_final', '!=', '2');
+                                             });
+                                    });
+                                }
+                            }
+                            
+                            // Nivel 3: si es intermedio (nivel_final = '4'), todos los usuarios del mismo nivel 3 ven todos los trámites
+                            if (in_array(3, $nivelesDelUsuario)) {
+                                $nivel3Usuario = $nivelesUsuario->where('nivel', 3)->first();
+                                if ($nivel3Usuario) {
+                                    $idNivel3Usuario = $nivel3Usuario->id_nivel;
+                                    // Obtener la subárea del nivel 3 del usuario
+                                    $nivel3Modelo = \App\Models\Nivel3::find($idNivel3Usuario);
+                                    if ($nivel3Modelo && $nivel3Modelo->id_nivel2) {
+                                        $idSubareaNivel3 = $nivel3Modelo->id_nivel2;
+                                        $q->orWhere(function($subQ) use ($idNivel3Usuario, $idSubareaNivel3) {
+                                            $subQ->where('nivel_actual', 3)
+                                                 ->whereHas('procedimiento', function($procQ) use ($idNivel3Usuario, $idSubareaNivel3) {
+                                                     // Solo si nivel 3 NO es el nivel final (es intermedio cuando nivel_final = '4')
+                                                     // Y pertenece a la misma subárea
+                                                     $procQ->where('nivel_final', '4')
+                                                           ->where('id_subarea', $idSubareaNivel3)
+                                                           ->where('id_nivel_final', '!=', $idNivel3Usuario); // No es el nivel final específico
+                                                 });
+                                        });
+                                    }
+                                }
+                            }
+                            
+                            // Niveles finales: solo el usuario asignado ve el trámite
+                            // Esto incluye: nivel 2 cuando es final, nivel 3 cuando es final, nivel 4 siempre
+                            $nivelesFinales = [];
+                            foreach ($nivelesDelUsuario as $nivel) {
+                                // Nivel 2 es final si el procedimiento tiene nivel_final = '2'
+                                // Nivel 3 es final si el procedimiento tiene nivel_final = '3'
+                                // Nivel 4 siempre es final
+                                if ($nivel == 4) {
+                                    $nivelesFinales[] = 4;
+                                } elseif ($nivel == 3) {
+                                    // Nivel 3 puede ser final o intermedio, verificamos por procedimiento
+                                    $nivel3Usuario = $nivelesUsuario->where('nivel', 3)->first();
+                                    if ($nivel3Usuario) {
+                                        $idNivel3Usuario = $nivel3Usuario->id_nivel;
+                                        // Si el procedimiento tiene nivel_final = '3' y id_nivel_final = id_nivel del usuario, es final
+                                        $q->orWhere(function($subQ) use ($idNivel3Usuario, $usuario) {
+                                            $subQ->where('nivel_actual', 3)
+                                                 ->where('id_usuario', $usuario->id)
+                                                 ->whereHas('procedimiento', function($procQ) use ($idNivel3Usuario) {
+                                                     $procQ->where('nivel_final', '3')
+                                                           ->where('id_nivel_final', $idNivel3Usuario);
+                                                 });
+                                        });
+                                    }
                             } elseif ($nivel == 2) {
-                                $q->where('id_subarea', $idNivel);
-                            } elseif ($nivel == 3) {
-                                $q->where(function($q2) use ($idNivel) {
-                                    $q2->where('nivel_final', '3')->where('id_nivel_final', $idNivel)
-                                       ->orWhere(function($q3) use ($idNivel) {
-                                           $q3->where('nivel_final', '4')
-                                              ->whereHas('nivel4', function($q4) use ($idNivel) {
-                                                  $q4->where('id_nivel3', $idNivel);
+                                    // Nivel 2 puede ser final o intermedio, verificamos por procedimiento
+                                    $nivel2Usuario = $nivelesUsuario->where('nivel', 2)->first();
+                                    if ($nivel2Usuario) {
+                                        $idNivel2Usuario = $nivel2Usuario->id_nivel;
+                                        // Si el procedimiento tiene nivel_final = '2' y id_nivel_final = id_nivel del usuario, es final
+                                        $q->orWhere(function($subQ) use ($idNivel2Usuario, $usuario) {
+                                            $subQ->where('nivel_actual', 2)
+                                                 ->where('id_usuario', $usuario->id)
+                                                 ->whereHas('procedimiento', function($procQ) use ($idNivel2Usuario) {
+                                                     $procQ->where('nivel_final', '2')
+                                                           ->where('id_nivel_final', $idNivel2Usuario);
                                               });
                                        });
-                                });
-                            } elseif ($nivel == 4) {
-                                $q->where('nivel_final', '4')->where('id_nivel_final', $idNivel);
+                                    }
+                                }
                             }
-                        })->pluck('id');
-                        
-                        $procedimientosIds = array_merge($procedimientosIds, $procedimientos->toArray());
-                    }
-                    
-                    // Incluir trámites donde el usuario es responsable O que coincidan con sus niveles
-                    // Esto es equivalente a: (procedimientos coinciden) OR (t.id_usuario = usuario.id)
-                    if (count($procedimientosIds) > 0) {
-                        $query->where(function($q) use ($procedimientosIds, $usuario) {
-                            $q->whereIn('id_procedimiento', array_unique($procedimientosIds))
-                              ->orWhere('id_usuario', $usuario->id);
+                            
+                            // Nivel 4 siempre es final: solo el usuario asignado
+                            if (in_array(4, $nivelesDelUsuario)) {
+                                $q->orWhere(function($subQ) use ($usuario) {
+                                    $subQ->where('nivel_actual', 4)
+                                         ->where('id_usuario', $usuario->id);
+                                });
+                            }
                         });
+                        
+                        // Log para depuración (solo en desarrollo)
+                        if (config('app.debug')) {
+                            \Log::debug('Filtrado de trámites AJAX para usuario interno', [
+                                'usuario_id' => $usuario->id,
+                                'niveles_usuario' => $nivelesDelUsuario,
+                                'query_sql' => $query->toSql(),
+                                'query_bindings' => $query->getBindings()
+                            ]);
+                        }
                     } else {
-                        // Si no hay procedimientos, solo mostrar trámites donde es responsable
-                        $query->where('id_usuario', $usuario->id);
+                        // Si no tiene niveles asignados, no mostrar ningún trámite
+                        // (solo administradores pueden ver todos sin niveles asignados)
+                        $query->whereRaw('1 = 0'); // Forzar que no devuelva resultados
                     }
                 }
             } else {
@@ -470,34 +657,42 @@ class MesaPartesController extends Controller
                 switch($tramite->estado) {
                     case 'PENDIENTE':
                         if ($usuario->tipo_user == 2) {
+                            // Todos los niveles internos pueden ACEPTAR, RECHAZAR y OBSERVAR en PENDIENTE
                             $acciones[] = 'ACEPTAR';
                             $acciones[] = 'RECHAZAR';
-                            $acciones[] = 'DERIVAR';
+                            $acciones[] = 'OBSERVAR';
+                            
+                            // Solo niveles intermedios pueden DERIVAR directamente
+                            if ($nivelUsuario && $nivelUsuario < $nivelFinalProcedimiento) {
+                                $acciones[] = 'DERIVAR';
+                            }
                         }
                         break;
                     case 'EN_PROCESO':
                         if ($usuario->tipo_user == 2) {
                             if ($nivelUsuario && $nivelUsuario < $nivelFinalProcedimiento) {
-                                $acciones[] = 'DERIVAR';
-                            }
-                            if ($nivelUsuario == $nivelFinalProcedimiento) {
-                                $acciones[] = 'DERIVAR_ESPECIALISTA';
+                                // Niveles intermedios (1, 2, 3 si no es final): OBSERVAR, ACEPTAR/DERIVAR, RECHAZAR
+                                $acciones[] = 'OBSERVAR';
+                                $acciones[] = 'DERIVAR'; // Derivar al siguiente nivel
+                                $acciones[] = 'RECHAZAR';
+                            } elseif ($nivelUsuario == $nivelFinalProcedimiento) {
+                                // Nivel final: opciones definitivas
+                            $acciones[] = 'OBSERVAR';
+                            $acciones[] = 'OBSERVAR_CON_OFICIO';
+                                
                                 // PROCESAR solo si no hay oficio requerido
                                 if (!$tieneOficio) {
                                     $acciones[] = 'PROCESAR';
                                 }
-                            }
-                            // OBSERVAR disponible para nivel final
-                            if ($nivelUsuario == $nivelFinalProcedimiento) {
-                                $acciones[] = 'OBSERVAR';
-                                $acciones[] = 'OBSERVAR_CON_OFICIO';
+                                
                                 // VERIFICAR si hay oficio
                                 if ($tieneOficio) {
-                                    $acciones[] = 'VERIFICAR';
+                                $acciones[] = 'VERIFICAR';
                                 }
+                                
+                                // RECHAZAR definitivo solo para nivel final
+                                $acciones[] = 'RECHAZAR';
                             }
-                            // RECHAZAR disponible para todos los niveles en EN_PROCESO
-                            $acciones[] = 'RECHAZAR';
                         }
                         break;
                     case 'OBSERVADO':
@@ -506,7 +701,7 @@ class MesaPartesController extends Controller
                         } else if ($usuario->tipo_user == 2) {
                             // Usuario interno puede verificar tras subsanación
                             if ($nivelUsuario == $nivelFinalProcedimiento || $nivelUsuario == 2) {
-                                $acciones[] = 'VERIFICAR';
+                            $acciones[] = 'VERIFICAR';
                             }
                             $acciones[] = 'OBSERVAR';
                         }
@@ -526,17 +721,31 @@ class MesaPartesController extends Controller
             return response()->json([
                 'status' => 'success',
                 'tramites' => $tramites->map(function($t) {
+                    // Calcular días transcurridos desde la fecha de creación
+                    $diasTranscurridos = 0;
+                    if ($t->fecha_creacion) {
+                        // Asegurar que fecha_creacion sea una instancia de Carbon
+                        $fechaCreacion = \Carbon\Carbon::parse($t->fecha_creacion);
+                        // Calcular días desde fecha_creacion hasta ahora
+                        $diasTranscurridos = (int) $fechaCreacion->diffInDays(now(), false);
+                        // Si es negativo (fecha futura), establecer a 0
+                        if ($diasTranscurridos < 0) {
+                            $diasTranscurridos = 0;
+                        }
+                    }
+                    
                     return [
                         'id' => $t->id,
                         'procedimiento_nombre' => $t->procedimiento->nombre ?? 'N/A',
                         'estado' => $t->estado,
-                        'fecha_creacion' => $t->fecha_creacion->format('Y-m-d H:i:s'),
+                        'fecha_creacion' => $t->fecha_creacion ? $t->fecha_creacion->format('Y-m-d H:i:s') : now()->format('Y-m-d H:i:s'),
                         'archivo_adjunto' => $t->archivo_adjunto,
                         'voucher' => $t->voucher,
                         'oficio' => $t->oficio,
                         'numero_voucher' => $t->numero_voucher,
                         'tramitescol' => $t->tramitescol,
                         'accionesPermitidas' => $t->accionesPermitidas ?? [],
+                        'dias_transcurridos' => $diasTranscurridos,
                     ];
                 }),
                 'total' => $total,

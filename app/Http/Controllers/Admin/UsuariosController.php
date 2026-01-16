@@ -13,11 +13,16 @@ use App\Models\Nivel4;
 use App\Models\Departamento;
 use App\Models\Provincia;
 use App\Models\Distrito;
-use Illuminate\Http\Request;
+use App\Models\Tramite;
+use App\Models\Procedimiento;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use App\Mail\BienvenidaUsuarioInterno;
 
 /**
  * Controlador para la gestión de usuarios internos
@@ -241,6 +246,14 @@ class UsuariosController extends Controller
 
             DB::commit();
 
+            // Enviar correo de bienvenida al usuario interno
+            try {
+                $this->enviarEmailBienvenidaInterno($usuario, $request->contrasenaUsuario);
+            } catch (\Exception $e) {
+                // No interrumpir el flujo si falla el envío de email
+                Log::error("Error al enviar email de bienvenida a usuario interno: " . $e->getMessage());
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Usuario creado exitosamente',
@@ -348,6 +361,41 @@ class UsuariosController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al actualizar el usuario: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener información de elementos relacionados que se eliminarán en cascada
+     * 
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getDependencias($id)
+    {
+        try {
+            $usuario = Usuario::findOrFail($id);
+            
+            // Solo contar asignaciones como especialista en procedimientos
+            $asignacionesEspecialista = DB::table('procedimiento_usuarios')
+                ->where('id_usuario', $id)
+                ->count();
+            
+            $tieneDependencias = $asignacionesEspecialista > 0;
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'asignaciones_especialista' => $asignacionesEspecialista,
+                    'tiene_dependencias' => $tieneDependencias
+                ]
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error al obtener dependencias de usuario: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener dependencias: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -509,5 +557,105 @@ class UsuariosController extends Controller
         // Excel: usar Laravel Excel o similar
         // PDF: usar DomPDF o similar
         // Incluir: filtros aplicados si los hay
+    }
+
+    /**
+     * Enviar email de bienvenida a usuario interno
+     * 
+     * @param \App\Models\Usuario $usuario
+     * @param string $contrasenaTemporal
+     * @return void
+     */
+    protected function enviarEmailBienvenidaInterno($usuario, $contrasenaTemporal)
+    {
+        try {
+            // Obtener información del nivel asignado
+            $nivelAsignado = UsuariosNiveles::where('id_usuario', $usuario->id)->first();
+            $infoArea = [];
+            $nivelesAsignados = [];
+            
+            if ($nivelAsignado) {
+                // Obtener nombre del nivel según el tipo
+                $nombreNivel = null;
+                switch ($nivelAsignado->nivel) {
+                    case 1:
+                        $nivelModel = Nivel1::find($nivelAsignado->id_nivel);
+                        $nombreNivel = $nivelModel ? $nivelModel->nombre : null;
+                        $infoArea = [
+                            'id' => $nivelAsignado->id_nivel,
+                            'nombre' => $nombreNivel,
+                            'tipo' => 'Área'
+                        ];
+                        break;
+                    case 2:
+                        $nivelModel = Nivel2::find($nivelAsignado->id_nivel);
+                        $nombreNivel = $nivelModel ? $nivelModel->nombre : null;
+                        $infoArea = [
+                            'id' => $nivelAsignado->id_nivel,
+                            'nombre' => $nombreNivel,
+                            'tipo' => 'Sub-área'
+                        ];
+                        break;
+                    case 3:
+                        $nivelModel = Nivel3::find($nivelAsignado->id_nivel);
+                        $nombreNivel = $nivelModel ? $nivelModel->nombre : null;
+                        $infoArea = [
+                            'id' => $nivelAsignado->id_nivel,
+                            'nombre' => $nombreNivel,
+                            'tipo' => 'Especialidad'
+                        ];
+                        break;
+                    case 4:
+                        $nivelModel = Nivel4::find($nivelAsignado->id_nivel);
+                        $nombreNivel = $nivelModel ? $nivelModel->nombre : null;
+                        $infoArea = [
+                            'id' => $nivelAsignado->id_nivel,
+                            'nombre' => $nombreNivel,
+                            'tipo' => 'Sub-especialidad'
+                        ];
+                        break;
+                }
+                
+                $nivelesAsignados = [
+                    [
+                        'nivel' => $nivelAsignado->nivel,
+                        'id_nivel' => $nivelAsignado->id_nivel,
+                        'nombre' => $nombreNivel
+                    ]
+                ];
+            }
+            
+            // Verificar si es administrador
+            $esAdministrador = Administrador::where('id_usuario', $usuario->id)->exists();
+            $permisos = $esAdministrador ? ['admin'] : ['acceso_basico'];
+            
+            // Preparar datos del usuario para el correo
+            $datosUsuario = [
+                'id' => $usuario->id,
+                'dni' => $usuario->dni,
+                'nombres' => $usuario->nombres,
+                'apellido_paterno' => $usuario->apellido_paterno,
+                'apellido_materno' => $usuario->apellido_materno,
+                'email' => $usuario->email,
+                'telefono' => $usuario->telefono,
+                'nombre_completo' => $usuario->nombres . ' ' . $usuario->apellido_paterno . ' ' . $usuario->apellido_materno,
+            ];
+            
+            // Enviar correo de bienvenida
+            Mail::to($usuario->email)->send(
+                new BienvenidaUsuarioInterno(
+                    $datosUsuario,
+                    $contrasenaTemporal,
+                    $infoArea,
+                    $nivelesAsignados,
+                    $permisos
+                )
+            );
+            
+            Log::info("Email de bienvenida enviado a usuario interno: {$usuario->email} (ID: {$usuario->id})");
+        } catch (\Exception $e) {
+            Log::error("Error al enviar email de bienvenida a usuario interno: " . $e->getMessage());
+            throw $e;
+        }
     }
 }

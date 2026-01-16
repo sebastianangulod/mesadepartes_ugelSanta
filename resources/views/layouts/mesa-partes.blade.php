@@ -285,7 +285,9 @@
             </div>
 
             <!-- Alerts -->
-            <x-alerts />
+            @unless(isset($hideAlerts) && $hideAlerts)
+                <x-alerts />
+            @endunless
 
             <!-- Content -->
             <div class="content-body">

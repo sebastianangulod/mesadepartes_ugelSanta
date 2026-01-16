@@ -208,6 +208,40 @@ class ProcedimientosController extends Controller
     }
 
     /**
+     * Obtener información de elementos relacionados que se eliminarán en cascada
+     * 
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getDependencias($id)
+    {
+        try {
+            $procedimiento = Procedimiento::findOrFail($id);
+            
+            $dependencias = [
+                'tramites' => Tramite::where('id_procedimiento', $id)->count(),
+                'usuarios_asignados' => $procedimiento->usuariosAsignados()->count(),
+            ];
+            
+            $total = array_sum($dependencias);
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'dependencias' => $dependencias,
+                    'total' => $total,
+                    'tiene_dependencias' => $total > 0
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener dependencias: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Eliminar procedimiento
      * Equivalente a action=eliminar en adminProcedimientos.php del PHP puro
      * 

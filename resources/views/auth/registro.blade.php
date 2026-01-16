@@ -223,9 +223,17 @@ El Sistema de Mesa de Partes Digital es un canal que la Unidad de Gestión Educa
 Los trámites y procedimientos iniciados mediante el Sistema de Mesa de Partes Digital de la UGEL Santa tienen la misma validez y eficacia jurídica que los realizados a través de medios convencionales.</textarea>
                 </div>
 
-                @if($recaptcha_enabled ?? false)
-                <div class="flex justify-center">
-                    <div class="g-recaptcha" data-sitekey="{{ $recaptcha_site_key }}"></div>
+                @php
+                    $recaptchaEnabled = config('services.recaptcha.enabled', false);
+                    $recaptchaSiteKey = config('services.recaptcha.site_key', '');
+                @endphp
+                
+                @if($recaptchaEnabled && !empty($recaptchaSiteKey))
+                <div class="flex justify-center mt-4">
+                    <div class="g-recaptcha" data-sitekey="{{ $recaptchaSiteKey }}" data-callback="onRecaptchaSuccess" data-expired-callback="onRecaptchaExpired"></div>
+                </div>
+                <div id="recaptcha-error" class="hidden mt-2 text-center text-sm text-red-600">
+                    Por favor, complete el reCAPTCHA para continuar.
                 </div>
                 @endif
 
@@ -740,7 +748,49 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-@if($recaptcha_enabled ?? false)
+@php
+    $recaptchaEnabled = config('services.recaptcha.enabled', false);
+    $recaptchaSiteKey = config('services.recaptcha.site_key', '');
+@endphp
+
+@if($recaptchaEnabled && !empty($recaptchaSiteKey))
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+<script>
+// Callback cuando reCAPTCHA se completa exitosamente
+function onRecaptchaSuccess(token) {
+    const errorDiv = document.getElementById('recaptcha-error');
+    if (errorDiv) {
+        errorDiv.classList.add('hidden');
+    }
+}
+
+// Callback cuando reCAPTCHA expira
+function onRecaptchaExpired() {
+    const errorDiv = document.getElementById('recaptcha-error');
+    if (errorDiv) {
+        errorDiv.classList.remove('hidden');
+    }
+}
+
+// Validar reCAPTCHA antes de enviar el formulario
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('registroForm');
+    if (form && {{ $recaptcha_enabled ? 'true' : 'false' }}) {
+        form.addEventListener('submit', function(e) {
+            if (typeof grecaptcha !== 'undefined') {
+                const recaptchaResponse = grecaptcha.getResponse();
+                if (!recaptchaResponse || recaptchaResponse.length === 0) {
+                    e.preventDefault();
+                    const errorDiv = document.getElementById('recaptcha-error');
+                    if (errorDiv) {
+                        errorDiv.classList.remove('hidden');
+                    }
+                    return false;
+                }
+            }
+        });
+    }
+});
+</script>
 @endif
 @endpush

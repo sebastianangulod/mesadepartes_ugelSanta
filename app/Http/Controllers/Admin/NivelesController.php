@@ -301,6 +301,75 @@ class NivelesController extends Controller
     }
 
     /**
+     * Obtener información de elementos relacionados que se eliminarán en cascada
+     * 
+     * @param Request $request
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getDependencias(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'nivel' => 'required|string|in:nivel_1,nivel_2,nivel_3,nivel_4',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first()
+            ], 422);
+        }
+
+        try {
+            $nivel = $request->nivel;
+            $dependencias = [];
+
+            switch ($nivel) {
+                case 'nivel_1':
+                    $dependencias = [
+                        'nivel2' => Nivel2::where('id_nivel1', $id)->count(),
+                        'procedimientos' => Procedimiento::where('id_area', $id)->count(),
+                    ];
+                    break;
+                case 'nivel_2':
+                    $dependencias = [
+                        'nivel3' => Nivel3::where('id_nivel2', $id)->count(),
+                        'procedimientos' => Procedimiento::where('id_subarea', $id)->count(),
+                        'usuarios' => UsuariosNiveles::where('nivel', '2')->where('id_nivel', $id)->count(),
+                    ];
+                    break;
+                case 'nivel_3':
+                    $dependencias = [
+                        'nivel4' => Nivel4::where('id_nivel3', $id)->count(),
+                        'usuarios' => UsuariosNiveles::where('nivel', '3')->where('id_nivel', $id)->count(),
+                    ];
+                    break;
+                case 'nivel_4':
+                    $dependencias = [
+                        'usuarios' => UsuariosNiveles::where('nivel', '4')->where('id_nivel', $id)->count(),
+                    ];
+                    break;
+            }
+
+            $total = array_sum($dependencias);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'dependencias' => $dependencias,
+                    'total' => $total,
+                    'tiene_dependencias' => $total > 0
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener dependencias: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Eliminar nivel
      * Equivalente a action=delete en adminNiveles.php del PHP puro
      * 

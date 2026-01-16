@@ -8,10 +8,10 @@
 @section('title', 'Panel de Administración - Mesa de Partes')
 
 @section('content')
-<div class="mb-8">
+    <div class="mb-8">
     <h2 class="text-3xl font-bold text-gray-900">Panel de Administración</h2>
-    <p class="text-gray-600">Bienvenido, {{ Auth::user()->nombres }}</p>
-</div>
+        <p class="text-gray-600">Bienvenido, {{ Auth::user()->nombres }}</p>
+    </div>
 
     {{-- Estadísticas Generales --}}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

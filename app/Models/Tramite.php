@@ -55,6 +55,7 @@ class Tramite extends Model
         'id_procedimiento',
         'fecha_creacion',
         'estado',
+        'nivel_actual',
         'ultimo_estado',
         'id_usuario',
         'tipo_tramite',

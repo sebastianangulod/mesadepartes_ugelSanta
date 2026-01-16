@@ -61,9 +61,19 @@
                     <!-- Navegación principal -->
                     @auth
                     <nav class="hidden md:flex space-x-8">
-                        <a href="{{ route('dashboard') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
-                            Dashboard
-                        </a>
+                        @if(auth()->user()->esAdministrador())
+                            <a href="{{ route('admin.index') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
+                                Dashboard Admin
+                            </a>
+                        @elseif(auth()->user()->esInterno())
+                            <a href="{{ route('mesa-partes.tramites-recibidos') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
+                                Trámites Recibidos
+                            </a>
+                        @else
+                            <a href="{{ route('mesa-partes.index') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
+                                Dashboard
+                            </a>
+                        @endif
                         <a href="{{ route('tramites.index') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
                             Trámites
                         </a>
@@ -187,12 +197,8 @@
     
     <!-- Scripts -->
     <script>
-        // Configuración global para AJAX
-        $.ajaxSetup({
-            headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-            }
-        });
+        // Configuración global para AJAX (usando fetch API en lugar de jQuery)
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         
         // Funciones globales
         window.app = {
@@ -230,6 +236,26 @@
                     'RECHAZADO': 'Rechazado'
                 };
                 return estados[estado] || estado;
+            },
+            
+            // Fetch con CSRF token
+            fetchWithCSRF: function(url, options = {}) {
+                const defaultOptions = {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                };
+                
+                return fetch(url, {
+                    ...defaultOptions,
+                    ...options,
+                    headers: {
+                        ...defaultOptions.headers,
+                        ...(options.headers || {})
+                    }
+                });
             }
         };
     </script>

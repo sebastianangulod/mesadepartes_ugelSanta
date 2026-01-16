@@ -72,25 +72,170 @@
                 </a>
             </div>
             
-            @if($recaptcha_enabled ?? false)
-            <div class="flex justify-center">
-                <div class="g-recaptcha" data-sitekey="{{ $recaptcha_site_key }}"></div>
+            @php
+                $recaptchaEnabled = config('services.recaptcha.enabled', false);
+                $recaptchaSiteKey = config('services.recaptcha.site_key', '');
+            @endphp
+            
+            @if($recaptchaEnabled && !empty($recaptchaSiteKey))
+            <div class="flex justify-center mt-4">
+                <div id="recaptcha-widget" 
+                     class="g-recaptcha" 
+                     data-sitekey="{{ $recaptchaSiteKey }}" 
+                     data-callback="onRecaptchaSuccess" 
+                     data-expired-callback="onRecaptchaExpired"
+                     data-size="normal"
+                     data-theme="light"
+                     data-type="image"></div>
+            </div>
+            <div id="recaptcha-error" class="hidden mt-2 text-center text-sm text-red-600">
+                Por favor, complete el reCAPTCHA para continuar.
+            </div>
+            <div id="recaptcha-config-error" class="hidden mt-2 text-center text-sm text-red-600 bg-red-50 p-3 rounded border border-red-200">
+                <strong>⚠️ Error de configuración de reCAPTCHA</strong><br>
+                <small>Verifique que:<br>
+                1. El dominio (localhost, 127.0.0.1) esté registrado en Google reCAPTCHA<br>
+                2. Las claves Site Key y Secret Key sean del mismo sitio<br>
+                3. El tipo de reCAPTCHA sea "v2 - No soy un robot" (no v3)</small>
             </div>
             @endif
         </form>
     </div>
 </div>
 
-@if($recaptcha_enabled ?? false)
-<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+@php
+    $recaptchaEnabled = config('services.recaptcha.enabled', false);
+    $recaptchaSiteKey = config('services.recaptcha.site_key', '');
+@endphp
+
+@if($recaptchaEnabled && !empty($recaptchaSiteKey))
+@once
+<script src="https://www.google.com/recaptcha/api.js?hl=es" async defer></script>
+@endonce
+
+<script>
+// Variable global para almacenar el widget ID
+let recaptchaWidgetId = null;
+
+// Callback cuando reCAPTCHA se completa exitosamente
+function onRecaptchaSuccess(token) {
+    const errorDiv = document.getElementById('recaptcha-error');
+    if (errorDiv) {
+        errorDiv.classList.add('hidden');
+    }
+    
+    // Guardar el token en una variable global para verificación
+    window.recaptchaToken = token;
+    
+    // Verificar si Google creó el textarea automáticamente
+    const form = document.querySelector('form[action="{{ route('login.interno') }}"]');
+    if (form) {
+        // Esperar un momento para que Google cree el textarea
+        setTimeout(function() {
+            const textarea = form.querySelector('textarea[name="g-recaptcha-response"]');
+            if (textarea && !textarea.value && token) {
+                textarea.value = token;
+            } else if (!textarea) {
+                const hiddenInput = document.createElement('textarea');
+                hiddenInput.name = 'g-recaptcha-response';
+                hiddenInput.style.display = 'none';
+                hiddenInput.value = token;
+                form.appendChild(hiddenInput);
+            }
+        }, 100);
+    }
+}
+
+// Callback cuando reCAPTCHA expira
+function onRecaptchaExpired() {
+    window.recaptchaToken = null;
+    const errorDiv = document.getElementById('recaptcha-error');
+    if (errorDiv) {
+        errorDiv.classList.remove('hidden');
+    }
+}
+
+// Callback cuando hay un error en reCAPTCHA
+function onRecaptchaError(error) {
+    window.recaptchaToken = null;
+    
+    // Mostrar error de configuración
+    const configErrorDiv = document.getElementById('recaptcha-config-error');
+    if (configErrorDiv) {
+        configErrorDiv.classList.remove('hidden');
+    }
+    
+    const errorDiv = document.getElementById('recaptcha-error');
+    if (errorDiv) {
+        errorDiv.classList.remove('hidden');
+        errorDiv.textContent = 'Error de configuración de reCAPTCHA. Verifique las claves y el dominio en Google reCAPTCHA.';
+    }
+}
+
+// Validar reCAPTCHA antes de enviar el formulario
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form[action="{{ route('login.interno') }}"]');
+    const widget = document.getElementById('recaptcha-widget');
+    
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Buscar específicamente el textarea de reCAPTCHA
+            const existingTextarea = form.querySelector('textarea[name="g-recaptcha-response"]');
+            let recaptchaResponse = null;
+            
+            if (existingTextarea && existingTextarea.value) {
+                recaptchaResponse = existingTextarea.value;
+            } else if (window.recaptchaToken) {
+                recaptchaResponse = window.recaptchaToken;
+            } else if (typeof grecaptcha !== 'undefined') {
+                // Intentar obtener el token usando grecaptcha.getResponse()
+                try {
+                    recaptchaResponse = grecaptcha.getResponse();
+                    if (!recaptchaResponse) {
+                        recaptchaResponse = grecaptcha.getResponse(0);
+                    }
+                } catch (err) {
+                    console.error('Error al obtener respuesta de grecaptcha:', err);
+                }
+            }
+            
+            if (!recaptchaResponse || recaptchaResponse.length === 0) {
+                e.preventDefault();
+                const errorDiv = document.getElementById('recaptcha-error');
+                if (errorDiv) {
+                    errorDiv.classList.remove('hidden');
+                }
+                alert('Por favor, complete el reCAPTCHA antes de continuar.');
+                return false;
+            }
+            
+            // Asegurar que el token esté en el formulario
+            if (!existingTextarea) {
+                const hiddenInput = document.createElement('textarea');
+                hiddenInput.name = 'g-recaptcha-response';
+                hiddenInput.style.display = 'none';
+                hiddenInput.value = recaptchaResponse;
+                form.appendChild(hiddenInput);
+            } else if (!existingTextarea.value) {
+                existingTextarea.value = recaptchaResponse;
+            }
+        });
+    }
+});
+</script>
 @endif
 
 <script>
 // Validar formato DNI en tiempo real
-document.getElementById('dni').addEventListener('input', function(e) {
+document.addEventListener('DOMContentLoaded', function() {
+    const dniInput = document.getElementById('dni');
+    if (dniInput) {
+        dniInput.addEventListener('input', function(e) {
     this.value = this.value.replace(/[^0-9]/g, '');
     if (this.value.length > 8) {
         this.value = this.value.slice(0, 8);
+            }
+        });
     }
 });
 </script>

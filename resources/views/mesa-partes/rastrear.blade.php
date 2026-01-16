@@ -50,13 +50,13 @@
                         <label for="fechaDesde" class="block text-sm font-medium text-gray-700 mb-1">Fecha Desde</label>
                         <input type="date" id="fechaDesde" name="fecha_desde" 
                                class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                               value="{{ request('fecha_desde') }}">
+                               value="{{ request('fecha_desde') }}" max="">
                     </div>
                     <div>
                         <label for="fechaHasta" class="block text-sm font-medium text-gray-700 mb-1">Fecha Hasta</label>
                         <input type="date" id="fechaHasta" name="fecha_hasta" 
                                class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                               value="{{ request('fecha_hasta') }}">
+                               value="{{ request('fecha_hasta') }}" max="" min="">
                     </div>
                     <div class="flex items-end">
                         <button type="submit" 
@@ -96,7 +96,11 @@
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {{ $tramite->fecha_creacion->format('d/m/Y H:i') }}
+                                        @if($tramite->fecha_creacion)
+                                            {{ $tramite->fecha_creacion->format('d/m/Y H:i') }}
+                                        @else
+                                            N/A
+                                        @endif
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <button onclick="verHojaRuta({{ $tramite->id }})" class="text-blue-600 hover:text-blue-900 mr-3">
@@ -222,8 +226,85 @@
         const resultadosBusqueda = document.getElementById('resultadosBusqueda');
         const loadingIndicator = document.getElementById('loadingIndicator');
 
+        // Configurar límites de fecha al cargar la página
+        const fechaDesdeInput = document.getElementById('fechaDesde');
+        const fechaHastaInput = document.getElementById('fechaHasta');
+        const fechaActual = new Date().toISOString().split('T')[0];
+        
+        // Establecer fecha máxima (hoy) para ambos campos
+        if (fechaDesdeInput) fechaDesdeInput.setAttribute('max', fechaActual);
+        if (fechaHastaInput) fechaHastaInput.setAttribute('max', fechaActual);
+        
+        // Validar cuando cambia la fecha "desde"
+        if (fechaDesdeInput) {
+            fechaDesdeInput.addEventListener('change', function() {
+                const fechaDesde = this.value;
+                if (fechaDesde) {
+                    // Establecer fecha mínima de "hasta" igual a "desde"
+                    if (fechaHastaInput) {
+                        fechaHastaInput.setAttribute('min', fechaDesde);
+                        
+                        // Si "hasta" es menor que "desde", actualizarla
+                        if (fechaHastaInput.value && fechaHastaInput.value < fechaDesde) {
+                            fechaHastaInput.value = fechaDesde;
+                        }
+                    }
+                } else {
+                    // Si no hay fecha "desde", quitar el mínimo de "hasta"
+                    if (fechaHastaInput) fechaHastaInput.removeAttribute('min');
+                }
+            });
+        }
+        
+        // Validar cuando cambia la fecha "hasta"
+        if (fechaHastaInput) {
+            fechaHastaInput.addEventListener('change', function() {
+                const fechaHasta = this.value;
+                const fechaDesde = fechaDesdeInput ? fechaDesdeInput.value : '';
+                
+                if (fechaDesde && fechaHasta && fechaHasta < fechaDesde) {
+                    alert('La fecha "Hasta" debe ser igual o posterior a la fecha "Desde"');
+                    this.value = fechaDesde;
+                }
+            });
+        }
+        
+        // Validar fechas antes de enviar el formulario
+        function validarFechas() {
+            const fechaDesde = fechaDesdeInput ? fechaDesdeInput.value : '';
+            const fechaHasta = fechaHastaInput ? fechaHastaInput.value : '';
+            
+            // Validar que no sean fechas futuras
+            if (fechaDesde && fechaDesde > fechaActual) {
+                alert('La fecha "Desde" no puede ser superior a la fecha actual');
+                if (fechaDesdeInput) fechaDesdeInput.value = '';
+                return false;
+            }
+            
+            if (fechaHasta && fechaHasta > fechaActual) {
+                alert('La fecha "Hasta" no puede ser superior a la fecha actual');
+                if (fechaHastaInput) fechaHastaInput.value = '';
+                return false;
+            }
+            
+            // Validar que "hasta" sea >= "desde"
+            if (fechaDesde && fechaHasta && fechaHasta < fechaDesde) {
+                alert('La fecha "Hasta" debe ser igual o posterior a la fecha "Desde"');
+                if (fechaHastaInput) fechaHastaInput.value = fechaDesde;
+                return false;
+            }
+            
+            return true;
+        }
+
         searchForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            
+            // Validar fechas antes de buscar
+            if (!validarFechas()) {
+                return;
+            }
+            
             buscarTramites();
         });
 
@@ -292,7 +373,7 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${tramite.procedimiento_nombre}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${obtenerClaseEstado(tramite.estado)}">
-                            ${tramite.estado}
+                            ${formatearEstado(tramite.estado)}
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${tramite.fecha_formateada}</td>
@@ -328,6 +409,30 @@
                 'RECHAZADO': 'bg-red-200 text-red-900'
             };
             return clases[estado] || 'bg-gray-100 text-gray-800';
+        }
+
+        function formatearEstado(estado) {
+            if (!estado) return '';
+            
+            const etiquetas = {
+                'PENDIENTE': 'Pendiente',
+                'OBSERVADO': 'Observado',
+                'EN_PROCESO': 'En Proceso',
+                'VERIFICADO': 'Verificado',
+                'FINALIZADO': 'Finalizado',
+                'RECHAZADO': 'Rechazado'
+            };
+            
+            if (etiquetas[estado]) {
+                return etiquetas[estado];
+            }
+            
+            return estado
+                .replace(/_/g, ' ')
+                .toLowerCase()
+                .split(' ')
+                .map(palabra => palabra.charAt(0).toUpperCase() + palabra.slice(1))
+                .join(' ');
         }
 
         window.verHojaRuta = function(idTramite) {

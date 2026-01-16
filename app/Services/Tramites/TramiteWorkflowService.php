@@ -60,29 +60,21 @@ class TramiteWorkflowService
                 throw new Exception('Solo se pueden aceptar trámites en estado PENDIENTE');
             }
 
-            $procedimiento = $tramite->procedimiento;
-            $nivelFinal = $procedimiento->nivel_final;
+            // Validar que el usuario puede actuar sobre este trámite
+            // (debe ser el responsable y tener el nivel correcto)
+            $this->validarNivelActual($tramite, $usuario->id);
 
-            if ($nivelFinal == '2') {
-                // Si el nivel final es 2, pasar directamente a VERIFICADO
-                $tramite->estado = EstadoTramite::VERIFICADO;
-            } else {
-                // Si el nivel final es 3 o 4, buscar especialista asignado
-                $especialistaAsignado = $this->obtenerEspecialistaAsignado(
-                    $procedimiento->id,
-                    $nivelFinal
+            // Validar que el trámite ya está asignado al nivel 1
+            if ($tramite->nivel_actual !== 1) {
+                throw new Exception(
+                    'El trámite debe estar asignado al nivel 1 para ser aceptado. ' .
+                    'Nivel actual: ' . ($tramite->nivel_actual ?? 'NULL')
                 );
-
-                if ($especialistaAsignado) {
-                    // Asignar al especialista y cambiar estado
-                    $tramite->id_usuario = $especialistaAsignado;
-                    $tramite->estado = EstadoTramite::EN_PROCESO;
-                } else {
-                    // Si no hay especialista asignado, mantener en EN_PROCESO para mesa de partes
-                    $tramite->estado = EstadoTramite::EN_PROCESO;
-                }
             }
 
+            // Cambiar estado de PENDIENTE a EN_PROCESO
+            // El trámite ya está asignado al usuario correcto y nivel_actual = 1 desde su creación
+            $tramite->estado = EstadoTramite::EN_PROCESO;
             $tramite->save();
 
             return $tramite->fresh();
@@ -102,6 +94,9 @@ class TramiteWorkflowService
         return DB::transaction(function () use ($tramiteId, $motivo) {
             $tramite = Tramite::with('procedimiento')->findOrFail($tramiteId);
             $usuario = Auth::user();
+
+            // Validar que el usuario puede actuar sobre este trámite
+            $this->validarNivelActual($tramite, $usuario->id);
 
             // Validar límite de observación si está observado
             if ($tramite->estado === EstadoTramite::OBSERVADO) {
@@ -203,13 +198,16 @@ class TramiteWorkflowService
     public function observar(int $tramiteId, string $observacion): Tramite
     {
         return DB::transaction(function () use ($tramiteId, $observacion) {
-            $tramite = Tramite::findOrFail($tramiteId);
+            $tramite = Tramite::with('procedimiento')->findOrFail($tramiteId);
             $usuario = Auth::user();
 
-            // Validar que el usuario tenga permiso para observar
+            // Validar que el usuario puede actuar sobre este trámite
+            $this->validarNivelActual($tramite, $usuario->id);
+
+            // Validar que el usuario tenga permiso para observar (solo nivel final)
             $nivelUsuario = $this->obtenerNivelUsuario($usuario->id);
             if (!$nivelUsuario || $nivelUsuario['nivel'] != $tramite->procedimiento->nivel_final) {
-                throw new Exception('Solo el especialista puede observar trámites');
+                throw new Exception('Solo el nivel final puede observar trámites');
             }
 
             $tramite->estado = EstadoTramite::OBSERVADO;
@@ -234,7 +232,11 @@ class TramiteWorkflowService
     public function observarConOficio(int $tramiteId, string $observacion, $oficio): Tramite
     {
         return DB::transaction(function () use ($tramiteId, $observacion, $oficio) {
-            $tramite = Tramite::findOrFail($tramiteId);
+            $tramite = Tramite::with('procedimiento')->findOrFail($tramiteId);
+            $usuario = Auth::user();
+
+            // Validar que el usuario puede actuar sobre este trámite
+            $this->validarNivelActual($tramite, $usuario->id);
 
             // Validar archivo de oficio
             $this->validarArchivoPDF($oficio);
@@ -321,6 +323,9 @@ class TramiteWorkflowService
             $nivelFinal = $tramite->procedimiento->nivel_final;
             $idNivelFinal = $tramite->procedimiento->id_nivel_final;
 
+            // Validar que el usuario puede actuar sobre este trámite
+            $this->validarNivelActual($tramite, $usuario->id);
+
             // Si ya está en el nivel final, no se puede derivar más
             if ($nivelActual == $nivelFinal) {
                 throw new Exception('El trámite ya está en el nivel final, no se puede derivar más');
@@ -344,8 +349,9 @@ class TramiteWorkflowService
                 );
             }
 
-            // Actualizar trámite
+            // Actualizar trámite: avanzar al siguiente nivel
             $tramite->id_usuario = $usuarioSiguiente;
+            $tramite->nivel_actual = $nivelSiguiente; // Actualizar nivel actual
             $tramite->estado = EstadoTramite::EN_PROCESO;
             $tramite->save();
 
@@ -365,6 +371,9 @@ class TramiteWorkflowService
         return DB::transaction(function () use ($tramiteId) {
             $tramite = Tramite::with('procedimiento')->findOrFail($tramiteId);
             $usuario = Auth::user();
+
+            // Validar que el usuario puede actuar sobre este trámite
+            $this->validarNivelActual($tramite, $usuario->id);
 
             // Obtener todos los especialistas vinculados al procedimiento
             $especialistas = DB::table('procedimiento_usuarios')
@@ -410,6 +419,9 @@ class TramiteWorkflowService
             $tramite = Tramite::with('procedimiento')->findOrFail($tramiteId);
             $usuario = Auth::user();
 
+            // Validar que el usuario puede actuar sobre este trámite
+            $this->validarNivelActual($tramite, $usuario->id);
+
             // Obtener nivel del usuario
             $nivelUsuario = $this->obtenerNivelUsuario($usuario->id);
             $nivelFinal = $tramite->procedimiento->nivel_final;
@@ -445,6 +457,9 @@ class TramiteWorkflowService
         return DB::transaction(function () use ($tramiteId) {
             $tramite = Tramite::with(['procedimiento', 'usuario'])->findOrFail($tramiteId);
             $usuario = Auth::user();
+
+            // Validar que el usuario puede actuar sobre este trámite
+            $this->validarNivelActual($tramite, $usuario->id);
 
             // Obtener nivel del usuario
             $nivelUsuario = $this->obtenerNivelUsuario($usuario->id);
@@ -499,6 +514,118 @@ class TramiteWorkflowService
     }
 
     /**
+     * Validar que el usuario actual puede actuar sobre el trámite
+     * Solo el nivel actual del trámite puede realizar acciones
+     * 
+     * @param Tramite $tramite
+     * @param int $usuarioId
+     * @throws Exception
+     */
+    private function validarNivelActual(Tramite $tramite, int $usuarioId): void
+    {
+        // EXCEPCIÓN: Los administradores pueden actuar sobre cualquier trámite
+        $usuario = Usuario::find($usuarioId);
+        if ($usuario && $usuario->esAdministrador()) {
+            return; // Los administradores pueden actuar sin restricciones
+        }
+
+        // Si el trámite está en PENDIENTE, validar que el usuario es el responsable asignado
+        if ($tramite->estado === EstadoTramite::PENDIENTE) {
+            // Validar que el usuario es el responsable del trámite
+            if ($tramite->id_usuario != $usuarioId) {
+                throw new Exception('Solo el usuario responsable del trámite puede aceptarlo');
+            }
+            
+            // Validar que el nivel del usuario coincide con el nivel actual del trámite
+            $nivelUsuario = $this->obtenerNivelUsuario($usuarioId);
+            if (!$nivelUsuario) {
+                throw new Exception('Usuario no tiene nivel asignado');
+            }
+            
+            if ($tramite->nivel_actual != $nivelUsuario['nivel']) {
+                throw new Exception(
+                    'Solo el nivel actual del trámite (nivel ' . $tramite->nivel_actual . ') puede realizar esta acción. ' .
+                    'Su nivel es ' . $nivelUsuario['nivel'] . '.'
+                );
+            }
+            
+            return;
+        }
+
+        // Para otros estados, validar nivel y permisos según tipo de nivel
+        $nivelUsuario = $this->obtenerNivelUsuario($usuarioId);
+        if (!$nivelUsuario) {
+            throw new Exception('Usuario no tiene nivel asignado');
+        }
+
+        $nivelActualUsuario = $nivelUsuario['nivel'];
+        $nivelActualTramite = $tramite->nivel_actual;
+
+        // Validar que el nivel del usuario coincide con el nivel actual del trámite
+        if ($nivelActualTramite != $nivelActualUsuario) {
+            throw new Exception(
+                'Solo el nivel actual del trámite (nivel ' . $nivelActualTramite . ') puede realizar esta acción. ' .
+                'Su nivel es ' . $nivelActualUsuario . '.'
+            );
+        }
+
+        // Obtener información del procedimiento para determinar si es nivel final
+        $procedimiento = $tramite->procedimiento;
+        if (!$procedimiento) {
+            throw new Exception('No se pudo obtener información del procedimiento');
+        }
+
+        $nivelFinal = $procedimiento->nivel_final;
+        $esNivelFinal = false;
+
+        // Determinar si el nivel actual es el nivel final del procedimiento
+        if ($nivelActualTramite == 4) {
+            // Nivel 4 siempre es final
+            $esNivelFinal = true;
+        } elseif ($nivelActualTramite == 3 && $nivelFinal == '3') {
+            // Nivel 3 es final si nivel_final = '3' y id_nivel_final coincide
+            $esNivelFinal = ($procedimiento->id_nivel_final == $nivelUsuario['id_nivel']);
+        } elseif ($nivelActualTramite == 2 && $nivelFinal == '2') {
+            // Nivel 2 es final si nivel_final = '2' y id_nivel_final coincide
+            $esNivelFinal = ($procedimiento->id_nivel_final == $nivelUsuario['id_nivel']);
+        }
+
+        // Para niveles finales: solo el usuario asignado puede actuar
+        // Para niveles intermedios: cualquier usuario del mismo nivel puede actuar
+        if ($esNivelFinal) {
+            // Nivel final: solo el usuario asignado puede actuar
+            if ($tramite->id_usuario != $usuarioId) {
+                throw new Exception('Solo el especialista asignado puede realizar esta acción en el nivel final');
+            }
+        } else {
+            // Nivel intermedio: validar que el usuario pertenece al mismo nivel/subárea
+            // Esto ya está validado por el nivel, pero verificamos que pertenezca a la misma área/subárea
+            $puedeActuar = false;
+
+            if ($nivelActualTramite == 1) {
+                // Nivel 1: verificar que pertenece a la misma área
+                $puedeActuar = ($procedimiento->id_area == $nivelUsuario['id_nivel']);
+            } elseif ($nivelActualTramite == 2) {
+                // Nivel 2: verificar que pertenece a la misma subárea
+                $puedeActuar = ($procedimiento->id_subarea == $nivelUsuario['id_nivel']);
+            } elseif ($nivelActualTramite == 3) {
+                // Nivel 3: verificar que pertenece a la misma subárea (a través del nivel 3)
+                $nivel3Modelo = \App\Models\Nivel3::find($nivelUsuario['id_nivel']);
+                if ($nivel3Modelo && $nivel3Modelo->id_nivel2) {
+                    $puedeActuar = ($procedimiento->id_subarea == $nivel3Modelo->id_nivel2);
+                }
+            }
+
+            if (!$puedeActuar) {
+                throw new Exception(
+                    'No tiene permisos para actuar sobre este trámite. ' .
+                    'Debe pertenecer al mismo nivel y área/subárea del trámite.'
+                );
+            }
+        }
+    }
+
+    /**
      * Obtener nivel del usuario
      * 
      * @param int $usuarioId
@@ -533,7 +660,7 @@ class TramiteWorkflowService
             ->join('procedimiento_usuarios as pu', 'u.id', '=', 'pu.id_usuario')
             ->where('pu.id_procedimiento', $idProcedimiento)
             ->where('un.nivel', $nivelFinal)
-            ->where('u.activo', true)
+            ->where('u.tipo_user', 2) // Solo usuarios internos
             ->orderBy('u.nombres')
             ->select('u.id')
             ->first();
@@ -564,14 +691,17 @@ class TramiteWorkflowService
                 ->where('un.nivel', $nivelSiguiente)
                 ->where('pu.id_procedimiento', $procedimiento->id)
                 ->where('un.id_nivel', $idNivelFinal)
-                ->where('u.activo', true)
+                ->where('u.tipo_user', 2) // Solo usuarios internos
                 ->select('u.id')
                 ->first();
         } else {
             // Niveles intermedios: buscar usuario solo en usuarios_niveles
             $idNivelBuscar = null;
             
-            if ($nivelSiguiente == 2) {
+            if ($nivelSiguiente == 1) {
+                // Nivel 1: usar el área del procedimiento
+                $idNivelBuscar = $procedimiento->id_area;
+            } elseif ($nivelSiguiente == 2) {
                 $idNivelBuscar = $procedimiento->id_subarea;
             } elseif ($nivelSiguiente == 3) {
                 if ($nivelFinal == '4') {
@@ -596,7 +726,7 @@ class TramiteWorkflowService
                 ->join('usuarios_niveles as un', 'u.id', '=', 'un.id_usuario')
                 ->where('un.nivel', $nivelSiguiente)
                 ->where('un.id_nivel', $idNivelBuscar)
-                ->where('u.activo', true)
+                ->where('u.tipo_user', 2) // Solo usuarios internos
                 ->select('u.id')
                 ->first();
         }

@@ -108,8 +108,8 @@
 
         <div class="info">
             <p><span>Tipo de Trámite:</span> {{ $tramite->tipo_tramite ?? 'VIRTUAL' }}</p>
-            <p><span>Fecha de Ingreso:</span> {{ $tramite->fecha_creacion->format('d/m/Y') }}</p>
-            <p><span>Fecha de Recepción:</span> {{ $tramite->fecha_creacion->format('d/m/Y H:i:s') }}</p>
+            <p><span>Fecha de Ingreso:</span> {{ $tramite->fecha_creacion ? $tramite->fecha_creacion->format('d/m/Y') : 'N/A' }}</p>
+            <p><span>Fecha de Recepción:</span> {{ $tramite->fecha_creacion ? $tramite->fecha_creacion->format('d/m/Y H:i:s') : 'N/A' }}</p>
             <p><span>Tipo de Documento:</span> Expediente</p>
             <p><span>N°:</span> {{ $tramite->id }}-{{ $tramite->periodo ?? date('Y') }}</p>
             <p><span>Clave:</span> {{ $tramite->id }}</p>

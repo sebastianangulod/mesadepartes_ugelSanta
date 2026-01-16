@@ -149,7 +149,13 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $tramite->numero_tramite ?? $tramite->id }}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ $tramite->tipoDocumento->nombre ?? '-' }}</td>
                             <td class="px-6 py-4 text-sm text-gray-600">{{ Str::limit($tramite->asunto ?? 'N/A', 50) }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ $tramite->created_at->format('d/m/Y H:i') }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                @if($tramite->fecha_creacion)
+                                    {{ $tramite->fecha_creacion->format('d/m/Y H:i') }}
+                                @else
+                                    N/A
+                                @endif
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
                                     {{ $tramite->estado_nombre ?? $tramite->estado ?? 'N/A' }}

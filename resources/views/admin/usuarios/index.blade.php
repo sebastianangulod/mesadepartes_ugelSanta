@@ -467,11 +467,24 @@
             <h2 class="text-2xl font-bold text-red-600">Eliminar Usuario</h2>
         </div>
         <div class="px-6 py-4">
-            <input type="hidden" id="deleteUserId">
-            <p class="text-lg text-gray-700 mb-4">
-                ¿Está seguro que desea eliminar el usuario <strong id="deleteUserName"></strong>?
+        <input type="hidden" id="deleteUserId">
+        <p class="text-lg text-gray-700 mb-4">
+            ¿Está seguro que desea eliminar el usuario <strong id="deleteUserName"></strong>?
+        </p>
+        
+        <!-- Información de elementos relacionados -->
+        <div id="deleteUserDependencias" class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg hidden">
+            <p class="text-sm font-semibold text-yellow-800 mb-2">
+                <svg class="inline-block w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                </svg>
+                Se eliminarán también los siguientes elementos relacionados:
             </p>
-            <p class="text-sm text-gray-500 mb-4">Esta acción no se puede deshacer.</p>
+            <ul id="deleteUserDependenciasList" class="text-sm text-yellow-700 list-disc list-inside space-y-1">
+            </ul>
+        </div>
+        
+        <p class="text-sm text-gray-500 mb-4">Esta acción no se puede deshacer.</p>
         </div>
         <div class="px-6 py-4 border-t-2 border-gray-300 flex justify-end space-x-2">
             <button type="button" onclick="closeModal('modalDeleteUser')" class="btn-secondary">Cancelar</button>
@@ -666,14 +679,14 @@
         .then(response => response.json())
         .then(data => {
             if (data.success && data.data) {
-                const select = document.getElementById('departamentoUsuario');
+            const select = document.getElementById('departamentoUsuario');
                 select.innerHTML = '<option value="">Seleccione un departamento</option>';
                 data.data.forEach(dept => {
-                    const option = document.createElement('option');
-                    option.value = dept.id;
-                    option.textContent = dept.nombre;
-                    select.appendChild(option);
-                });
+                const option = document.createElement('option');
+                option.value = dept.id;
+                option.textContent = dept.nombre;
+                select.appendChild(option);
+            });
             }
         })
         .catch(error => {
@@ -698,12 +711,12 @@
         .then(data => {
             if (data.success && data.data) {
                 data.data.forEach(prov => {
-                    const option = document.createElement('option');
-                    option.value = prov.id;
-                    option.textContent = prov.nombre;
-                    select.appendChild(option);
-                });
-                select.disabled = false;
+                const option = document.createElement('option');
+                option.value = prov.id;
+                option.textContent = prov.nombre;
+                select.appendChild(option);
+            });
+            select.disabled = false;
             }
             limpiarDistritos();
         })
@@ -726,12 +739,12 @@
         .then(data => {
             if (data.success && data.data) {
                 data.data.forEach(dist => {
-                    const option = document.createElement('option');
-                    option.value = dist.id;
-                    option.textContent = dist.nombre;
-                    select.appendChild(option);
-                });
-                select.disabled = false;
+                const option = document.createElement('option');
+                option.value = dist.id;
+                option.textContent = dist.nombre;
+                select.appendChild(option);
+            });
+            select.disabled = false;
             }
         })
         .catch(error => {
@@ -844,14 +857,14 @@
         .then(response => response.json())
         .then(data => {
             if (data.success && data.data) {
-                const select = document.getElementById('editDepartamentoUsuario');
+            const select = document.getElementById('editDepartamentoUsuario');
                 select.innerHTML = '<option value="">Seleccione un departamento</option>';
                 data.data.forEach(dept => {
-                    const option = document.createElement('option');
-                    option.value = dept.id;
-                    option.textContent = dept.nombre;
-                    select.appendChild(option);
-                });
+                const option = document.createElement('option');
+                option.value = dept.id;
+                option.textContent = dept.nombre;
+                select.appendChild(option);
+            });
             }
             return data;
         })
@@ -878,11 +891,11 @@
         .then(data => {
             if (data.success && data.data) {
                 data.data.forEach(prov => {
-                    const option = document.createElement('option');
-                    option.value = prov.id;
-                    option.textContent = prov.nombre;
-                    select.appendChild(option);
-                });
+                const option = document.createElement('option');
+                option.value = prov.id;
+                option.textContent = prov.nombre;
+                select.appendChild(option);
+            });
                 select.disabled = false;
             }
             limpiarDistritosEdit();
@@ -909,11 +922,11 @@
         .then(data => {
             if (data.success && data.data) {
                 data.data.forEach(dist => {
-                    const option = document.createElement('option');
-                    option.value = dist.id;
-                    option.textContent = dist.nombre;
-                    select.appendChild(option);
-                });
+                const option = document.createElement('option');
+                option.value = dist.id;
+                option.textContent = dist.nombre;
+                select.appendChild(option);
+            });
                 select.disabled = false;
             }
         })
@@ -1227,18 +1240,18 @@
                         console.log('Departamento seleccionado:', departamentoSelect.value); // Debug
                         return cargarProvinciasEdit(user.departamento_id);
                     }).then(() => {
-                        if (user.provincia_id) {
+                    if (user.provincia_id) {
                             const provinciaSelect = document.getElementById('editProvinciaUsuario');
                             provinciaSelect.value = user.provincia_id;
                             console.log('Provincia seleccionada:', provinciaSelect.value); // Debug
                             return cargarDistritosEdit(user.provincia_id);
                         }
                     }).then(() => {
-                        if (user.distrito_id) {
+                            if (user.distrito_id) {
                             const distritoSelect = document.getElementById('editDistritoUsuario');
                             distritoSelect.value = user.distrito_id;
                             console.log('Distrito seleccionado:', distritoSelect.value); // Debug
-                        }
+                            }
                     }).catch(error => {
                         console.error('Error al cargar ubicación:', error);
                     });
@@ -1346,7 +1359,65 @@
     function eliminarUsuario(id, nombre) {
         document.getElementById('deleteUserId').value = id;
         document.getElementById('deleteUserName').textContent = nombre;
+        
+        // Ocultar el div de dependencias inicialmente
+        const dependenciasDiv = document.getElementById('deleteUserDependencias');
+        const dependenciasList = document.getElementById('deleteUserDependenciasList');
+        
+        if (dependenciasDiv) {
+            dependenciasDiv.classList.add('hidden');
+        }
+        if (dependenciasList) {
+            dependenciasList.innerHTML = '';
+        }
+        
+        // Abrir el modal primero
         openModal('modalDeleteUser');
+        
+        // Cargar información de dependencias después de abrir el modal
+        cargarDependenciasUsuario(id);
+    }
+    
+    // Función para cargar dependencias del usuario
+    function cargarDependenciasUsuario(id) {
+        fetch(`/admin/usuarios/${id}/dependencias`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error en la respuesta: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const dependenciasDiv = document.getElementById('deleteUserDependencias');
+                const dependenciasList = document.getElementById('deleteUserDependenciasList');
+                
+                if (!dependenciasDiv || !dependenciasList) {
+                    return;
+                }
+                
+                if (data.success && data.data && data.data.tiene_dependencias && data.data.asignaciones_especialista > 0) {
+                    dependenciasList.innerHTML = '';
+                    const li = document.createElement('li');
+                    li.textContent = `Asignaciones como especialista en procedimientos: ${data.data.asignaciones_especialista}`;
+                    dependenciasList.appendChild(li);
+                    dependenciasDiv.classList.remove('hidden');
+                } else {
+                    dependenciasDiv.classList.add('hidden');
+                }
+            })
+            .catch(error => {
+                console.error('Error al cargar dependencias:', error);
+                const dependenciasDiv = document.getElementById('deleteUserDependencias');
+                if (dependenciasDiv) {
+                    dependenciasDiv.classList.add('hidden');
+                }
+            });
     }
 
     function confirmarEliminarUsuario() {

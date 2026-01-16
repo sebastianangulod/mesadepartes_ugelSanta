@@ -52,10 +52,10 @@ class VoucherService
     public function generarVoucher(Tramite $tramite): string
     {
         try {
-            // Asegurar que el directorio existe
-            $voucherDir = storage_path('app/' . $this->voucherPath);
+            // Asegurar que el directorio existe en el disco 'public'
+            $voucherDir = Storage::disk('public')->path($this->voucherPath);
             if (!is_dir($voucherDir)) {
-                mkdir($voucherDir, 0777, true);
+                Storage::disk('public')->makeDirectory($this->voucherPath);
             }
 
             // Generar nombre único para el voucher

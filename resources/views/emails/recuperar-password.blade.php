@@ -48,15 +48,17 @@
             display: inline-block;
             padding: 12px 30px;
             background-color: #2563eb;
-            color: white;
+            color: #ffffff !important;
             text-decoration: none;
             border-radius: 5px;
             margin: 20px 0;
             font-weight: bold;
             text-align: center;
+            border: none;
         }
         .button:hover {
             background-color: #1d4ed8;
+            color: #ffffff !important;
         }
         .button-container {
             text-align: center;
@@ -127,7 +129,7 @@
             <p>Para restablecer su contraseña, haga clic en el siguiente botón:</p>
             
             <div class="button-container">
-                <a href="{{ $urlRestablecimiento }}" class="button">Restablecer Contraseña</a>
+                <a href="{{ $urlRestablecimiento }}" class="button" style="color: #ffffff !important; text-decoration: none; font-weight: bold;">Restablecer Contraseña</a>
             </div>
             
             <p style="text-align: center; font-size: 12px; color: #6b7280;">

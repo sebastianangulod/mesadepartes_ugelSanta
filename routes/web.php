@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TramiteController;
 use App\Http\Controllers\ReporteController;
@@ -47,6 +48,17 @@ Route::middleware('guest')->group(function () {
     Route::get('/restablecer/{token}', [AuthController::class, 'showRestablecerForm'])->name('password.reset');
     Route::post('/restablecer', [AuthController::class, 'restablecer'])->name('password.update');
     
+});
+
+// Rutas de perfil de usuario (requieren autenticación)
+Route::middleware('auth')->group(function () {
+    // Actualizar datos personales
+    Route::get('/perfil/actualizar-datos', [AuthController::class, 'showActualizarDatosForm'])->name('perfil.actualizar-datos');
+    Route::post('/perfil/actualizar-datos', [AuthController::class, 'actualizarDatos'])->name('perfil.actualizar-datos.store');
+    
+    // Actualizar contraseña
+    Route::get('/perfil/actualizar-contraseña', [AuthController::class, 'showActualizarContraseñaForm'])->name('perfil.actualizar-contraseña');
+    Route::post('/perfil/actualizar-contraseña', [AuthController::class, 'actualizarContraseña'])->name('perfil.actualizar-contraseña.store');
 });
     
 // API para selects anidados (departamentos, provincias, distritos) - Públicas
@@ -179,6 +191,9 @@ Route::middleware(['auth'])->group(function () {
         // Exportar trámites
         Route::get('/exportar', [TramiteController::class, 'exportar'])->name('tramites.exportar');
         
+        // Descargar archivo de trámite (protegido)
+        Route::get('/{tramite}/archivo/{nombreArchivo}', [TramiteController::class, 'descargarArchivo'])->name('tramites.archivo.descargar');
+        
     });
     
     // Rutas de reportes
@@ -227,6 +242,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/usuarios/{id}', [UsuariosController::class, 'update'])->name('admin.usuarios.update');
         Route::delete('/usuarios/{id}', [UsuariosController::class, 'destroy'])->name('admin.usuarios.destroy');
         Route::get('/usuarios/{id}/obtener', [UsuariosController::class, 'obtenerUsuario'])->name('admin.usuarios.obtener');
+        Route::get('/usuarios/{id}/dependencias', [UsuariosController::class, 'getDependencias'])->name('admin.usuarios.dependencias');
         
         // Áreas (Nivel 1)
         Route::get('/areas', [AreasController::class, 'index'])->name('admin.areas');
@@ -234,6 +250,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/areas/{id}', [AreasController::class, 'update'])->name('admin.areas.update');
         Route::delete('/areas/{id}', [AreasController::class, 'destroy'])->name('admin.areas.destroy');
         Route::get('/areas/obtener', [AreasController::class, 'obtenerAreas'])->name('admin.areas.obtener');
+        Route::get('/areas/{id}/dependencias', [AreasController::class, 'getDependencias'])->name('admin.areas.dependencias');
         
         // Niveles
         Route::get('/niveles', [NivelesController::class, 'index'])->name('admin.niveles');
@@ -243,6 +260,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/niveles/nivel2/{nivel1Id}', [NivelesController::class, 'obtenerNivel2'])->name('admin.niveles.nivel2');
         Route::get('/niveles/nivel3/{nivel2Id}', [NivelesController::class, 'obtenerNivel3'])->name('admin.niveles.nivel3');
         Route::get('/niveles/nivel4/{nivel3Id}', [NivelesController::class, 'obtenerNivel4'])->name('admin.niveles.nivel4');
+        Route::get('/niveles/{id}/dependencias', [NivelesController::class, 'getDependencias'])->name('admin.niveles.dependencias');
         
         // Procedimientos
         Route::get('/procedimientos', [ProcedimientosController::class, 'index'])->name('admin.procedimientos');
@@ -252,19 +270,27 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/procedimientos/{id}/obtener', [ProcedimientosController::class, 'obtener'])->name('admin.procedimientos.obtener');
         Route::get('/procedimientos/{id}/especialistas', [ProcedimientosController::class, 'obtenerEspecialistasDisponibles'])->name('admin.procedimientos.especialistas');
         Route::post('/procedimientos/{id}/asignar-especialistas', [ProcedimientosController::class, 'asignarEspecialistas'])->name('admin.procedimientos.asignar-especialistas');
+        Route::get('/procedimientos/{id}/dependencias', [ProcedimientosController::class, 'getDependencias'])->name('admin.procedimientos.dependencias');
     });
-
-    // Dashboard principal
-    Route::get('/dashboard', function () {
-        return view('dashboard.index');
-    })->name('dashboard');
     
     // Rutas adicionales del sistema
     Route::get('/home', function () {
-        return redirect()->route('dashboard');
+        if (!Auth::check()) {
+            return redirect()->route('login');
+        }
+        
+        $usuario = Auth::user();
+        
+        // Redirigir según el tipo de usuario
+        if ($usuario->esAdministrador()) {
+            return redirect()->route('admin.index');
+        } elseif ($usuario->esInterno()) {
+            return redirect()->route('mesa-partes.tramites-recibidos');
+        } else {
+            // Usuario externo
+            return redirect()->route('mesa-partes.index');
+        }
     })->name('home');
-    
-    // Rutas API para dashboard (AJAX)
     
     // Rutas internas de mesa de partes (usuarios autenticados)
     Route::prefix('mesa-partes')->group(function () {
@@ -290,142 +316,6 @@ Route::middleware(['auth'])->group(function () {
         
         // Áreas
         Route::get('/areas', [AreasController::class, 'obtenerAreas'])->name('api.areas');
-        
-        // Dashboard
-        Route::get('/dashboard/estadisticas', function () {
-            // Implementar lógica para estadísticas del dashboard
-            return response()->json([
-                'total_tramites' => 150,
-                'pendientes' => 25,
-                'en_proceso' => 45,
-                'finalizados' => 80
-            ]);
-        })->name('api.dashboard.estadisticas');
-        
-        Route::get('/dashboard/tramites-recientes', function () {
-            // Implementar lógica para trámites recientes
-            return response()->json([
-                [
-                    'id' => 1,
-                    'codigo' => 'MP-2024-001',
-                    'procedimiento' => 'Inscripción de Estudiantes',
-                    'solicitante' => 'Juan Pérez',
-                    'estado' => 'pendiente',
-                    'fecha' => '2024-01-15'
-                ],
-                [
-                    'id' => 2,
-                    'codigo' => 'MP-2024-002',
-                    'procedimiento' => 'Traslado de Estudiantes',
-                    'solicitante' => 'María García',
-                    'estado' => 'en_proceso',
-                    'fecha' => '2024-01-16'
-                ]
-            ]);
-        })->name('api.dashboard.tramites-recientes');
-        
-        Route::get('/dashboard/tramites-por-mes', function () {
-            // Implementar lógica para trámites por mes
-            return response()->json([
-                'labels' => ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
-                'values' => [25, 30, 35, 28, 40, 45]
-            ]);
-        })->name('api.dashboard.tramites-por-mes');
-        
-        Route::get('/dashboard/tramites-por-estado', function () {
-            // Implementar lógica para trámites por estado
-            return response()->json([
-                'labels' => ['Pendientes', 'En Proceso', 'Finalizados', 'Observados', 'Anulados'],
-                'values' => [25, 45, 80, 10, 5]
-            ]);
-        })->name('api.dashboard.tramites-por-estado');
-        
-        Route::get('/dashboard/tramites-pendientes', function () {
-            try {
-                $tramites = \App\Models\Tramite::with(['procedimiento'])
-                    ->where('estado', \App\Domain\Tramites\EstadoTramite::PENDIENTE)
-                    ->orderByDesc('fecha_creacion')
-                    ->limit(10)
-                    ->get()
-                    ->map(function ($tramite) {
-                        $dias = $tramite->fecha_creacion ? $tramite->fecha_creacion->diffInDays(now()) : 0;
-                        
-                        return [
-                            'id' => $tramite->id,
-                            'codigo' => 'MP-' . str_pad($tramite->id, 6, '0', STR_PAD_LEFT),
-                            'procedimiento' => $tramite->procedimiento ? $tramite->procedimiento->nombre : 'Sin procedimiento',
-                            'dias' => $dias,
-                            'prioridad' => $dias > 5 ? 'Alta' : ($dias > 3 ? 'Media' : 'Baja')
-                        ];
-                    });
-                
-                return response()->json($tramites);
-            } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Error al obtener trámites pendientes: ' . $e->getMessage());
-                return response()->json([], 500);
-            }
-        })->name('api.dashboard.tramites-pendientes');
-        
-        Route::get('/dashboard/alertas', function () {
-            try {
-                $alertas = [];
-                
-                // Alertas de trámites vencidos (más de 30 días)
-                $tramitesVencidos = \App\Models\Tramite::where('estado', '!=', \App\Domain\Tramites\EstadoTramite::FINALIZADO)
-                    ->where('estado', '!=', \App\Domain\Tramites\EstadoTramite::RECHAZADO)
-                    ->where('fecha_creacion', '<', now()->subDays(30))
-                    ->count();
-                
-                if ($tramitesVencidos > 0) {
-                    $alertas[] = [
-                        'tipo' => 'danger',
-                        'icono' => 'exclamation-triangle',
-                        'titulo' => 'Trámites Vencidos',
-                        'mensaje' => "Tienes {$tramitesVencidos} trámite(s) vencido(s) que requieren atención inmediata."
-                    ];
-                }
-                
-                // Alertas de trámites pendientes por mucho tiempo (más de 15 días)
-                $tramitesPendientesLargos = \App\Models\Tramite::where('estado', \App\Domain\Tramites\EstadoTramite::PENDIENTE)
-                    ->where('fecha_creacion', '<', now()->subDays(15))
-                    ->count();
-                
-                if ($tramitesPendientesLargos > 0) {
-                    $alertas[] = [
-                        'tipo' => 'warning',
-                        'icono' => 'clock',
-                        'titulo' => 'Trámites Pendientes',
-                        'mensaje' => "Hay {$tramitesPendientesLargos} trámite(s) pendiente(s) por más de 15 días."
-                    ];
-                }
-                
-                // Alertas de trámites observados sin respuesta
-                $tramitesObservados = \App\Models\Tramite::where('estado', \App\Domain\Tramites\EstadoTramite::OBSERVADO)
-                    ->whereNotNull('limite_observacion')
-                    ->where('limite_observacion', '<', now())
-                    ->count();
-                
-                if ($tramitesObservados > 0) {
-                    $alertas[] = [
-                        'tipo' => 'warning',
-                        'icono' => 'eye',
-                        'titulo' => 'Observaciones Vencidas',
-                        'mensaje' => "Hay {$tramitesObservados} trámite(s) observado(s) cuyo plazo de corrección ha vencido."
-                    ];
-                }
-                
-                // Si no hay alertas, mostrar mensaje informativo
-                if (empty($alertas)) {
-                    // Opcional: puedes retornar un array vacío o un mensaje positivo
-                    // return response()->json([]);
-                }
-                
-                return response()->json($alertas);
-            } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Error al obtener alertas: ' . $e->getMessage());
-                return response()->json([], 500);
-            }
-        })->name('api.dashboard.alertas');
     });
     
 });

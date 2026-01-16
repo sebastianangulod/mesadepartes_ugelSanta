@@ -63,8 +63,8 @@
 
             <div>
                 <button type="submit" 
-                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Restablecer Contraseña
+                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                    <span class="text-white font-semibold">Restablecer Contraseña</span>
                 </button>
             </div>
 
@@ -74,37 +74,97 @@
                 </a>
             </div>
             
-            @if($recaptcha_enabled ?? false)
-            <div class="flex justify-center">
-                <div class="g-recaptcha" data-sitekey="{{ $recaptcha_site_key }}"></div>
+            @php
+                $recaptchaEnabled = config('services.recaptcha.enabled', false);
+                $recaptchaSiteKey = config('services.recaptcha.site_key', '');
+            @endphp
+            
+            @if($recaptchaEnabled && !empty($recaptchaSiteKey))
+            <div class="flex justify-center mt-4">
+                <div class="g-recaptcha" data-sitekey="{{ $recaptchaSiteKey }}" data-callback="onRecaptchaSuccess" data-expired-callback="onRecaptchaExpired"></div>
+            </div>
+            <div id="recaptcha-error" class="hidden mt-2 text-center text-sm text-red-600">
+                Por favor, complete el reCAPTCHA para continuar.
             </div>
             @endif
         </form>
     </div>
 </div>
 
-@if($recaptcha_enabled ?? false)
+@php
+    $recaptchaEnabled = config('services.recaptcha.enabled', false);
+    $recaptchaSiteKey = config('services.recaptcha.site_key', '');
+@endphp
+
+@if($recaptchaEnabled && !empty($recaptchaSiteKey))
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+<script>
+// Callback cuando reCAPTCHA se completa exitosamente
+function onRecaptchaSuccess(token) {
+    const errorDiv = document.getElementById('recaptcha-error');
+    if (errorDiv) {
+        errorDiv.classList.add('hidden');
+    }
+}
+
+// Callback cuando reCAPTCHA expira
+function onRecaptchaExpired() {
+    const errorDiv = document.getElementById('recaptcha-error');
+    if (errorDiv) {
+        errorDiv.classList.remove('hidden');
+    }
+}
+
+// Validar reCAPTCHA antes de enviar el formulario
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form[action="{{ route('password.update') }}"]');
+    if (form && {{ $recaptcha_enabled ? 'true' : 'false' }}) {
+        form.addEventListener('submit', function(e) {
+            if (typeof grecaptcha !== 'undefined') {
+                const recaptchaResponse = grecaptcha.getResponse();
+                if (!recaptchaResponse || recaptchaResponse.length === 0) {
+                    e.preventDefault();
+                    const errorDiv = document.getElementById('recaptcha-error');
+                    if (errorDiv) {
+                        errorDiv.classList.remove('hidden');
+                    }
+                    return false;
+                }
+            }
+        });
+    }
+});
+</script>
 @endif
 
 <script>
 // Validar formato DNI en tiempo real
-document.getElementById('dni').addEventListener('input', function(e) {
-    this.value = this.value.replace(/[^0-9]/g, '');
-    if (this.value.length > 8) {
-        this.value = this.value.slice(0, 8);
+document.addEventListener('DOMContentLoaded', function() {
+    const dniInput = document.getElementById('dni');
+    if (dniInput) {
+        dniInput.addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+            if (this.value.length > 8) {
+                this.value = this.value.slice(0, 8);
+            }
+        });
     }
-});
 
-// Validar que las contraseñas coincidan
-document.getElementById('password_confirmation').addEventListener('input', function(e) {
-    const password = document.getElementById('password').value;
-    const confirmation = this.value;
+    // Validar que las contraseñas coincidan
+    const passwordInput = document.getElementById('password');
+    const passwordConfirmationInput = document.getElementById('password_confirmation');
     
-    if (password !== confirmation && confirmation.length > 0) {
-        this.setCustomValidity('Las contraseñas no coinciden');
-    } else {
-        this.setCustomValidity('');
+    if (passwordInput && passwordConfirmationInput) {
+        passwordConfirmationInput.addEventListener('input', function(e) {
+            const password = passwordInput.value;
+            const confirmation = this.value;
+            
+            if (password !== confirmation && confirmation.length > 0) {
+                this.setCustomValidity('Las contraseñas no coinciden');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
     }
 });
 </script>

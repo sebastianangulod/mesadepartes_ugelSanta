@@ -23,11 +23,11 @@
                 </div>
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Fecha Desde</label>
-                    <input type="date" name="fecha_desde" id="filtro_fecha_desde" class="w-full p-2 border rounded">
+                    <input type="date" name="fecha_desde" id="filtro_fecha_desde" class="w-full p-2 border rounded" max="">
                 </div>
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Fecha Hasta</label>
-                    <input type="date" name="fecha_hasta" id="filtro_fecha_hasta" class="w-full p-2 border rounded">
+                    <input type="date" name="fecha_hasta" id="filtro_fecha_hasta" class="w-full p-2 border rounded" max="" min="">
                 </div>
                 <div class="flex items-end">
                     <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full">
@@ -35,6 +35,45 @@
                     </button>
                 </div>
             </form>
+                                </div>
+
+        <!-- Leyenda de Indicador de Tiempo -->
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg shadow-sm p-4 mb-4">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <svg class="h-6 w-6 text-blue-600 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div class="ml-3 flex-1">
+                    <h4 class="text-sm font-semibold text-gray-900 mb-2">Indicador de Tiempo de Trámites</h4>
+                    <p class="text-xs text-gray-700 mb-3">
+                        Cada trámite tiene un límite de <strong>30 días</strong> para ser procesado. El indicador de color muestra el tiempo transcurrido desde la creación del trámite.
+                    </p>
+                    <div class="flex flex-wrap gap-3 text-xs">
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 rounded mr-2 border border-gray-300" style="background-color: #22c55e;"></div>
+                            <span class="text-gray-700"><strong>0-9 días:</strong> Normal (21-30 días restantes)</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 rounded mr-2 border border-gray-300" style="background-color: #fde047;"></div>
+                            <span class="text-gray-700"><strong>9-15 días:</strong> Atención (15-21 días restantes)</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 rounded mr-2 border border-gray-300" style="background-color: #eab308;"></div>
+                            <span class="text-gray-700"><strong>15-21 días:</strong> Advertencia (9-15 días restantes)</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 rounded mr-2 border border-gray-300" style="background-color: #f97316;"></div>
+                            <span class="text-gray-700"><strong>21-30 días:</strong> Urgente (0-9 días restantes)</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 rounded mr-2 border border-gray-300" style="background-color: #dc2626;"></div>
+                            <span class="text-gray-700"><strong>30+ días:</strong> Vencido</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
                                 </div>
 
         <!-- Tabla de Trámites -->
@@ -46,6 +85,7 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Documento</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Procedimiento</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tiempo</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Voucher</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hoja de Ruta</th>
@@ -88,7 +128,7 @@
                     </div>
                 </div>
             </div>
-        </div>
+            </div>
 
 <!-- Modal Hoja de Ruta -->
 <div id="hojaRutaModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
@@ -259,6 +299,34 @@
         return clases[estado] || 'estado-pendiente';
     }
 
+    // Función para formatear el estado (reemplazar guiones bajos con espacios y capitalizar)
+    function formatearEstado(estado) {
+        if (!estado) return '';
+        
+        // Mapeo de estados a etiquetas formateadas
+        const etiquetas = {
+            'PENDIENTE': 'Pendiente',
+            'OBSERVADO': 'Observado',
+            'EN_PROCESO': 'En Proceso',
+            'VERIFICADO': 'Verificado',
+            'FINALIZADO': 'Finalizado',
+            'RECHAZADO': 'Rechazado'
+        };
+        
+        // Si existe en el mapeo, usar la etiqueta formateada
+        if (etiquetas[estado]) {
+            return etiquetas[estado];
+        }
+        
+        // Si no existe, reemplazar guiones bajos con espacios y capitalizar
+        return estado
+            .replace(/_/g, ' ')
+            .toLowerCase()
+            .split(' ')
+            .map(palabra => palabra.charAt(0).toUpperCase() + palabra.slice(1))
+            .join(' ');
+    }
+
     // Formatear fecha
     function formatearFecha(fecha) {
         if (!fecha) return '';
@@ -270,6 +338,54 @@
             hour: '2-digit',
             minute: '2-digit'
         });
+    }
+
+    // Función para obtener el indicador de días transcurridos (cuadrado de color)
+    function obtenerIndicadorDias(diasTranscurridos, fechaCreacion, tramiteId) {
+        const LIMITE_DIAS = 30;
+        
+        // Si no se proporcionan los días transcurridos, calcularlos desde la fecha
+        if (diasTranscurridos === undefined || diasTranscurridos === null) {
+            if (fechaCreacion) {
+                const fecha = new Date(fechaCreacion);
+                const ahora = new Date();
+                // Calcular diferencia en días (entero) desde fecha hasta ahora
+                const diffTime = ahora.getTime() - fecha.getTime();
+                diasTranscurridos = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                // Si es negativo (fecha futura), establecer a 0
+                if (diasTranscurridos < 0) {
+                    diasTranscurridos = 0;
+                }
+            } else {
+                diasTranscurridos = 0;
+            }
+        }
+        
+        // Asegurar que sea un entero (redondear hacia abajo)
+        diasTranscurridos = Math.floor(Math.abs(diasTranscurridos));
+        
+        // Determinar el color según los días transcurridos usando colores específicos con estilos inline
+        let colorFondo = '';
+        
+        if (diasTranscurridos >= LIMITE_DIAS) {
+            // Vencido (rojo)
+            colorFondo = '#dc2626'; // red-600
+        } else if (diasTranscurridos >= 21) {
+            // Urgente (naranja) - 21-30 días - usando naranja más saturado
+            colorFondo = '#f97316'; // orange-500
+        } else if (diasTranscurridos >= 15) {
+            // Advertencia (amarillo) - 15-21 días - usando amarillo más saturado
+            colorFondo = '#eab308'; // yellow-500
+        } else if (diasTranscurridos >= 9) {
+            // Atención (amarillo claro) - 9-15 días - usando amarillo claro más visible
+            colorFondo = '#fde047'; // yellow-300
+        } else {
+            // Normal (verde) - 0-9 días
+            colorFondo = '#22c55e'; // green-500
+        }
+        
+        // Asegurar que el estilo se aplique correctamente sin clases que puedan interferir
+        return `<div style="width: 1.25rem; height: 1.25rem; border-radius: 0.25rem; border: 1px solid #9ca3af; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); background-color: ${colorFondo};"></div>`;
     }
 
     // Cargar trámites dinámicamente
@@ -286,6 +402,12 @@
         payload.append('por_pagina', 10);
         payload.append('filtros', JSON.stringify(filtrosActuales));
 
+        console.log('Enviando petición AJAX', {
+            url: '{{ route("mesa-partes.tramites-recibidos.ajax") }}',
+            pagina: pagina,
+            filtros: filtrosActuales
+        });
+
         fetch('{{ route("mesa-partes.tramites-recibidos.ajax") }}', {
             method: 'POST',
             headers: {
@@ -294,22 +416,30 @@
             },
             body: payload
         })
-        .then(res => res.json())
+        .then(res => {
+            console.log('Respuesta recibida', res.status, res.statusText);
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            return res.json();
+        })
         .then(data => {
+            console.log('Datos recibidos:', data);
             if (data.status === 'success') {
                 renderTramites(data.tramites || []);
                 paginaActual = data.pagina_actual || 1;
                 totalPaginas = data.paginas || 1;
                 actualizarPaginacion(data);
             } else {
+                console.error('Error en respuesta:', data.message || 'Estado desconocido');
                 document.getElementById('tramitesTableBody').innerHTML = 
-                    '<tr><td colspan="8" class="text-center py-4">No hay trámites disponibles</td></tr>';
+                    '<tr><td colspan="9" class="text-center py-4">' + (data.message || 'No hay trámites disponibles') + '</td></tr>';
             }
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('Error completo:', error);
             document.getElementById('tramitesTableBody').innerHTML = 
-                '<tr><td colspan="8" class="text-center py-4 text-red-500">Error al cargar los trámites</td></tr>';
+                '<tr><td colspan="9" class="text-center py-4 text-red-500">Error al cargar los trámites: ' + error.message + '</td></tr>';
         });
     }
 
@@ -319,7 +449,7 @@
         tbody.innerHTML = '';
         
         if (!tramites || tramites.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">No hay trámites para mostrar</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4">No hay trámites para mostrar</td></tr>';
             return;
         }
         
@@ -332,27 +462,30 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     ${tramite.archivo_adjunto ? `
                         <div class="flex flex-col gap-1 items-center">
-                            <a href="/storage/uploads/tramites/${tramite.archivo_adjunto}" download 
+                            <a href="/tramites/${tramite.id}/archivo/${tramite.archivo_adjunto}" download 
                                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-xs text-center" target="_blank">
                                 Descargar
                             </a>
-                            <button onclick="verDocumento('${tramite.archivo_adjunto}')" 
-                                    class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded text-xs text-center">
+                            <a href="/tramites/${tramite.id}/archivo/${tramite.archivo_adjunto}" 
+                               class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded text-xs text-center" target="_blank">
                                 Ver
-                            </button>
+                            </a>
                         </div>
                     ` : 'Sin archivo'}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${tramite.procedimiento_nombre || ''}</td>
                 <td class="px-6 py-4 whitespace-nowrap">
                     <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${obtenerClaseEstado(tramite.estado)}">
-                        ${tramite.estado}
+                        ${formatearEstado(tramite.estado)}
                     </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center">
+                    ${obtenerIndicadorDias(tramite.dias_transcurridos, tramite.fecha_creacion, tramite.id)}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatearFecha(tramite.fecha_creacion)}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     ${tramite.voucher ? `
-                        <a href="/storage/uploads/vouchers/${tramite.voucher}" download 
+                        <a href="/tramites/${tramite.id}/archivo/${tramite.voucher}" download 
                            class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded text-xs" target="_blank">
                             Descargar Voucher
                         </a>
@@ -383,7 +516,7 @@
         
         // Ver oficio si existe
         if (tramite.oficio) {
-            botones += `<button onclick="verOficio('${tramite.oficio}')" 
+            botones += `<button onclick="verOficio('${tramite.oficio}', ${tramite.id})" 
                         class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-1 px-2 rounded text-xs mb-1 mr-1">
                         Ver Oficio</button>`;
         }
@@ -690,20 +823,20 @@
         document.getElementById('hojaRutaModal').classList.add('hidden');
     }
 
-    window.verOficio = function(nombreOficio) {
-        if (!nombreOficio) {
+    window.verOficio = function(nombreOficio, tramiteId) {
+        if (!nombreOficio || !tramiteId) {
             alert('No hay oficio adjunto');
             return;
         }
-        window.open(`/storage/uploads/oficios/${nombreOficio}`, '_blank');
+        window.open(`/tramites/${tramiteId}/archivo/${nombreOficio}`, '_blank');
     }
 
-    window.verDocumento = function(nombreDocumento) {
-        if (!nombreDocumento) {
+    window.verDocumento = function(nombreDocumento, tramiteId) {
+        if (!nombreDocumento || !tramiteId) {
             alert('No hay documento adjunto');
             return;
         }
-        window.open(`/storage/uploads/tramites/${nombreDocumento}`, '_blank');
+        window.open(`/tramites/${tramiteId}/archivo/${nombreDocumento}`, '_blank');
     }
 
     window.abrirModalOficio = function(idTramite) {
@@ -848,9 +981,86 @@
             .catch(() => alert('Error de red al intentar observar el trámite.'));
         };
 
+        // Configurar límites de fecha al cargar la página
+        const fechaDesdeInput = document.getElementById('filtro_fecha_desde');
+        const fechaHastaInput = document.getElementById('filtro_fecha_hasta');
+        const fechaActual = new Date().toISOString().split('T')[0];
+        
+        // Establecer fecha máxima (hoy) para ambos campos
+        if (fechaDesdeInput) fechaDesdeInput.setAttribute('max', fechaActual);
+        if (fechaHastaInput) fechaHastaInput.setAttribute('max', fechaActual);
+        
+        // Validar cuando cambia la fecha "desde"
+        if (fechaDesdeInput) {
+            fechaDesdeInput.addEventListener('change', function() {
+                const fechaDesde = this.value;
+                if (fechaDesde) {
+                    // Establecer fecha mínima de "hasta" igual a "desde"
+                    if (fechaHastaInput) {
+                        fechaHastaInput.setAttribute('min', fechaDesde);
+                        
+                        // Si "hasta" es menor que "desde", actualizarla
+                        if (fechaHastaInput.value && fechaHastaInput.value < fechaDesde) {
+                            fechaHastaInput.value = fechaDesde;
+                        }
+                    }
+                } else {
+                    // Si no hay fecha "desde", quitar el mínimo de "hasta"
+                    if (fechaHastaInput) fechaHastaInput.removeAttribute('min');
+                }
+            });
+        }
+        
+        // Validar cuando cambia la fecha "hasta"
+        if (fechaHastaInput) {
+            fechaHastaInput.addEventListener('change', function() {
+                const fechaHasta = this.value;
+                const fechaDesde = fechaDesdeInput ? fechaDesdeInput.value : '';
+                
+                if (fechaDesde && fechaHasta && fechaHasta < fechaDesde) {
+                    alert('La fecha "Hasta" debe ser igual o posterior a la fecha "Desde"');
+                    this.value = fechaDesde;
+                }
+            });
+        }
+        
+        // Validar fechas antes de enviar el formulario
+        function validarFechas() {
+            const fechaDesde = fechaDesdeInput ? fechaDesdeInput.value : '';
+            const fechaHasta = fechaHastaInput ? fechaHastaInput.value : '';
+            
+            // Validar que no sean fechas futuras
+            if (fechaDesde && fechaDesde > fechaActual) {
+                alert('La fecha "Desde" no puede ser superior a la fecha actual');
+                if (fechaDesdeInput) fechaDesdeInput.value = '';
+                return false;
+            }
+            
+            if (fechaHasta && fechaHasta > fechaActual) {
+                alert('La fecha "Hasta" no puede ser superior a la fecha actual');
+                if (fechaHastaInput) fechaHastaInput.value = '';
+                return false;
+            }
+            
+            // Validar que "hasta" sea >= "desde"
+            if (fechaDesde && fechaHasta && fechaHasta < fechaDesde) {
+                alert('La fecha "Hasta" debe ser igual o posterior a la fecha "Desde"');
+                if (fechaHastaInput) fechaHastaInput.value = fechaDesde;
+                return false;
+            }
+            
+            return true;
+        }
+
         // Formulario de filtros
         document.getElementById('filtrosForm').addEventListener('submit', function(e) {
             e.preventDefault();
+            
+            // Validar fechas antes de filtrar
+            if (!validarFechas()) {
+                return;
+            }
+            
             paginaActual = 1;
             cargarTramites(1);
         });

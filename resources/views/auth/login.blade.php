@@ -107,9 +107,17 @@
                 </div>
             </div>
             
-            @if($recaptcha_enabled ?? false)
-            <div class="flex justify-center">
-                <div class="g-recaptcha" data-sitekey="{{ $recaptcha_site_key }}"></div>
+            @php
+                $recaptchaEnabled = config('services.recaptcha.enabled', false);
+                $recaptchaSiteKey = config('services.recaptcha.site_key', '');
+            @endphp
+            
+            @if($recaptchaEnabled && !empty($recaptchaSiteKey))
+            <div class="flex justify-center mt-4">
+                <div class="g-recaptcha" data-sitekey="{{ $recaptchaSiteKey }}" data-callback="onRecaptchaSuccess" data-expired-callback="onRecaptchaExpired"></div>
+            </div>
+            <div id="recaptcha-error" class="hidden mt-2 text-center text-sm text-red-600">
+                Por favor, complete el reCAPTCHA para continuar.
             </div>
             @endif
 
@@ -122,24 +130,80 @@
     </div>
 </div>
 
-@if($recaptcha_enabled ?? false)
+@php
+    $recaptchaEnabled = config('services.recaptcha.enabled', false);
+    $recaptchaSiteKey = config('services.recaptcha.site_key', '');
+@endphp
+
+@if($recaptchaEnabled && !empty($recaptchaSiteKey))
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+<script>
+// Callback cuando reCAPTCHA se completa exitosamente
+function onRecaptchaSuccess(token) {
+    const errorDiv = document.getElementById('recaptcha-error');
+    if (errorDiv) {
+        errorDiv.classList.add('hidden');
+    }
+}
+
+// Callback cuando reCAPTCHA expira
+function onRecaptchaExpired() {
+    const errorDiv = document.getElementById('recaptcha-error');
+    if (errorDiv) {
+        errorDiv.classList.remove('hidden');
+    }
+}
+
+// Validar reCAPTCHA antes de enviar el formulario
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form[action="{{ route('login') }}"]');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Esperar a que grecaptcha esté disponible
+            const checkRecaptcha = setInterval(function() {
+                if (typeof grecaptcha !== 'undefined') {
+                    clearInterval(checkRecaptcha);
+                    const recaptchaResponse = grecaptcha.getResponse();
+                    if (!recaptchaResponse || recaptchaResponse.length === 0) {
+                        e.preventDefault();
+                        const errorDiv = document.getElementById('recaptcha-error');
+                        if (errorDiv) {
+                            errorDiv.classList.remove('hidden');
+                        }
+                        return false;
+                    }
+                }
+            }, 100);
+            
+            // Timeout después de 5 segundos
+            setTimeout(function() {
+                clearInterval(checkRecaptcha);
+            }, 5000);
+        });
+    }
+});
+</script>
 @endif
 
 <script>
 // Validar formato DNI en tiempo real
-document.getElementById('dni').addEventListener('input', function(e) {
+document.addEventListener('DOMContentLoaded', function() {
+    const dniInput = document.getElementById('dni');
+    if (dniInput) {
+        dniInput.addEventListener('input', function(e) {
     this.value = this.value.replace(/[^0-9]/g, '');
     if (this.value.length > 8) {
         this.value = this.value.slice(0, 8);
     }
 });
+    }
 
 // Mostrar/ocultar campos según tipo de persona
 const tipoPersonaSelect = document.getElementById('tipo_persona');
 const campoRuc = document.getElementById('campo_ruc');
 const campoNombreEntidad = document.getElementById('campo_nombre_entidad');
 
+    if (tipoPersonaSelect && campoRuc && campoNombreEntidad) {
 function actualizarCamposTipoPersona() {
     const tipo = tipoPersonaSelect.value;
     campoRuc.classList.toggle('hidden', tipo !== '2');
@@ -149,5 +213,7 @@ function actualizarCamposTipoPersona() {
 tipoPersonaSelect.addEventListener('change', actualizarCamposTipoPersona);
 // Ejecutar al cargar para reflejar old()
 actualizarCamposTipoPersona();
+    }
+});
 </script>
 @endsection
