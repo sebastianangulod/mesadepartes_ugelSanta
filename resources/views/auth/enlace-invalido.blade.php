@@ -10,7 +10,7 @@
 <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8">
         <div class="text-center">
-            <img class="mx-auto h-12 w-auto" src="{{ asset('img/logo-ugel.png') }}" alt="UGEL">
+            <img class="mx-auto h-16 w-auto" src="{{ asset('img/logo-ugel.png') }}" alt="UGEL" style="max-height: 80px;">
             <div class="mt-6 flex justify-center">
                 <div class="rounded-full bg-red-100 p-3">
                     <svg class="h-12 w-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
