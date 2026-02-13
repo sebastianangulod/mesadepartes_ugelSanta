@@ -52,8 +52,13 @@
                     <!-- Logo y título -->
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
-                            <h1 class="text-xl font-bold text-gray-900">
-                                <span class="text-blue-600">UGEL</span> Mesa de Partes
+                            <h1 class="flex items-baseline space-x-2 text-lg sm:text-xl font-semibold tracking-tight">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-blue-50 text-xs font-bold uppercase text-blue-800 border border-blue-400">
+                                    UGEL
+                                </span>
+                                <span class="hidden sm:inline text-blue-600">
+                                    Mesa de Partes
+                                </span>
                             </h1>
                         </div>
                     </div>
@@ -123,11 +128,11 @@
                     </div>
                     @else
                     <!-- Menú para usuarios no autenticados -->
-                    <div class="flex items-center space-x-4">
-                        <a href="{{ route('login') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
+                    <div class="flex items-center space-x-3">
+                        <a href="{{ route('login') }}" class="inline-flex items-center px-4 py-2 rounded-full border border-blue-500 text-sm font-medium text-blue-600 bg-white hover:bg-blue-50 transition duration-200">
                             Iniciar Sesión
                         </a>
-                        <a href="{{ route('register') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition duration-200">
+                        <a href="{{ route('register') }}" class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition duration-200">
                             Registrarse
                         </a>
                     </div>
@@ -138,7 +143,8 @@
         
         <!-- Contenido principal -->
         <main class="flex-1">
-            <!-- Breadcrumbs y título de página -->
+            <!-- Breadcrumbs y título de página (solo si la vista los define) -->
+            @hasSection('header')
             <div class="bg-white shadow-sm border-b border-gray-200">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                     <div class="flex items-center justify-between">
@@ -151,6 +157,7 @@
                     </div>
                 </div>
             </div>
+            @endif
             
             <!-- Contenido de la página -->
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

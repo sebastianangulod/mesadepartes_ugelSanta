@@ -10,14 +10,18 @@
 @section('content')
 <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8">
-        <div class="text-center">
-            <img src="{{ asset('img/logo-ugel.png') }}" alt="UGEL" class="mx-auto">
-            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                Sistema de Mesa de Partes
-            </h2>
-            <p class="mt-2 text-center text-sm text-gray-600">
-                Ingrese con su DNI y contraseña
-            </p>
+        <div class="text-center space-y-4">
+            <div class="inline-flex items-center justify-center rounded-2xl border border-indigo-100 bg-white shadow-sm px-6 py-4">
+                <img src="{{ asset('img/logo-ugel.png') }}" alt="UGEL" class="mx-auto">
+            </div>
+            <div>
+                <h2 class="text-2xl font-extrabold text-gray-900 tracking-tight">
+                    Sistema de Mesa de Partes
+                </h2>
+                <p class="mt-1 text-sm text-gray-600">
+                    Ingrese con su DNI y contraseña
+                </p>
+            </div>
         </div>
         
         <form class="mt-8 space-y-6" action="{{ route('login') }}" method="POST">
@@ -34,7 +38,7 @@
                 </div>
             @endif
 
-            <div class="rounded-md shadow-sm space-y-4">
+            <div class="bg-white rounded-xl shadow-md border border-gray-200 px-6 py-5 space-y-4">
                 <div>
                     <label for="tipo_persona" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Persona</label>
                     <select id="tipo_persona" name="tipo_persona" required 
@@ -94,14 +98,14 @@
                 </button>
             </div>
 
-            <div class="flex items-center justify-between">
-                <div class="text-sm">
-                    <a href="{{ route('register') }}" class="font-medium text-indigo-600 hover:text-indigo-500">
+            <div class="mt-6 flex flex-wrap items-center justify-between gap-y-2 text-sm font-medium text-indigo-600">
+                <div>
+                    <a href="{{ route('register') }}" class="inline-flex items-center hover:text-indigo-500 hover:underline">
                         ¿No tienes cuenta? Regístrate
                     </a>
                 </div>
-                <div class="text-sm">
-                    <a href="{{ route('password.request') }}" class="font-medium text-indigo-600 hover:text-indigo-500">
+                <div>
+                    <a href="{{ route('password.request') }}" class="inline-flex items-center hover:text-indigo-500 hover:underline">
                         ¿Olvidaste tu contraseña?
                     </a>
                 </div>
@@ -121,8 +125,8 @@
             </div>
             @endif
 
-            <div class="text-center border-t pt-4">
-                <a href="{{ route('login.interno') }}" class="font-medium text-indigo-600 hover:text-indigo-500">
+            <div class="mt-6 text-center border-t border-gray-200 pt-5">
+                <a href="{{ route('login.interno') }}" class="inline-flex items-center justify-center px-5 py-2 rounded-md border border-indigo-500 bg-white text-sm font-semibold text-indigo-600 hover:bg-indigo-50 shadow-sm tracking-wide">
                     Soy personal interno
                 </a>
             </div>
