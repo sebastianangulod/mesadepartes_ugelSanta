@@ -113,11 +113,12 @@
             <p><span>Tipo de Documento:</span> Expediente</p>
             <p><span>N°:</span> {{ $tramite->id }}-{{ $tramite->periodo ?? date('Y') }}</p>
             <p><span>Clave:</span> {{ $tramite->id }}</p>
+            @php $solicitante = $tramite->creador ?? $tramite->usuario; @endphp
             <p><span>Razón Social & Apellidos y Nombres:</span> 
-                {{ $tramite->usuario->razon_social ?? ($tramite->usuario->nombres . ' ' . $tramite->usuario->apellido_paterno . ' ' . $tramite->usuario->apellido_materno) }}
+                {{ $solicitante->razon_social ?? ($solicitante->nombres . ' ' . $solicitante->apellido_paterno . ' ' . $solicitante->apellido_materno) }}
             </p>
-            <p><span>DNI:</span> {{ $tramite->usuario->dni }}</p>
-            <p><span>Registrado por:</span> {{ $tramite->usuario->nombres }} {{ $tramite->usuario->apellido_paterno }}</p>
+            <p><span>DNI:</span> {{ $solicitante->dni }}</p>
+            <p><span>Registrado por:</span> {{ $solicitante->nombres }} {{ $solicitante->apellido_paterno }}</p>
             <p><span>Folios:</span> {{ $tramite->tramitescol ?? 1 }} FOLIOS</p>
             <p><span>Asunto:</span> {{ $tramite->procedimiento->nombre ?? 'N/A' }}</p>
             <p><span>Número de Voucher:</span> {{ $tramite->numero_voucher ?? ($tramite->id . '-' . ($tramite->periodo ?? date('Y'))) }}</p>

@@ -19,6 +19,7 @@ use App\Domain\Tramites\EstadoTramite;
  * @property string $estado ENUM('PENDIENTE','OBSERVADO','EN_PROCESO','FINALIZADO','VERIFICADO','RECHAZADO')
  * @property string|null $ultimo_estado
  * @property int $id_usuario
+ * @property int|null $creado_por
  * @property string|null $tipo_tramite ENUM('PRESENCIAL','VIRTUAL')
  * @property string|null $tramitescol
  * @property string|null $observaciones
@@ -58,6 +59,7 @@ class Tramite extends Model
         'nivel_actual',
         'ultimo_estado',
         'id_usuario',
+        'creado_por',
         'tipo_tramite',
         'tramitescol',
         'observaciones',
@@ -97,6 +99,16 @@ class Tramite extends Model
     public function usuario()
     {
         return $this->belongsTo(Usuario::class, 'id_usuario');
+    }
+
+    /**
+     * Relación con el usuario que creó el trámite (solicitante)
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function creador()
+    {
+        return $this->belongsTo(Usuario::class, 'creado_por');
     }
 
     /**

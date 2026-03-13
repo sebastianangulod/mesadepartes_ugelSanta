@@ -38,7 +38,21 @@ class MesaPartesController extends Controller
         $usuario = auth()->user();
 
         // Estadísticas básicas de los trámites del usuario autenticado
-        $queryBase = Tramite::where('id_usuario', $usuario->id);
+        // - Usuarios externos: trámites que ellos crearon (creado_por), o legacy por id_usuario
+        // - Usuarios internos: trámites asignados a ellos (id_usuario) O que ellos crearon (creado_por)
+        if ($usuario->tipo_user == 1) {
+            $queryBase = Tramite::where(function ($q) use ($usuario) {
+                $q->where('creado_por', $usuario->id)
+                  ->orWhere(function ($q2) use ($usuario) {
+                      $q2->whereNull('creado_por')->where('id_usuario', $usuario->id);
+                  });
+            });
+        } else {
+            $queryBase = Tramite::where(function ($q) use ($usuario) {
+                $q->where('id_usuario', $usuario->id)
+                  ->orWhere('creado_por', $usuario->id);
+            });
+        }
 
         $estadisticas = [
             'tramites_realizados' => (clone $queryBase)->count(),
@@ -98,8 +112,25 @@ class MesaPartesController extends Controller
         $usuario = auth()->user();
 
         // Obtener documentos enviados por el usuario
-        $documentos = Tramite::where('id_usuario', $usuario->id)
-            ->with('procedimiento')
+        // - Usuarios externos: trámites que ellos crearon (creado_por), o legacy por id_usuario
+        // - Usuarios internos: trámites asignados a ellos (id_usuario) O que ellos crearon (creado_por)
+        $query = Tramite::with('procedimiento');
+
+        if ($usuario->tipo_user == 1) {
+            $query->where(function ($q) use ($usuario) {
+                $q->where('creado_por', $usuario->id)
+                  ->orWhere(function ($q2) use ($usuario) {
+                      $q2->whereNull('creado_por')->where('id_usuario', $usuario->id);
+                  });
+            });
+        } else {
+            $query->where(function ($q) use ($usuario) {
+                $q->where('id_usuario', $usuario->id)
+                  ->orWhere('creado_por', $usuario->id);
+            });
+        }
+
+        $documentos = $query
             ->orderByDesc('fecha_creacion')
             ->get();
 
@@ -645,69 +676,95 @@ class MesaPartesController extends Controller
                 ->take($porPagina)
                 ->get();
 
-            // Agregar acciones permitidas para cada trámite
+            // Agregar acciones permitidas para cada trámite (solo las que aplican al tipo de usuario y si es asignado)
             $tramites->transform(function($tramite) use ($usuario) {
                 $acciones = [];
-                $nivelUsuario = $usuario->usuariosNiveles->first()->nivel ?? null;
                 $nivelFinalProcedimiento = $tramite->procedimiento->nivel_final ?? null;
+                $nivelActualTramite = $tramite->nivel_actual ?? 1;
+                $esAsignado = ($tramite->id_usuario == $usuario->id);
 
-                // Lógica de acciones permitidas según estado y nivel (equivalente al PHP puro)
+                // Nivel del usuario que coincide con el nivel actual del trámite (usuario puede tener varios niveles)
+                $nivelDelUsuarioEnTramite = $usuario->usuariosNiveles->firstWhere('nivel', $nivelActualTramite);
+                $nivelUsuario = $nivelDelUsuarioEnTramite ? (int) $nivelDelUsuarioEnTramite->nivel : null;
+                $idNivelUsuario = $nivelDelUsuarioEnTramite ? $nivelDelUsuarioEnTramite->id_nivel : null;
+
+                // Comprobar si el usuario pertenece al mismo área/subárea del trámite (para niveles intermedios)
+                $perteneceAlAreaDelTramite = false;
+                if ($nivelUsuario !== null && $idNivelUsuario !== null && $tramite->procedimiento) {
+                    $proc = $tramite->procedimiento;
+                    if ($nivelUsuario == 1) {
+                        $perteneceAlAreaDelTramite = ($proc->id_area == $idNivelUsuario);
+                    } elseif ($nivelUsuario == 2) {
+                        $perteneceAlAreaDelTramite = ($proc->id_subarea == $idNivelUsuario);
+                    } elseif ($nivelUsuario == 3) {
+                        $n3 = \App\Models\Nivel3::find($idNivelUsuario);
+                        $perteneceAlAreaDelTramite = $n3 && $n3->id_nivel2 && ($proc->id_subarea == $n3->id_nivel2);
+                    } elseif ($nivelUsuario == 4) {
+                        $perteneceAlAreaDelTramite = ($proc->id_nivel_final == $idNivelUsuario);
+                    }
+                }
+
+                $esNivelFinalParaEsteProcedimiento = false;
+                if ($nivelUsuario !== null && $nivelFinalProcedimiento !== null) {
+                    if ($nivelUsuario == 4) {
+                        $esNivelFinalParaEsteProcedimiento = true;
+                    } elseif ($nivelUsuario == 3 && $nivelFinalProcedimiento == '3' && $tramite->procedimiento->id_nivel_final == $idNivelUsuario) {
+                        $esNivelFinalParaEsteProcedimiento = true;
+                    } elseif ($nivelUsuario == 2 && $nivelFinalProcedimiento == '2' && $tramite->procedimiento->id_nivel_final == $idNivelUsuario) {
+                        $esNivelFinalParaEsteProcedimiento = true;
+                    }
+                }
+
                 $tieneOficio = !empty($tramite->oficio);
-                
-                switch($tramite->estado) {
+
+                switch ($tramite->estado) {
                     case 'PENDIENTE':
-                        if ($usuario->tipo_user == 2) {
-                            // Todos los niveles internos pueden ACEPTAR, RECHAZAR y OBSERVAR en PENDIENTE
+                        if ($usuario->tipo_user == 2 && $nivelUsuario !== null && $perteneceAlAreaDelTramite) {
                             $acciones[] = 'ACEPTAR';
                             $acciones[] = 'RECHAZAR';
                             $acciones[] = 'OBSERVAR';
-                            
-                            // Solo niveles intermedios pueden DERIVAR directamente
-                            if ($nivelUsuario && $nivelUsuario < $nivelFinalProcedimiento) {
+                            if ($nivelFinalProcedimiento !== null && $nivelUsuario < (int) $nivelFinalProcedimiento) {
                                 $acciones[] = 'DERIVAR';
                             }
                         }
                         break;
                     case 'EN_PROCESO':
                         if ($usuario->tipo_user == 2) {
-                            if ($nivelUsuario && $nivelUsuario < $nivelFinalProcedimiento) {
-                                // Niveles intermedios (1, 2, 3 si no es final): OBSERVAR, ACEPTAR/DERIVAR, RECHAZAR
+                            if ($nivelUsuario !== null && $perteneceAlAreaDelTramite && !$esNivelFinalParaEsteProcedimiento) {
+                                // Niveles intermedios: solo si está en el nivel actual del trámite y misma área
                                 $acciones[] = 'OBSERVAR';
-                                $acciones[] = 'DERIVAR'; // Derivar al siguiente nivel
+                                $acciones[] = 'DERIVAR';
                                 $acciones[] = 'RECHAZAR';
-                            } elseif ($nivelUsuario == $nivelFinalProcedimiento) {
-                                // Nivel final: opciones definitivas
-                            $acciones[] = 'OBSERVAR';
-                            $acciones[] = 'OBSERVAR_CON_OFICIO';
-                                
-                                // PROCESAR solo si no hay oficio requerido
+                            } elseif ($esNivelFinalParaEsteProcedimiento && $esAsignado) {
+                                // Nivel final: solo el especialista asignado ve estas opciones
+                                $acciones[] = 'OBSERVAR';
+                                $acciones[] = 'OBSERVAR_CON_OFICIO';
                                 if (!$tieneOficio) {
                                     $acciones[] = 'PROCESAR';
                                 }
-                                
-                                // VERIFICAR si hay oficio
                                 if ($tieneOficio) {
-                                $acciones[] = 'VERIFICAR';
+                                    $acciones[] = 'VERIFICAR';
                                 }
-                                
-                                // RECHAZAR definitivo solo para nivel final
                                 $acciones[] = 'RECHAZAR';
+                                $acciones[] = 'DERIVAR_ESPECIALISTA';
                             }
                         }
                         break;
                     case 'OBSERVADO':
-                        if ($usuario->tipo_user == 1) {
+                        if ($usuario->tipo_user == 1 && $tramite->creado_por == $usuario->id) {
                             $acciones[] = 'CORREGIR';
-                        } else if ($usuario->tipo_user == 2) {
-                            // Usuario interno puede verificar tras subsanación
-                            if ($nivelUsuario == $nivelFinalProcedimiento || $nivelUsuario == 2) {
-                            $acciones[] = 'VERIFICAR';
+                        } elseif ($usuario->tipo_user == 2) {
+                            // Verificar: mesa de partes (nivel 2) o nivel final asignado
+                            if ($nivelUsuario == 2 && $perteneceAlAreaDelTramite) {
+                                $acciones[] = 'VERIFICAR';
+                            } elseif ($esNivelFinalParaEsteProcedimiento && $esAsignado) {
+                                $acciones[] = 'VERIFICAR';
+                                $acciones[] = 'OBSERVAR';
                             }
-                            $acciones[] = 'OBSERVAR';
                         }
                         break;
                     case 'VERIFICADO':
-                        if ($usuario->tipo_user == 2 && $nivelUsuario == $nivelFinalProcedimiento) {
+                        if ($usuario->tipo_user == 2 && $esNivelFinalParaEsteProcedimiento && $esAsignado) {
                             $acciones[] = 'PROCESAR';
                             $acciones[] = 'RECHAZAR';
                         }

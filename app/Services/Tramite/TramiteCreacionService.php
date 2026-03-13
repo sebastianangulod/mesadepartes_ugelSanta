@@ -128,7 +128,8 @@ class TramiteCreacionService
             $tramite = Tramite::create([
                 'archivo_adjunto' => $nombreArchivo,
                 'id_procedimiento' => $datos['id_procedimiento'],
-                'id_usuario' => $usuarioNivel1, // Usuario de nivel 1 asignado automáticamente
+                'id_usuario' => $usuarioNivel1, // Usuario de nivel 1 asignado automáticamente (responsable actual)
+                'creado_por' => $usuario->id,   // Usuario que crea el trámite (solicitante)
                 'estado' => 'PENDIENTE', // PENDIENTE hasta que el usuario de nivel 1 lo acepte
                 'nivel_actual' => 1, // Asignado automáticamente al nivel 1
                 'tipo_tramite' => $tipoTramite,

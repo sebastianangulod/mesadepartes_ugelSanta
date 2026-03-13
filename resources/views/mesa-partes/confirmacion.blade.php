@@ -67,7 +67,8 @@
                     </dl>
                 </div>
 
-                <!-- Información del Solicitante -->
+                <!-- Información del Solicitante (quien creó el trámite) -->
+                @php $solicitante = $tramite->creador ?? $tramite->usuario; @endphp
                 <div class="bg-gray-50 rounded-lg p-5">
                     <h3 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-300">
                         Información del Solicitante
@@ -76,16 +77,16 @@
                         <div>
                             <dt class="text-sm font-medium text-gray-500">Nombre:</dt>
                             <dd class="mt-1 text-sm text-gray-900">
-                                {{ $tramite->usuario->nombres }} {{ $tramite->usuario->apellido_paterno }} {{ $tramite->usuario->apellido_materno }}
+                                {{ $solicitante->nombres }} {{ $solicitante->apellido_paterno }} {{ $solicitante->apellido_materno }}
                             </dd>
                         </div>
                         <div>
                             <dt class="text-sm font-medium text-gray-500">DNI:</dt>
-                            <dd class="mt-1 text-sm text-gray-900">{{ $tramite->usuario->dni }}</dd>
+                            <dd class="mt-1 text-sm text-gray-900">{{ $solicitante->dni }}</dd>
                         </div>
                         <div>
                             <dt class="text-sm font-medium text-gray-500">Email:</dt>
-                            <dd class="mt-1 text-sm text-gray-900">{{ $tramite->usuario->email }}</dd>
+                            <dd class="mt-1 text-sm text-gray-900">{{ $solicitante->email }}</dd>
                         </div>
                     </dl>
                 </div>
@@ -108,7 +109,7 @@
                     </svg>
                     Crear Otro Trámite
                 </a>
-                <a href="{{ route('mesa-partes.tramites-recibidos') }}" 
+                <a href="{{ route('mesa-partes.documentos-enviados') }}" 
                    class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>

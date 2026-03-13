@@ -652,7 +652,7 @@ class TramiteController extends Controller
      */
     public function confirmacion(int $id): View
     {
-        $tramite = Tramite::with(['procedimiento', 'usuario'])->findOrFail($id);
+        $tramite = Tramite::with(['procedimiento', 'usuario', 'creador'])->findOrFail($id);
 
         // Cualquier usuario autenticado puede ver la confirmación
         // (la autenticación se valida en el middleware 'auth')
@@ -677,7 +677,7 @@ class TramiteController extends Controller
      */
     public function voucher(int $id): View
     {
-        $tramite = Tramite::with(['procedimiento', 'usuario'])->findOrFail($id);
+        $tramite = Tramite::with(['procedimiento', 'usuario', 'creador'])->findOrFail($id);
 
         // Cualquier usuario autenticado puede ver el voucher
         // (la autenticación se valida en el middleware 'auth')
