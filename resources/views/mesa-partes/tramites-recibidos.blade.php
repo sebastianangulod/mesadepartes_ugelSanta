@@ -559,10 +559,14 @@
         cont.innerHTML = '';
         
         if (tramite.accionesPermitidas && tramite.accionesPermitidas.length > 0) {
+            const etiquetasAccion = {
+                'MODO_MANUAL': 'Activar derivación manual',
+                'OBSERVAR_CON_OFICIO': 'Observar con oficio',
+            };
             tramite.accionesPermitidas.forEach(acc => {
                 const btn = document.createElement('button');
                 btn.className = 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded';
-                btn.textContent = acc;
+                btn.textContent = etiquetasAccion[acc] || acc;
                 btn.onclick = function() {
                     modal.classList.add('hidden');
                     ejecutarAccion(acc, idTramite);
@@ -594,6 +598,9 @@
                 break;
             case 'ACEPTAR':
                 aceptarTramite(idTramite);
+                break;
+            case 'MODO_MANUAL':
+                activarModoManualTramite(idTramite);
                 break;
             case 'RECHAZAR':
                 rechazarTramite(idTramite);
@@ -662,6 +669,28 @@
         })
         .catch(() => alert('Error de red al intentar derivar el trámite.'));
     }
+
+    window.activarModoManualTramite = function(id) {
+        if (!confirm('¿Activar derivación manual permanente para este trámite? Ya no se usará derivación automática.')) return;
+
+        fetch(`/tramites/${id}/flujo/modo-manual`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message || 'Modo manual activado.');
+                cargarTramites(paginaActual);
+            } else {
+                alert(data.message || 'Error al activar el modo manual.');
+            }
+        })
+        .catch(() => alert('Error de red al activar el modo manual.'));
+    };
 
     window.aceptarTramite = function(id) {
         if (!confirm('¿Está seguro de aceptar este trámite?')) return;

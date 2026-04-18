@@ -329,6 +329,16 @@ class TramiteController extends Controller
         $this->authorize('aceptar', $tramite);
 
         try {
+            if ($tramite->estado === EstadoTramite::PENDIENTE && $tramite->id_nodo_actual === null) {
+                $tramite = $this->tramiteFlujoService->aceptarIngresoDesdePendienteSinNodo($tramite);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Trámite ingresado al flujo correctamente',
+                    'data' => $tramite,
+                ]);
+            }
+
             $tramite = $this->tramiteService->aceptar($id);
 
             return response()->json([
@@ -943,11 +953,16 @@ class TramiteController extends Controller
      * @param int $id
      * @return JsonResponse
      */
-    public function derivar(int $id): JsonResponse
+    public function derivar(Request $request, int $tramite): JsonResponse
     {
-        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
-        
-        if (!$tramite) {
+        $id = $tramite;
+        $request->validate([
+            'hacia_nodo_id' => 'nullable|integer|exists:flujo_nodos,id',
+        ]);
+
+        $tramiteModel = $this->tramiteService->obtenerTramiteCompleto($id);
+
+        if (!$tramiteModel) {
             return response()->json([
                 'success' => false,
                 'message' => 'Trámite no encontrado',
@@ -955,12 +970,17 @@ class TramiteController extends Controller
         }
 
         try {
-            $tramite = $this->tramiteService->derivar($id);
+            if ($tramiteModel->id_nodo_actual) {
+                $hacia = $request->filled('hacia_nodo_id') ? (int) $request->input('hacia_nodo_id') : null;
+                $tramiteModel = $this->tramiteFlujoService->derivarPorGrafo($tramiteModel, Auth::user(), $hacia);
+            } else {
+                $tramiteModel = $this->tramiteService->derivar($id);
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Trámite derivado exitosamente',
-                'data' => $tramite,
+                'data' => $tramiteModel,
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -976,11 +996,12 @@ class TramiteController extends Controller
      * @param int $id
      * @return JsonResponse
      */
-    public function derivarEspecialista(int $id): JsonResponse
+    public function derivarEspecialista(int $tramite): JsonResponse
     {
-        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
-        
-        if (!$tramite) {
+        $id = $tramite;
+        $tramiteModel = $this->tramiteService->obtenerTramiteCompleto($id);
+
+        if (!$tramiteModel) {
             return response()->json([
                 'success' => false,
                 'message' => 'Trámite no encontrado',
@@ -988,12 +1009,16 @@ class TramiteController extends Controller
         }
 
         try {
-            $tramite = $this->tramiteService->derivarEspecialista($id);
+            if ($tramiteModel->id_nodo_actual) {
+                $tramiteModel = $this->tramiteFlujoService->derivarAColegaMismoNodo($tramiteModel, Auth::user());
+            } else {
+                $tramiteModel = $this->tramiteService->derivarEspecialista($id);
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Trámite derivado al especialista exitosamente',
-                'data' => $tramite,
+                'data' => $tramiteModel,
             ]);
         } catch (\Exception $e) {
             return response()->json([
