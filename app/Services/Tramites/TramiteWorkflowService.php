@@ -7,7 +7,6 @@ use App\Models\Procedimiento;
 use App\Models\Usuario;
 use App\Models\UsuariosNiveles;
 use App\Domain\Tramites\EstadoTramite;
-use App\Domain\Tramites\StateTransitionService;
 use App\Services\Tramites\VoucherService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -31,14 +30,11 @@ use Exception;
  */
 class TramiteWorkflowService
 {
-    private StateTransitionService $stateTransitionService;
     private VoucherService $voucherService;
 
     public function __construct(
-        StateTransitionService $stateTransitionService,
         VoucherService $voucherService
     ) {
-        $this->stateTransitionService = $stateTransitionService;
         $this->voucherService = $voucherService;
     }
 

@@ -11,7 +11,6 @@ use App\Models\Usuario;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 /**
  * CRUD del flujo configurable (nodos, transiciones, equipos) por procedimiento.

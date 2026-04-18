@@ -74,62 +74,6 @@ class TramitePolicy
     }
 
     /**
-     * Verificar si un usuario está en la "hoja de ruta" del trámite
-     * (pertenece al mismo nivel y área/subárea del procedimiento)
-     * 
-     * @param Usuario $usuario
-     * @param Tramite $tramite
-     * @return bool
-     */
-    private function usuarioEnHojaDeRuta(Usuario $usuario, Tramite $tramite): bool
-    {
-        // Si no hay procedimiento, no se puede verificar
-        if (!$tramite->procedimiento) {
-            return false;
-        }
-
-        $procedimiento = $tramite->procedimiento;
-
-        // Obtener niveles del usuario
-        $nivelesUsuario = \App\Models\UsuariosNiveles::where('id_usuario', $usuario->id)->get();
-        
-        if ($nivelesUsuario->isEmpty()) {
-            return false;
-        }
-
-        // Verificar si el usuario tiene algún nivel que coincida con la hoja de ruta
-        foreach ($nivelesUsuario as $nivelUsuario) {
-            $nivel = $nivelUsuario->nivel;
-            $idNivel = $nivelUsuario->id_nivel;
-
-            // Nivel 1: verificar que pertenece a la misma área
-            if ($nivel == 1 && $procedimiento->id_area == $idNivel) {
-                return true;
-            }
-
-            // Nivel 2: verificar que pertenece a la misma subárea
-            if ($nivel == 2 && $procedimiento->id_subarea == $idNivel) {
-                return true;
-            }
-
-            // Nivel 3: verificar que pertenece a la misma subárea (a través del nivel 3)
-            if ($nivel == 3) {
-                $nivel3Modelo = \App\Models\Nivel3::find($idNivel);
-                if ($nivel3Modelo && $nivel3Modelo->id_nivel2 == $procedimiento->id_subarea) {
-                    return true;
-                }
-            }
-
-            // Nivel 4: verificar que pertenece al mismo nivel final
-            if ($nivel == 4 && $procedimiento->nivel_final == '4' && $procedimiento->id_nivel_final == $idNivel) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
      * Determinar si el usuario puede crear trámites
      * 
      * @param Usuario $usuario
