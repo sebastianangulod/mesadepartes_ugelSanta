@@ -155,6 +155,9 @@ Route::middleware(['auth'])->group(function () {
         // Búsqueda de trámites
         Route::get('/buscar', [TramiteController::class, 'buscar'])->name('tramites.buscar');
         Route::post('/buscar/resultados', [TramiteController::class, 'resultadosBusqueda'])->name('tramites.buscar.resultados');
+
+        Route::post('/{tramite}/flujo/aceptar-ingreso', [TramiteController::class, 'aceptarIngresoFlujo'])->name('tramites.flujo.aceptar-ingreso');
+        Route::post('/{tramite}/flujo/modo-manual', [TramiteController::class, 'forzarModoDerivacionManualFlujo'])->name('tramites.flujo.modo-manual');
         
             // Acciones de estado
             Route::post('/{tramite}/aceptar', [TramiteController::class, 'aceptar'])->name('tramites.aceptar');

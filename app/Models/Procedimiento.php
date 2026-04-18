@@ -46,6 +46,7 @@ class Procedimiento extends Model
         'id_subarea',
         'nivel_final',
         'id_nivel_final',
+        'id_nodo_entrada',
         'created_by',
         'updated_by',
     ];
@@ -75,6 +76,22 @@ class Procedimiento extends Model
     public function tramites()
     {
         return $this->hasMany(Tramite::class, 'id_procedimiento');
+    }
+
+    /**
+     * Nodos del flujo configurable asociados a este procedimiento.
+     */
+    public function flujoNodos()
+    {
+        return $this->hasMany(FlujoNodo::class, 'id_procedimiento');
+    }
+
+    /**
+     * Primer nodo por el que debe ingresar un trámite nuevo (config. admin).
+     */
+    public function nodoEntrada()
+    {
+        return $this->belongsTo(FlujoNodo::class, 'id_nodo_entrada');
     }
 
     /**

@@ -57,6 +57,8 @@ class Tramite extends Model
         'fecha_creacion',
         'estado',
         'nivel_actual',
+        'id_nodo_actual',
+        'modo_derivacion',
         'ultimo_estado',
         'id_usuario',
         'creado_por',
@@ -119,6 +121,22 @@ class Tramite extends Model
     public function procedimiento()
     {
         return $this->belongsTo(Procedimiento::class, 'id_procedimiento');
+    }
+
+    /**
+     * Nodo actual del flujo configurable (null = pendiente sin ingreso a área/nodo).
+     */
+    public function nodoActual()
+    {
+        return $this->belongsTo(FlujoNodo::class, 'id_nodo_actual');
+    }
+
+    /**
+     * Historial de acciones y cambios de nodo.
+     */
+    public function movimientosFlujo()
+    {
+        return $this->hasMany(TramiteMovimiento::class, 'tramite_id')->orderByDesc('id');
     }
 
     /**

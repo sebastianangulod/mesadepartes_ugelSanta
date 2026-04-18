@@ -2,9 +2,11 @@
 
 namespace App\Services\Tramite;
 
+use App\Domain\Tramites\ModoDerivacion;
 use App\Models\Tramite;
 use App\Models\Procedimiento;
 use App\Models\Usuario;
+use App\Services\Tramites\TramiteFlujoService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +30,11 @@ class TramiteCreacionService
     private $uploadPath = 'uploads/tramites/';
     private $voucherPath = 'uploads/vouchers/';
     private $expedientePath = 'uploads/expedientes/';
+
+    public function __construct(
+        private readonly TramiteFlujoService $tramiteFlujoService
+    ) {
+    }
 
     /**
      * Crear un nuevo trámite con archivo adjunto
@@ -103,40 +110,33 @@ class TramiteCreacionService
                 $numeroPaginas = $this->contarPaginasPDF($rutaArchivo);
             }
 
-            // IMPORTANTE: Al crear un trámite, debe asignarse automáticamente a un usuario de nivel 1
-            // Buscar usuario de nivel 1 según el área del procedimiento
-            $usuarioNivel1 = $this->buscarUsuarioNivel1($procedimiento);
-            
-            if (!$usuarioNivel1) {
-                Log::error('No se encontró usuario de nivel 1 para el procedimiento', [
-                    'id_procedimiento' => $procedimiento->id,
-                    'id_area' => $procedimiento->id_area
-                ]);
-                throw new Exception(
-                    'No se encontró usuario de nivel 1 para iniciar el trámite. ' .
-                    'Por favor, verifique que haya un usuario de nivel 1 vinculado al área correspondiente.'
-                );
-            }
+            $this->validarFlujoDeEntradaConfigurado($procedimiento);
 
-            Log::info('Usuario de nivel 1 asignado al trámite', [
-                'usuario_nivel_1_id' => $usuarioNivel1,
-                'id_procedimiento' => $procedimiento->id,
-                'id_area' => $procedimiento->id_area
-            ]);
-
-            // Crear el trámite asignado automáticamente al nivel 1
+            // PENDIENTE sin nodo: id_nodo_actual null hasta que un área acepte el ingreso.
+            // id_usuario = quien registra (FK obligatoria); la responsabilidad por nodo la dan los equipos.
             $tramite = Tramite::create([
                 'archivo_adjunto' => $nombreArchivo,
                 'id_procedimiento' => $datos['id_procedimiento'],
-                'id_usuario' => $usuarioNivel1, // Usuario de nivel 1 asignado automáticamente (responsable actual)
-                'creado_por' => $usuario->id,   // Usuario que crea el trámite (solicitante)
-                'estado' => 'PENDIENTE', // PENDIENTE hasta que el usuario de nivel 1 lo acepte
-                'nivel_actual' => 1, // Asignado automáticamente al nivel 1
+                'id_usuario' => $usuario->id,
+                'creado_por' => $usuario->id,
+                'estado' => 'PENDIENTE',
+                'nivel_actual' => null,
+                'id_nodo_actual' => null,
+                'modo_derivacion' => ModoDerivacion::AUTO,
                 'tipo_tramite' => $tipoTramite,
                 'tramitescol' => $numeroPaginas,
                 'periodo' => $periodo,
-                'fecha_creacion' => now()
+                'fecha_creacion' => now(),
             ]);
+
+            $this->tramiteFlujoService->registrarMovimiento(
+                $tramite,
+                (int) $usuario->id,
+                'CREAR',
+                null,
+                null,
+                ['id_procedimiento' => $procedimiento->id]
+            );
 
             DB::commit();
 
@@ -317,30 +317,36 @@ class TramiteCreacionService
     }
 
     /**
-     * Buscar usuario de nivel 1 según el área del procedimiento
-     * 
-     * @param Procedimiento $procedimiento
-     * @return int|null ID del usuario de nivel 1
+     * El procedimiento debe tener nodo de entrada y al menos un interno en algún equipo de ese nodo.
+     *
+     * @throws Exception
      */
-    private function buscarUsuarioNivel1(Procedimiento $procedimiento): ?int
+    private function validarFlujoDeEntradaConfigurado(Procedimiento $procedimiento): void
     {
-        if (!$procedimiento->id_area) {
-            Log::warning('Procedimiento no tiene área asignada', [
-                'id_procedimiento' => $procedimiento->id
-            ]);
-            return null;
+        $procedimiento->loadMissing('nodoEntrada.equipos.miembros');
+
+        if (!$procedimiento->id_nodo_entrada || !$procedimiento->nodoEntrada) {
+            throw new Exception(
+                'El procedimiento no tiene nodo de entrada configurado. ' .
+                'Configure el flujo y el nodo de entrada en administración.'
+            );
         }
 
-        // Buscar usuario de nivel 1 vinculado al área del procedimiento
-        $usuario = DB::table('usuarios as u')
-            ->join('usuarios_niveles as un', 'u.id', '=', 'un.id_usuario')
-            ->where('un.nivel', 1)
-            ->where('un.id_nivel', $procedimiento->id_area)
-            ->where('u.tipo_user', 2) // Solo usuarios internos
-            ->select('u.id')
-            ->first();
+        $nodo = $procedimiento->nodoEntrada;
+        if ((int) $nodo->id_procedimiento !== (int) $procedimiento->id) {
+            throw new Exception('El nodo de entrada no pertenece a este procedimiento.');
+        }
 
-        return $usuario ? $usuario->id : null;
+        $tieneInterno = $nodo->equipos->contains(function ($equipo) {
+            return $equipo->miembros->contains(fn (Usuario $u) => (int) $u->tipo_user === 2);
+        });
+
+        if (!$tieneInterno) {
+            throw new Exception(
+                'El nodo de entrada no tiene equipos con usuarios internos asignados. ' .
+                'Configure al menos un equipo y un usuario interno en administración.'
+            );
+        }
     }
 }
 

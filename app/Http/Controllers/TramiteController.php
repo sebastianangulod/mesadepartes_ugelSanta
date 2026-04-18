@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\Tramites\TramiteWorkflowService;
+use App\Services\Tramites\TramiteFlujoService;
 use App\Services\Tramite\TramiteCreacionService;
 use App\DTOs\TramiteDTO;
 use App\Domain\Tramites\EstadoTramite;
@@ -32,19 +33,23 @@ class TramiteController extends Controller
 {
     private TramiteWorkflowService $tramiteService;
     private TramiteCreacionService $tramiteCreacionService;
+    private TramiteFlujoService $tramiteFlujoService;
 
     /**
      * Constructor
      * 
      * @param TramiteWorkflowService $tramiteService
      * @param TramiteCreacionService $tramiteCreacionService
+     * @param TramiteFlujoService $tramiteFlujoService
      */
     public function __construct(
         TramiteWorkflowService $tramiteService,
-        TramiteCreacionService $tramiteCreacionService
+        TramiteCreacionService $tramiteCreacionService,
+        TramiteFlujoService $tramiteFlujoService
     ) {
         $this->tramiteService = $tramiteService;
         $this->tramiteCreacionService = $tramiteCreacionService;
+        $this->tramiteFlujoService = $tramiteFlujoService;
     }
 
     /**
@@ -255,6 +260,52 @@ class TramiteController extends Controller
                 'success' => false,
                 'message' => 'Error al buscar trámites: ' . $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * PENDIENTE sin nodo: ingreso al nodo de entrada del procedimiento (flujo configurable).
+     */
+    public function aceptarIngresoFlujo(Tramite $tramite): JsonResponse
+    {
+        $this->authorize('view', $tramite);
+
+        try {
+            $actualizado = $this->tramiteFlujoService->aceptarIngresoDesdePendienteSinNodo($tramite);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Trámite ingresado al flujo correctamente',
+                'data' => $actualizado,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Fija el trámite en derivación manual permanente.
+     */
+    public function forzarModoDerivacionManualFlujo(Tramite $tramite): JsonResponse
+    {
+        $this->authorize('view', $tramite);
+
+        try {
+            $actualizado = $this->tramiteFlujoService->forzarModoDerivacionManual($tramite);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Derivación manual activada para este trámite',
+                'data' => $actualizado,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
         }
     }
 
