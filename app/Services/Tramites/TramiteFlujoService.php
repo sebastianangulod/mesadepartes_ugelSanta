@@ -10,6 +10,7 @@ use App\Models\Tramite;
 use App\Models\TramiteMovimiento;
 use App\Models\Usuario;
 use Exception;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -359,5 +360,312 @@ class TramiteFlujoService
         }
 
         return $ids[0];
+    }
+
+    /**
+     * Nodo usado para permisos (actual o entrada), igual criterio que la bandeja interna.
+     */
+    public function nodoContextoPermisos(Tramite $tramite): ?FlujoNodo
+    {
+        $tramite->loadMissing(['procedimiento.nodoEntrada', 'nodoActual']);
+
+        if ($tramite->id_nodo_actual && $tramite->nodoActual) {
+            return $tramite->nodoActual;
+        }
+
+        return $tramite->procedimiento?->nodoEntrada;
+    }
+
+    /**
+     * Transiciones salientes desde el nodo actual (para UI de derivación manual).
+     *
+     * @return list<array{id:int, hacia_nodo_id:int, nombre_destino:string, es_default_auto:bool}>
+     */
+    public function listarOpcionesDerivacionDesdeTramite(Tramite $tramite): array
+    {
+        $tramite->loadMissing('nodoActual');
+        if (!$tramite->id_nodo_actual || !$tramite->nodoActual) {
+            return [];
+        }
+
+        return FlujoTransicion::query()
+            ->where('desde_nodo_id', $tramite->nodoActual->id)
+            ->with('nodoHacia')
+            ->orderByDesc('es_default_auto')
+            ->orderBy('hacia_nodo_id')
+            ->get()
+            ->map(static function (FlujoTransicion $t) {
+                return [
+                    'id' => (int) $t->id,
+                    'hacia_nodo_id' => (int) $t->hacia_nodo_id,
+                    'nombre_destino' => $t->nodoHacia?->nombre ?? ('#'.$t->hacia_nodo_id),
+                    'es_default_auto' => (bool) $t->es_default_auto,
+                ];
+            })
+            ->all();
+    }
+
+    /**
+     * Observación simple (sin oficio): miembros del nodo en contexto.
+     *
+     * @throws Exception
+     */
+    public function observarEnFlujoConfigurable(Tramite $tramite, string $observacion, ?Usuario $actor = null): Tramite
+    {
+        $actor = $actor ?? Auth::user();
+        if (!$actor instanceof Usuario) {
+            throw new Exception('Usuario no autenticado');
+        }
+
+        return DB::transaction(function () use ($tramite, $observacion, $actor) {
+            $nodo = $this->nodoContextoPermisos($tramite);
+            if (!$nodo) {
+                throw new Exception('No hay nodo de contexto para observar');
+            }
+
+            if (!in_array($tramite->estado, [EstadoTramite::PENDIENTE, EstadoTramite::EN_PROCESO], true)) {
+                throw new Exception('Solo se puede observar en PENDIENTE o EN_PROCESO');
+            }
+
+            if (!$actor->esAdministrador() && !$this->usuarioInternoPuedeActuarEnNodo($actor, $nodo)) {
+                throw new Exception('No tiene permiso para observar en este nodo');
+            }
+
+            $tramite->estado = EstadoTramite::OBSERVADO;
+            $tramite->ultimo_estado = EstadoTramite::OBSERVADO;
+            $tramite->observaciones = $observacion;
+            $tramite->limite_observacion = now()->addDays(2);
+            $tramite->save();
+
+            $nid = (int) $nodo->id;
+            $this->registrarMovimiento($tramite, (int) $actor->id, 'OBSERVAR', $nid, $nid, []);
+
+            return $tramite->fresh(['procedimiento', 'nodoActual']);
+        });
+    }
+
+    /**
+     * Rechazo: definitivo solo si el nodo permite rechazo definitivo; si no, observación al ciudadano.
+     *
+     * @throws Exception
+     */
+    public function rechazarEnFlujoConfigurable(Tramite $tramite, string $motivo, ?Usuario $actor = null): Tramite
+    {
+        $actor = $actor ?? Auth::user();
+        if (!$actor instanceof Usuario) {
+            throw new Exception('Usuario no autenticado');
+        }
+
+        return DB::transaction(function () use ($tramite, $motivo, $actor) {
+            $nodo = $this->nodoContextoPermisos($tramite);
+            if (!$nodo) {
+                throw new Exception('No hay nodo de contexto para rechazar');
+            }
+
+            if (!$actor->esAdministrador() && !$this->usuarioInternoPuedeActuarEnNodo($actor, $nodo)) {
+                throw new Exception('No tiene permiso para rechazar en este nodo');
+            }
+
+            if ($tramite->estado === EstadoTramite::OBSERVADO && !$this->validarLimiteObservacionInterno($tramite)) {
+                throw new Exception('Se ha excedido el límite de tiempo para observaciones');
+            }
+
+            if ($nodo->puede_rechazar_definitivo) {
+                $tramite->estado = EstadoTramite::RECHAZADO;
+                $tramite->ultimo_estado = EstadoTramite::RECHAZADO;
+                $tramite->observaciones = 'RECHAZO DEFINITIVO: '.$motivo;
+                $tramite->limite_observacion = null;
+                $tramite->rechazado_por = $actor->id;
+                $tramite->fecha_rechazo = now();
+            } else {
+                $tramite->estado = EstadoTramite::OBSERVADO;
+                $tramite->ultimo_estado = EstadoTramite::OBSERVADO;
+                $tramite->observaciones = $motivo;
+                $tramite->limite_observacion = now()->addDays(2);
+            }
+
+            $tramite->save();
+
+            $nid = (int) $nodo->id;
+            $this->registrarMovimiento($tramite, (int) $actor->id, 'RECHAZAR', $nid, $nid, [
+                'definitivo' => $nodo->puede_rechazar_definitivo,
+            ]);
+
+            return $tramite->fresh(['procedimiento', 'nodoActual']);
+        });
+    }
+
+    /**
+     * Observar con oficio (nodo con puede_finalizar).
+     *
+     * @throws Exception
+     */
+    public function observarConOficioEnFlujoConfigurable(
+        Tramite $tramite,
+        string $observacion,
+        UploadedFile $oficio,
+        ?Usuario $actor = null
+    ): Tramite {
+        $actor = $actor ?? Auth::user();
+        if (!$actor instanceof Usuario) {
+            throw new Exception('Usuario no autenticado');
+        }
+
+        return DB::transaction(function () use ($tramite, $observacion, $oficio, $actor) {
+            $tramite->loadMissing('nodoActual');
+            $nodo = $tramite->nodoActual;
+            if (!$nodo || !$nodo->puede_finalizar) {
+                throw new Exception('Solo un nodo autorizado a finalizar puede observar con oficio');
+            }
+
+            if ($tramite->estado !== EstadoTramite::EN_PROCESO) {
+                throw new Exception('Solo se puede observar con oficio en EN_PROCESO');
+            }
+
+            if (!$actor->esAdministrador() && !$this->usuarioInternoPuedeActuarEnNodo($actor, $nodo)) {
+                throw new Exception('No tiene permiso para esta acción en este nodo');
+            }
+
+            $this->validarArchivoPdfSubida($oficio);
+            $nombreOficio = $this->guardarPdfSubido($oficio, 'oficios');
+
+            $tramite->estado = EstadoTramite::OBSERVADO;
+            $tramite->observaciones = $observacion;
+            $tramite->oficio = $nombreOficio;
+            $tramite->limite_observacion = now()->addDays(2);
+            $tramite->save();
+
+            $nid = (int) $nodo->id;
+            $this->registrarMovimiento($tramite, (int) $actor->id, 'OBSERVAR_CON_OFICIO', $nid, $nid, []);
+
+            return $tramite->fresh(['procedimiento', 'nodoActual']);
+        });
+    }
+
+    /**
+     * Verificar (tras observación o con oficio en proceso).
+     *
+     * @throws Exception
+     */
+    public function verificarEnFlujoConfigurable(Tramite $tramite, ?Usuario $actor = null): Tramite
+    {
+        $actor = $actor ?? Auth::user();
+        if (!$actor instanceof Usuario) {
+            throw new Exception('Usuario no autenticado');
+        }
+
+        return DB::transaction(function () use ($tramite, $actor) {
+            $tramite->loadMissing('nodoActual');
+            $nodo = $tramite->nodoActual;
+            if (!$nodo || !$nodo->puede_finalizar) {
+                throw new Exception('Solo el nodo autorizado a finalizar puede verificar');
+            }
+
+            if (!$actor->esAdministrador() && !$this->usuarioInternoPuedeActuarEnNodo($actor, $nodo)) {
+                throw new Exception('No tiene permiso para verificar en este nodo');
+            }
+
+            $ok = $tramite->estado === EstadoTramite::OBSERVADO
+                || ($tramite->estado === EstadoTramite::EN_PROCESO && !empty($tramite->oficio));
+            if (!$ok) {
+                throw new Exception('El trámite no puede ser verificado en su estado actual');
+            }
+
+            $tramite->estado = EstadoTramite::VERIFICADO;
+            $tramite->save();
+
+            $nid = (int) $nodo->id;
+            $this->registrarMovimiento($tramite, (int) $actor->id, 'VERIFICAR', $nid, $nid, []);
+
+            return $tramite->fresh(['procedimiento', 'nodoActual']);
+        });
+    }
+
+    /**
+     * Procesar y generar voucher (nodo con puede_finalizar).
+     *
+     * @throws Exception
+     */
+    public function procesarEnFlujoConfigurable(Tramite $tramite, ?Usuario $actor = null): Tramite
+    {
+        $actor = $actor ?? Auth::user();
+        if (!$actor instanceof Usuario) {
+            throw new Exception('Usuario no autenticado');
+        }
+
+        return DB::transaction(function () use ($tramite, $actor) {
+            $tramite->loadMissing(['nodoActual', 'procedimiento', 'usuario']);
+            $nodo = $tramite->nodoActual;
+            if (!$nodo || !$nodo->puede_finalizar) {
+                throw new Exception('Solo el nodo autorizado a finalizar puede procesar');
+            }
+
+            if (!$actor->esAdministrador() && !$this->usuarioInternoPuedeActuarEnNodo($actor, $nodo)) {
+                throw new Exception('No tiene permiso para procesar en este nodo');
+            }
+
+            $puede = false;
+            if ($tramite->estado === EstadoTramite::VERIFICADO) {
+                $puede = true;
+            } elseif ($tramite->estado === EstadoTramite::EN_PROCESO && empty($tramite->oficio)) {
+                $puede = true;
+            }
+            if (!$puede) {
+                throw new Exception(
+                    'El trámite solo puede procesarse si está VERIFICADO o en EN_PROCESO sin requerir oficio'
+                );
+            }
+
+            $numeroVoucher = $this->voucherService->generarNumeroVoucher($tramite->tipo_tramite);
+            $voucherPath = $this->voucherService->generarVoucher($tramite);
+
+            $tramite->estado = EstadoTramite::FINALIZADO;
+            $tramite->numero_voucher = $numeroVoucher;
+            $tramite->voucher = $voucherPath;
+            $tramite->save();
+
+            $nid = (int) $nodo->id;
+            $this->registrarMovimiento($tramite, (int) $actor->id, 'PROCESAR_FINALIZAR', $nid, $nid, [
+                'numero_voucher' => $numeroVoucher,
+            ]);
+
+            return $tramite->fresh(['procedimiento', 'nodoActual']);
+        });
+    }
+
+    private function validarLimiteObservacionInterno(Tramite $tramite): bool
+    {
+        if (!$tramite->limite_observacion) {
+            return true;
+        }
+
+        return now() <= $tramite->limite_observacion;
+    }
+
+    private function validarArchivoPdfSubida(UploadedFile $archivo): void
+    {
+        if (!$archivo->isValid()) {
+            throw new Exception('El archivo no es válido');
+        }
+
+        if (strtolower($archivo->getClientOriginalExtension()) !== 'pdf') {
+            throw new Exception('El archivo debe ser un PDF');
+        }
+
+        if ($archivo->getSize() > 10 * 1024 * 1024) {
+            throw new Exception('El archivo no debe superar los 10MB');
+        }
+    }
+
+    private function guardarPdfSubido(UploadedFile $archivo, string $directorio): string
+    {
+        $nombreOriginal = $archivo->getClientOriginalName();
+        $extension = $archivo->getClientOriginalExtension();
+        $base = preg_replace('/[^a-zA-Z0-9._-]/', '', pathinfo($nombreOriginal, PATHINFO_FILENAME) ?? 'doc');
+        $base = strtolower(substr(str_replace(' ', '_', $base), 0, 100));
+        $nombreFinal = time().'_'.$base.'.'.$extension;
+        $archivo->storeAs('uploads/'.$directorio, $nombreFinal);
+
+        return $nombreFinal;
     }
 }

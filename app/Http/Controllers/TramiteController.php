@@ -53,6 +53,24 @@ class TramiteController extends Controller
     }
 
     /**
+     * Trámite gestionado por el motor de nodos (procedimiento con entrada y pendiente sin nodo o ya con nodo).
+     */
+    private function tramiteUsaMotorNodos(Tramite $tramite): bool
+    {
+        $tramite->loadMissing('procedimiento');
+
+        if (!$tramite->procedimiento?->id_nodo_entrada) {
+            return false;
+        }
+
+        if ($tramite->id_nodo_actual) {
+            return true;
+        }
+
+        return $tramite->estado === EstadoTramite::PENDIENTE && $tramite->id_nodo_actual === null;
+    }
+
+    /**
      * Listar todos los trámites
      * 
      * @param Request $request
@@ -130,8 +148,7 @@ class TramiteController extends Controller
             abort(404, 'Trámite no encontrado');
         }
 
-        // Cualquier usuario autenticado puede ver el trámite
-        // (la autenticación se valida en el middleware 'auth')
+        $this->authorize('view', $tramite);
 
         return view('tramites.show', [
             'tramite' => $tramite,
@@ -379,7 +396,15 @@ class TramiteController extends Controller
         ]);
 
         try {
-            $tramite = $this->tramiteService->rechazar($id, $request->input('motivo'));
+            if ($this->tramiteUsaMotorNodos($tramite)) {
+                $tramite = $this->tramiteFlujoService->rechazarEnFlujoConfigurable(
+                    $tramite,
+                    $request->input('motivo'),
+                    Auth::user()
+                );
+            } else {
+                $tramite = $this->tramiteService->rechazar($id, $request->input('motivo'));
+            }
 
             return response()->json([
                 'success' => true,
@@ -419,7 +444,15 @@ class TramiteController extends Controller
         ]);
 
         try {
-            $tramite = $this->tramiteService->observar($id, $request->input('observacion'));
+            if ($this->tramiteUsaMotorNodos($tramite)) {
+                $tramite = $this->tramiteFlujoService->observarEnFlujoConfigurable(
+                    $tramite,
+                    $request->input('observacion'),
+                    Auth::user()
+                );
+            } else {
+                $tramite = $this->tramiteService->observar($id, $request->input('observacion'));
+            }
 
             return response()->json([
                 'success' => true,
@@ -454,7 +487,11 @@ class TramiteController extends Controller
         $this->authorize('verificar', $tramite);
 
         try {
-            $tramite = $this->tramiteService->verificar($id);
+            if ($tramite->id_nodo_actual) {
+                $tramite = $this->tramiteFlujoService->verificarEnFlujoConfigurable($tramite, Auth::user());
+            } else {
+                $tramite = $this->tramiteService->verificar($id);
+            }
 
             return response()->json([
                 'success' => true,
@@ -489,7 +526,11 @@ class TramiteController extends Controller
         $this->authorize('finalizar', $tramite);
 
         try {
-            $tramite = $this->tramiteService->finalizar($id);
+            if ($tramite->id_nodo_actual) {
+                $tramite = $this->tramiteFlujoService->procesarEnFlujoConfigurable($tramite, Auth::user());
+            } else {
+                $tramite = $this->tramiteService->finalizar($id);
+            }
 
             return response()->json([
                 'success' => true,
@@ -502,6 +543,22 @@ class TramiteController extends Controller
                 'message' => 'Error al finalizar el trámite: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Opciones de derivación (transiciones) para el trámite en su nodo actual.
+     */
+    public function opcionesDerivacionFlujo(Tramite $tramite): JsonResponse
+    {
+        $this->authorize('view', $tramite);
+
+        $completo = $this->tramiteService->obtenerTramiteCompleto($tramite->id) ?? $tramite;
+
+        return response()->json([
+            'success' => true,
+            'modo_derivacion' => $completo->modo_derivacion,
+            'transiciones' => $this->tramiteFlujoService->listarOpcionesDerivacionDesdeTramite($completo),
+        ]);
     }
 
     /**
@@ -1051,12 +1108,23 @@ class TramiteController extends Controller
             'oficio' => 'required|file|mimes:pdf|max:10240',
         ]);
 
+        $this->authorize('observar', $tramite);
+
         try {
-            $tramite = $this->tramiteService->observarConOficio(
-                $id,
-                $request->input('observacion'),
-                $request->file('oficio')
-            );
+            if ($tramite->id_nodo_actual) {
+                $tramite = $this->tramiteFlujoService->observarConOficioEnFlujoConfigurable(
+                    $tramite,
+                    $request->input('observacion'),
+                    $request->file('oficio'),
+                    Auth::user()
+                );
+            } else {
+                $tramite = $this->tramiteService->observarConOficio(
+                    $id,
+                    $request->input('observacion'),
+                    $request->file('oficio')
+                );
+            }
 
             return response()->json([
                 'success' => true,
@@ -1127,7 +1195,12 @@ class TramiteController extends Controller
         }
 
         try {
-            $tramite = $this->tramiteService->procesar($id);
+            if ($tramite->id_nodo_actual) {
+                $this->authorize('finalizar', $tramite);
+                $tramite = $this->tramiteFlujoService->procesarEnFlujoConfigurable($tramite, Auth::user());
+            } else {
+                $tramite = $this->tramiteService->procesar($id);
+            }
 
             return response()->json([
                 'success' => true,

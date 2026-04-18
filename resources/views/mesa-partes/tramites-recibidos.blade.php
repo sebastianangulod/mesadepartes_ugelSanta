@@ -648,15 +648,51 @@
         .catch(() => alert('Error de red al intentar observar el trámite.'));
     }
 
-    window.derivarTramite = function(id) {
+    window.derivarTramite = async function(id) {
         if (!confirm('¿Está seguro de derivar este trámite al siguiente nivel?')) return;
-        
+
+        const csrf = document.querySelector('meta[name="csrf-token"]').content;
+        const headersJson = {
+            'X-CSRF-TOKEN': csrf,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+        };
+
+        let body = null;
+        const t = tramitesCache[id];
+        const necesitaElegir = t && t.id_nodo_actual && t.modo_derivacion === 'MANUAL_FORZADO';
+
+        if (necesitaElegir) {
+            try {
+                const rOp = await fetch(`/tramites/${id}/flujo/derivacion-opciones`, { headers: { 'Accept': 'application/json' } });
+                const op = await rOp.json();
+                const tr = op.transiciones || [];
+                if (tr.length > 1) {
+                    const lineas = tr.map((x, i) => `${i + 1}) ${x.nombre_destino} (id destino ${x.hacia_nodo_id})`).join('\n');
+                    const sel = prompt(`Seleccione destino (modo manual). Escriba el número de opción:\n\n${lineas}`);
+                    if (!sel) return;
+                    const idx = parseInt(sel, 10) - 1;
+                    if (isNaN(idx) || idx < 0 || idx >= tr.length) {
+                        alert('Opción no válida.');
+                        return;
+                    }
+                    body = JSON.stringify({ hacia_nodo_id: tr[idx].hacia_nodo_id });
+                } else if (tr.length === 1) {
+                    body = JSON.stringify({ hacia_nodo_id: tr[0].hacia_nodo_id });
+                }
+            } catch (e) {
+                alert('No se pudieron cargar las opciones de derivación.');
+                return;
+            }
+        }
+
         fetch(`/tramites/${id}/derivar`, {
             method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Accept': 'application/json'
-            }
+            headers: body ? headersJson : {
+                'X-CSRF-TOKEN': csrf,
+                'Accept': 'application/json',
+            },
+            body: body || undefined,
         })
         .then(res => res.json())
         .then(data => {

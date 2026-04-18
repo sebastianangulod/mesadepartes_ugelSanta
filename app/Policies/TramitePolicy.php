@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Usuario;
 use App\Models\Tramite;
+use App\Services\Tramites\TramiteFlujoService;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 /**
@@ -16,6 +17,11 @@ use Illuminate\Auth\Access\HandlesAuthorization;
 class TramitePolicy
 {
     use HandlesAuthorization;
+
+    public function __construct(
+        private readonly TramiteFlujoService $tramiteFlujoService
+    ) {
+    }
 
     /**
      * Determinar si el usuario puede ver cualquier trámite
@@ -38,8 +44,33 @@ class TramitePolicy
      */
     public function view(Usuario $usuario, Tramite $tramite): bool
     {
-        // Cualquier usuario autenticado puede ver cualquier trámite
-        return true;
+        if (!$usuario->estaActivo()) {
+            return false;
+        }
+
+        if ($usuario->esAdministrador()) {
+            return true;
+        }
+
+        if ($usuario->esExterno()) {
+            return (int) $tramite->creado_por === (int) $usuario->id
+                || ((int) $tramite->id_usuario === (int) $usuario->id && $tramite->creado_por === null);
+        }
+
+        if ($usuario->esInterno()) {
+            if ((int) $tramite->id_usuario === (int) $usuario->id
+                || (int) $tramite->creado_por === (int) $usuario->id) {
+                return true;
+            }
+
+            $tramite->loadMissing(['procedimiento.nodoEntrada', 'nodoActual']);
+            $nodo = $tramite->nodoActual ?? $tramite->procedimiento?->nodoEntrada;
+            if ($nodo && $this->tramiteFlujoService->usuarioInternoPuedeActuarEnNodo($usuario, $nodo)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -159,13 +190,23 @@ class TramitePolicy
      */
     public function aceptar(Usuario $usuario, Tramite $tramite): bool
     {
-        // Solo el personal de mesa de partes puede aceptar trámites
-        if (!$usuario->esPersonalMesaPartes()) {
+        if (!$usuario->estaActivo() || !$tramite->estaPendiente()) {
             return false;
         }
 
-        // Solo se pueden aceptar trámites pendientes
-        return $tramite->estaPendiente() && $usuario->estaActivo();
+        if ($usuario->esAdministrador()) {
+            return true;
+        }
+
+        $tramite->loadMissing('procedimiento.nodoEntrada');
+        if ($tramite->id_nodo_actual === null && $tramite->procedimiento?->id_nodo_entrada) {
+            $nodo = $tramite->procedimiento->nodoEntrada;
+            if ($nodo && $this->tramiteFlujoService->usuarioInternoPuedeActuarEnNodo($usuario, $nodo)) {
+                return true;
+            }
+        }
+
+        return $usuario->esPersonalMesaPartes();
     }
 
     /**
@@ -177,18 +218,30 @@ class TramitePolicy
      */
     public function rechazar(Usuario $usuario, Tramite $tramite): bool
     {
-        // Solo el personal de mesa de partes puede rechazar trámites
-        if (!$usuario->esPersonalMesaPartes()) {
+        if (!$usuario->estaActivo()) {
             return false;
         }
 
-        // Solo se pueden rechazar trámites en ciertos estados
-        return in_array($tramite->estado, [
+        if ($usuario->esAdministrador()) {
+            return true;
+        }
+
+        $estadosOk = in_array($tramite->estado, [
             \App\Domain\Tramites\EstadoTramite::PENDIENTE,
             \App\Domain\Tramites\EstadoTramite::EN_PROCESO,
             \App\Domain\Tramites\EstadoTramite::OBSERVADO,
             \App\Domain\Tramites\EstadoTramite::VERIFICADO,
-        ]) && $usuario->estaActivo();
+        ], true);
+
+        if (!$estadosOk) {
+            return false;
+        }
+
+        if ($this->internoPuedeActuarPorEquipoNodo($usuario, $tramite)) {
+            return true;
+        }
+
+        return $usuario->esPersonalMesaPartes();
     }
 
     /**
@@ -200,17 +253,29 @@ class TramitePolicy
      */
     public function observar(Usuario $usuario, Tramite $tramite): bool
     {
-        // Solo el personal de mesa de partes puede observar trámites
-        if (!$usuario->esPersonalMesaPartes()) {
+        if (!$usuario->estaActivo()) {
             return false;
         }
 
-        // Solo se pueden observar trámites en ciertos estados
-        return in_array($tramite->estado, [
+        if ($usuario->esAdministrador()) {
+            return true;
+        }
+
+        $estadosOk = in_array($tramite->estado, [
             \App\Domain\Tramites\EstadoTramite::PENDIENTE,
             \App\Domain\Tramites\EstadoTramite::EN_PROCESO,
             \App\Domain\Tramites\EstadoTramite::VERIFICADO,
-        ]) && $usuario->estaActivo();
+        ], true);
+
+        if (!$estadosOk) {
+            return false;
+        }
+
+        if ($this->internoPuedeActuarPorEquipoNodo($usuario, $tramite)) {
+            return true;
+        }
+
+        return $usuario->esPersonalMesaPartes();
     }
 
     /**
@@ -222,13 +287,22 @@ class TramitePolicy
      */
     public function verificar(Usuario $usuario, Tramite $tramite): bool
     {
-        // Solo el personal de mesa de partes puede verificar trámites
-        if (!$usuario->esPersonalMesaPartes()) {
+        if (!$usuario->estaActivo()) {
             return false;
         }
 
-        // Solo se pueden verificar trámites en proceso
-        return $tramite->estaEnProceso() && $usuario->estaActivo();
+        if ($usuario->esAdministrador()) {
+            return true;
+        }
+
+        if ($tramite->estaEnProceso() || $tramite->estaObservado()) {
+            if ($this->internoPuedeActuarPorEquipoNodo($usuario, $tramite)) {
+                return true;
+            }
+        }
+
+        return $usuario->esPersonalMesaPartes()
+            && ($tramite->estaEnProceso() || $tramite->estaObservado());
     }
 
     /**
@@ -240,12 +314,38 @@ class TramitePolicy
      */
     public function finalizar(Usuario $usuario, Tramite $tramite): bool
     {
-        // Solo el personal de mesa de partes puede finalizar trámites
+        if (!$usuario->estaActivo()) {
+            return false;
+        }
+
+        if ($usuario->esAdministrador()) {
+            return true;
+        }
+
+        $tramite->loadMissing('nodoActual');
+        if ($tramite->id_nodo_actual && $tramite->nodoActual?->puede_finalizar) {
+            return $this->tramiteFlujoService->usuarioInternoPuedeActuarEnNodo($usuario, $tramite->nodoActual);
+        }
+
         if (!$usuario->esPersonalMesaPartes()) {
             return false;
         }
 
-        // Solo se pueden finalizar trámites verificados
-        return $tramite->estaVerificado() && $usuario->estaActivo();
+        return $tramite->estaVerificado();
+    }
+
+    /**
+     * Interno miembro del equipo del nodo actual o del nodo de entrada (misma regla que la bandeja).
+     */
+    private function internoPuedeActuarPorEquipoNodo(Usuario $usuario, Tramite $tramite): bool
+    {
+        if (!$usuario->esInterno()) {
+            return false;
+        }
+
+        $tramite->loadMissing(['procedimiento.nodoEntrada', 'nodoActual']);
+        $nodo = $tramite->nodoActual ?? $tramite->procedimiento?->nodoEntrada;
+
+        return $nodo && $this->tramiteFlujoService->usuarioInternoPuedeActuarEnNodo($usuario, $nodo);
     }
 }

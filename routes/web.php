@@ -9,6 +9,7 @@ use App\Http\Controllers\Configuracion\ConfiguracionController;
 use App\Http\Controllers\Admin\AreasController;
 use App\Http\Controllers\Admin\NivelesController;
 use App\Http\Controllers\Admin\ProcedimientosController;
+use App\Http\Controllers\Admin\FlujoProcedimientoController;
 use App\Http\Controllers\Admin\UsuariosController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\MesaPartesController;
@@ -158,6 +159,7 @@ Route::middleware(['auth'])->group(function () {
 
         Route::post('/{tramite}/flujo/aceptar-ingreso', [TramiteController::class, 'aceptarIngresoFlujo'])->name('tramites.flujo.aceptar-ingreso');
         Route::post('/{tramite}/flujo/modo-manual', [TramiteController::class, 'forzarModoDerivacionManualFlujo'])->name('tramites.flujo.modo-manual');
+        Route::get('/{tramite}/flujo/derivacion-opciones', [TramiteController::class, 'opcionesDerivacionFlujo'])->name('tramites.flujo.derivacion-opciones');
         
             // Acciones de estado
             Route::post('/{tramite}/aceptar', [TramiteController::class, 'aceptar'])->name('tramites.aceptar');
@@ -274,6 +276,21 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/procedimientos/{id}/especialistas', [ProcedimientosController::class, 'obtenerEspecialistasDisponibles'])->name('admin.procedimientos.especialistas');
         Route::post('/procedimientos/{id}/asignar-especialistas', [ProcedimientosController::class, 'asignarEspecialistas'])->name('admin.procedimientos.asignar-especialistas');
         Route::get('/procedimientos/{id}/dependencias', [ProcedimientosController::class, 'getDependencias'])->name('admin.procedimientos.dependencias');
+
+        Route::get('/flujo/usuarios-internos', [FlujoProcedimientoController::class, 'usuariosInternos'])->name('admin.flujo.usuarios-internos');
+        Route::get('/procedimientos/{procedimiento}/flujo', [FlujoProcedimientoController::class, 'edit'])->name('admin.procedimientos.flujo');
+        Route::get('/procedimientos/{procedimiento}/flujo/api', [FlujoProcedimientoController::class, 'estructura'])->name('admin.procedimientos.flujo.api');
+        Route::post('/procedimientos/{procedimiento}/flujo/nodos', [FlujoProcedimientoController::class, 'storeNodo'])->name('admin.procedimientos.flujo.nodos.store');
+        Route::put('/procedimientos/{procedimiento}/flujo/nodos/{nodo}', [FlujoProcedimientoController::class, 'updateNodo'])->name('admin.procedimientos.flujo.nodos.update');
+        Route::delete('/procedimientos/{procedimiento}/flujo/nodos/{nodo}', [FlujoProcedimientoController::class, 'destroyNodo'])->name('admin.procedimientos.flujo.nodos.destroy');
+        Route::post('/procedimientos/{procedimiento}/flujo/nodo-entrada', [FlujoProcedimientoController::class, 'setNodoEntrada'])->name('admin.procedimientos.flujo.nodo-entrada');
+        Route::post('/procedimientos/{procedimiento}/flujo/transiciones', [FlujoProcedimientoController::class, 'storeTransicion'])->name('admin.procedimientos.flujo.transiciones.store');
+        Route::put('/procedimientos/{procedimiento}/flujo/transiciones/{transicion}', [FlujoProcedimientoController::class, 'updateTransicion'])->name('admin.procedimientos.flujo.transiciones.update');
+        Route::delete('/procedimientos/{procedimiento}/flujo/transiciones/{transicion}', [FlujoProcedimientoController::class, 'destroyTransicion'])->name('admin.procedimientos.flujo.transiciones.destroy');
+        Route::post('/procedimientos/{procedimiento}/flujo/equipos', [FlujoProcedimientoController::class, 'storeEquipo'])->name('admin.procedimientos.flujo.equipos.store');
+        Route::delete('/procedimientos/{procedimiento}/flujo/equipos/{equipo}', [FlujoProcedimientoController::class, 'destroyEquipo'])->name('admin.procedimientos.flujo.equipos.destroy');
+        Route::post('/procedimientos/{procedimiento}/flujo/equipos/{equipo}/miembros', [FlujoProcedimientoController::class, 'attachMiembro'])->name('admin.procedimientos.flujo.equipos.miembros.attach');
+        Route::delete('/procedimientos/{procedimiento}/flujo/equipos/{equipo}/miembros/{usuario}', [FlujoProcedimientoController::class, 'detachMiembro'])->name('admin.procedimientos.flujo.equipos.miembros.detach');
     });
     
     // Rutas adicionales del sistema

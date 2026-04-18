@@ -468,6 +468,8 @@ class MesaPartesController extends Controller
                         'tramitescol' => $t->tramitescol,
                         'accionesPermitidas' => $t->accionesPermitidas ?? [],
                         'dias_transcurridos' => $diasTranscurridos,
+                        'id_nodo_actual' => $t->id_nodo_actual,
+                        'modo_derivacion' => $t->modo_derivacion,
                     ];
                 }),
                 'total' => $total,
