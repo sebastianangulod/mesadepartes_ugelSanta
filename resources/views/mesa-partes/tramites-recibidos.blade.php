@@ -562,6 +562,7 @@
             const etiquetasAccion = {
                 'MODO_MANUAL': 'Activar derivación manual',
                 'OBSERVAR_CON_OFICIO': 'Observar con oficio',
+                'RETROCEDER': 'Retroceder en el flujo',
             };
             tramite.accionesPermitidas.forEach(acc => {
                 const btn = document.createElement('button');
@@ -595,6 +596,9 @@
                 break;
             case 'DERIVAR':
                 derivarTramite(idTramite);
+                break;
+            case 'RETROCEDER':
+                retrocederTramite(idTramite);
                 break;
             case 'ACEPTAR':
                 aceptarTramite(idTramite);
@@ -705,6 +709,27 @@
         })
         .catch(() => alert('Error de red al intentar derivar el trámite.'));
     }
+
+    window.retrocederTramite = function(id) {
+        if (!confirm('¿Retroceder el trámite al paso anterior del flujo (derivación o ingreso)?')) return;
+        fetch(`/tramites/${id}/flujo/retroceder`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message || 'Retroceso aplicado.');
+                cargarTramites(paginaActual);
+            } else {
+                alert(data.message || 'No se pudo retroceder.');
+            }
+        })
+        .catch(() => alert('Error de red al retroceder el trámite.'));
+    };
 
     window.activarModoManualTramite = function(id) {
         if (!confirm('¿Activar derivación manual permanente para este trámite? Ya no se usará derivación automática.')) return;

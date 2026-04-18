@@ -137,12 +137,12 @@ class TramiteController extends Controller
     /**
      * Mostrar trámite específico
      * 
-     * @param int $id
+     * @param int $tramite
      * @return View
      */
-    public function show(int $id): View
+    public function show(int $tramite): View
     {
-        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($tramite);
         
         if (!$tramite) {
             abort(404, 'Trámite no encontrado');
@@ -159,12 +159,12 @@ class TramiteController extends Controller
     /**
      * Mostrar formulario de edición
      * 
-     * @param int $id
+     * @param int $tramite
      * @return View
      */
-    public function edit(int $id): View
+    public function edit(int $tramite): View
     {
-        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($tramite);
         
         if (!$tramite) {
             abort(404, 'Trámite no encontrado');
@@ -183,12 +183,13 @@ class TramiteController extends Controller
      * Actualizar trámite
      * 
      * @param TramiteRequest $request
-     * @param int $id
+     * @param int $tramite
      * @return JsonResponse
      */
-    public function update(TramiteRequest $request, int $id): JsonResponse
+    public function update(TramiteRequest $request, int $tramite): JsonResponse
     {
-        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        $tid = $tramite;
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($tid);
         
         if (!$tramite) {
             return response()->json([
@@ -200,8 +201,8 @@ class TramiteController extends Controller
         $this->authorize('update', $tramite);
 
         try {
-            $datos = new TramiteDTO(array_merge($request->validated(), ['id' => $id]));
-            $tramite = $this->tramiteService->actualizar($id, $datos);
+            $datos = new TramiteDTO(array_merge($request->validated(), ['id' => $tid]));
+            $tramite = $this->tramiteService->actualizar($tid, $datos);
 
             return response()->json([
                 'success' => true,
@@ -220,12 +221,13 @@ class TramiteController extends Controller
     /**
      * Eliminar trámite
      * 
-     * @param int $id
+     * @param int $tramite
      * @return JsonResponse
      */
-    public function destroy(int $id): JsonResponse
+    public function destroy(int $tramite): JsonResponse
     {
-        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        $tid = $tramite;
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($tid);
         
         if (!$tramite) {
             return response()->json([
@@ -237,7 +239,7 @@ class TramiteController extends Controller
         $this->authorize('delete', $tramite);
 
         try {
-            $this->tramiteService->eliminar($id);
+            $this->tramiteService->eliminar($tid);
 
             return response()->json([
                 'success' => true,
@@ -329,12 +331,13 @@ class TramiteController extends Controller
     /**
      * Aceptar trámite (cambiar a EN_PROCESO)
      * 
-     * @param int $id
+     * @param int $tramite
      * @return JsonResponse
      */
-    public function aceptar(int $id): JsonResponse
+    public function aceptar(int $tramite): JsonResponse
     {
-        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        $tid = $tramite;
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($tid);
         
         if (!$tramite) {
             return response()->json([
@@ -356,7 +359,7 @@ class TramiteController extends Controller
                 ]);
             }
 
-            $tramite = $this->tramiteService->aceptar($id);
+            $tramite = $this->tramiteService->aceptar($tid);
 
             return response()->json([
                 'success' => true,
@@ -375,12 +378,13 @@ class TramiteController extends Controller
      * Rechazar trámite
      * 
      * @param Request $request
-     * @param int $id
+     * @param int $tramite
      * @return JsonResponse
      */
-    public function rechazar(Request $request, int $id): JsonResponse
+    public function rechazar(Request $request, int $tramite): JsonResponse
     {
-        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        $tid = $tramite;
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($tid);
         
         if (!$tramite) {
             return response()->json([
@@ -403,7 +407,7 @@ class TramiteController extends Controller
                     Auth::user()
                 );
             } else {
-                $tramite = $this->tramiteService->rechazar($id, $request->input('motivo'));
+                $tramite = $this->tramiteService->rechazar($tid, $request->input('motivo'));
             }
 
             return response()->json([
@@ -423,12 +427,13 @@ class TramiteController extends Controller
      * Observar trámite
      * 
      * @param Request $request
-     * @param int $id
+     * @param int $tramite
      * @return JsonResponse
      */
-    public function observar(Request $request, int $id): JsonResponse
+    public function observar(Request $request, int $tramite): JsonResponse
     {
-        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        $tid = $tramite;
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($tid);
         
         if (!$tramite) {
             return response()->json([
@@ -451,7 +456,7 @@ class TramiteController extends Controller
                     Auth::user()
                 );
             } else {
-                $tramite = $this->tramiteService->observar($id, $request->input('observacion'));
+                $tramite = $this->tramiteService->observar($tid, $request->input('observacion'));
             }
 
             return response()->json([
@@ -470,12 +475,13 @@ class TramiteController extends Controller
     /**
      * Verificar trámite
      * 
-     * @param int $id
+     * @param int $tramite
      * @return JsonResponse
      */
-    public function verificar(int $id): JsonResponse
+    public function verificar(int $tramite): JsonResponse
     {
-        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        $tid = $tramite;
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($tid);
         
         if (!$tramite) {
             return response()->json([
@@ -490,7 +496,7 @@ class TramiteController extends Controller
             if ($tramite->id_nodo_actual) {
                 $tramite = $this->tramiteFlujoService->verificarEnFlujoConfigurable($tramite, Auth::user());
             } else {
-                $tramite = $this->tramiteService->verificar($id);
+                $tramite = $this->tramiteService->verificar($tid);
             }
 
             return response()->json([
@@ -509,12 +515,13 @@ class TramiteController extends Controller
     /**
      * Finalizar trámite
      * 
-     * @param int $id
+     * @param int $tramite
      * @return JsonResponse
      */
-    public function finalizar(int $id): JsonResponse
+    public function finalizar(int $tramite): JsonResponse
     {
-        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        $tid = $tramite;
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($tid);
         
         if (!$tramite) {
             return response()->json([
@@ -529,7 +536,7 @@ class TramiteController extends Controller
             if ($tramite->id_nodo_actual) {
                 $tramite = $this->tramiteFlujoService->procesarEnFlujoConfigurable($tramite, Auth::user());
             } else {
-                $tramite = $this->tramiteService->finalizar($id);
+                $tramite = $this->tramiteService->finalizar($tid);
             }
 
             return response()->json([
@@ -542,6 +549,31 @@ class TramiteController extends Controller
                 'success' => false,
                 'message' => 'Error al finalizar el trámite: ' . $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Retroceder un paso en el flujo por nodos (deshace última derivación o ingreso).
+     */
+    public function retrocederFlujo(Tramite $tramite): JsonResponse
+    {
+        $this->authorize('view', $tramite);
+
+        $modelo = $this->tramiteService->obtenerTramiteCompleto($tramite->id) ?? $tramite;
+
+        try {
+            $actualizado = $this->tramiteFlujoService->retrocederEnFlujoConfigurable($modelo, Auth::user());
+
+            return response()->json([
+                'success' => true,
+                'message' => 'El trámite retrocedió en el flujo correctamente',
+                'data' => $actualizado,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
         }
     }
 
@@ -970,12 +1002,13 @@ class TramiteController extends Controller
      * Corregir trámite observado (usuario externo)
      * 
      * @param Request $request
-     * @param int $id
+     * @param int $tramite
      * @return JsonResponse
      */
-    public function corregir(Request $request, int $id): JsonResponse
+    public function corregir(Request $request, int $tramite): JsonResponse
     {
-        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        $tid = $tramite;
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($tid);
         
         if (!$tramite) {
             return response()->json([
@@ -989,7 +1022,7 @@ class TramiteController extends Controller
         ]);
 
         try {
-            $tramite = $this->tramiteService->corregir($id, $request->file('archivo_adjunto'));
+            $tramite = $this->tramiteService->corregir($tid, $request->file('archivo_adjunto'));
 
             return response()->json([
                 'success' => true,
@@ -1089,12 +1122,13 @@ class TramiteController extends Controller
      * Observar trámite con oficio adjunto
      * 
      * @param Request $request
-     * @param int $id
+     * @param int $tramite
      * @return JsonResponse
      */
-    public function observarConOficio(Request $request, int $id): JsonResponse
+    public function observarConOficio(Request $request, int $tramite): JsonResponse
     {
-        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        $tid = $tramite;
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($tid);
         
         if (!$tramite) {
             return response()->json([
@@ -1120,7 +1154,7 @@ class TramiteController extends Controller
                 );
             } else {
                 $tramite = $this->tramiteService->observarConOficio(
-                    $id,
+                    $tid,
                     $request->input('observacion'),
                     $request->file('oficio')
                 );
@@ -1143,12 +1177,13 @@ class TramiteController extends Controller
      * Usuario externo sube oficio de subsanación
      * 
      * @param Request $request
-     * @param int $id
+     * @param int $tramite
      * @return JsonResponse
      */
-    public function subirOficioUsuario(Request $request, int $id): JsonResponse
+    public function subirOficioUsuario(Request $request, int $tramite): JsonResponse
     {
-        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        $tid = $tramite;
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($tid);
         
         if (!$tramite) {
             return response()->json([
@@ -1162,7 +1197,7 @@ class TramiteController extends Controller
         ]);
 
         try {
-            $tramite = $this->tramiteService->subirOficioUsuario($id, $request->file('archivo_oficio'));
+            $tramite = $this->tramiteService->subirOficioUsuario($tid, $request->file('archivo_oficio'));
 
             return response()->json([
                 'success' => true,
@@ -1180,12 +1215,13 @@ class TramiteController extends Controller
     /**
      * Procesar trámite (finalizar y generar voucher)
      * 
-     * @param int $id
+     * @param int $tramite
      * @return JsonResponse
      */
-    public function procesar(int $id): JsonResponse
+    public function procesar(int $tramite): JsonResponse
     {
-        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        $tid = $tramite;
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($tid);
         
         if (!$tramite) {
             return response()->json([
@@ -1199,7 +1235,7 @@ class TramiteController extends Controller
                 $this->authorize('finalizar', $tramite);
                 $tramite = $this->tramiteFlujoService->procesarEnFlujoConfigurable($tramite, Auth::user());
             } else {
-                $tramite = $this->tramiteService->procesar($id);
+                $tramite = $this->tramiteService->procesar($tid);
             }
 
             return response()->json([
@@ -1255,12 +1291,13 @@ class TramiteController extends Controller
      * Agregar documento a un trámite
      * 
      * @param Request $request
-     * @param int $id
+     * @param int $tramite
      * @return JsonResponse
      */
-    public function agregarDocumento(Request $request, int $id): JsonResponse
+    public function agregarDocumento(Request $request, int $tramite): JsonResponse
     {
-        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        $tid = $tramite;
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($tid);
         
         if (!$tramite) {
             return response()->json([
@@ -1295,13 +1332,13 @@ class TramiteController extends Controller
     /**
      * Eliminar documento de un trámite
      * 
-     * @param int $tramiteId
-     * @param int $documentoId
+     * @param int $tramite
+     * @param int $documento
      * @return JsonResponse
      */
-    public function eliminarDocumento(int $tramiteId, int $documentoId): JsonResponse
+    public function eliminarDocumento(int $tramite, int $documento): JsonResponse
     {
-        $tramite = $this->tramiteService->obtenerTramiteCompleto($tramiteId);
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($tramite);
         
         if (!$tramite) {
             return response()->json([
@@ -1331,12 +1368,13 @@ class TramiteController extends Controller
      * Agregar comentario a un trámite
      * 
      * @param Request $request
-     * @param int $id
+     * @param int $tramite
      * @return JsonResponse
      */
-    public function agregarComentario(Request $request, int $id): JsonResponse
+    public function agregarComentario(Request $request, int $tramite): JsonResponse
     {
-        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        $tid = $tramite;
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($tid);
         
         if (!$tramite) {
             return response()->json([
@@ -1473,12 +1511,13 @@ class TramiteController extends Controller
      * Anular trámite
      * 
      * @param Request $request
-     * @param int $id
+     * @param int $tramite
      * @return JsonResponse
      */
-    public function anular(Request $request, int $id): JsonResponse
+    public function anular(Request $request, int $tramite): JsonResponse
     {
-        $tramite = $this->tramiteService->obtenerTramiteCompleto($id);
+        $tid = $tramite;
+        $tramite = $this->tramiteService->obtenerTramiteCompleto($tid);
         
         if (!$tramite) {
             return response()->json([
@@ -1496,7 +1535,7 @@ class TramiteController extends Controller
         try {
             // Anular es similar a rechazar pero con un estado especial
             // Por ahora, lo tratamos como rechazo
-            $tramite = $this->tramiteService->rechazar($id, $request->input('motivo'));
+            $tramite = $this->tramiteService->rechazar($tid, $request->input('motivo'));
 
             return response()->json([
                 'success' => true,
@@ -1521,7 +1560,7 @@ class TramiteController extends Controller
     public function hojaRuta(int $id): JsonResponse
     {
         try {
-            $tramite = Tramite::with(['procedimiento', 'usuario'])->findOrFail($id);
+            $tramite = Tramite::with(['procedimiento', 'usuario', 'nodoActual'])->findOrFail($id);
             
             $niveles = [];
             
@@ -1616,6 +1655,9 @@ class TramiteController extends Controller
                     'procedimiento_nombre' => $tramite->procedimiento->nombre ?? 'N/A',
                     'estado' => $tramite->estado,
                     'tramitescol' => $tramite->tramitescol ?? 1,
+                    'id_nodo_actual' => $tramite->id_nodo_actual,
+                    'nodo_actual_nombre' => $tramite->nodoActual->nombre ?? null,
+                    'modo_derivacion' => $tramite->modo_derivacion,
                 ]
             ]);
         } catch (\Exception $e) {
@@ -1655,16 +1697,15 @@ class TramiteController extends Controller
     /**
      * Descargar archivo de un trámite (con validación de permisos)
      * 
-     * @param int $id
+     * @param int $tramite
      * @param string $nombreArchivo
      * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\RedirectResponse
      */
-    public function descargarArchivo(int $id, string $nombreArchivo)
+    public function descargarArchivo(int $tramite, string $nombreArchivo)
     {
-        $tramite = Tramite::with('procedimiento')->findOrFail($id);
+        $tramite = Tramite::with('procedimiento')->findOrFail($tramite);
 
-        // Cualquier usuario autenticado puede descargar archivos
-        // (la autenticación se valida en el middleware 'auth')
+        $this->authorize('view', $tramite);
 
         // Validar que el archivo pertenece al trámite
         $archivoValido = false;

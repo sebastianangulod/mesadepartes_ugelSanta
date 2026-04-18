@@ -131,6 +131,9 @@ class TramiteBandejaInternaService
                 if (!$tramite->id_nodo_actual) {
                     $acciones[] = 'DERIVAR';
                 }
+                if ($tramite->id_nodo_actual && $this->tramiteFlujoService->puedeRetrocederEnGrafo($tramite)) {
+                    $acciones[] = 'RETROCEDER';
+                }
                 if ($nodo && $nodo->puede_finalizar) {
                     $acciones[] = 'OBSERVAR_CON_OFICIO';
                     if (!$tieneOficio) {

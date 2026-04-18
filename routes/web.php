@@ -160,6 +160,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{tramite}/flujo/aceptar-ingreso', [TramiteController::class, 'aceptarIngresoFlujo'])->name('tramites.flujo.aceptar-ingreso');
         Route::post('/{tramite}/flujo/modo-manual', [TramiteController::class, 'forzarModoDerivacionManualFlujo'])->name('tramites.flujo.modo-manual');
         Route::get('/{tramite}/flujo/derivacion-opciones', [TramiteController::class, 'opcionesDerivacionFlujo'])->name('tramites.flujo.derivacion-opciones');
+        Route::post('/{tramite}/flujo/retroceder', [TramiteController::class, 'retrocederFlujo'])->name('tramites.flujo.retroceder');
         
             // Acciones de estado
             Route::post('/{tramite}/aceptar', [TramiteController::class, 'aceptar'])->name('tramites.aceptar');

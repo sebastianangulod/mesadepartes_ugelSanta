@@ -285,6 +285,97 @@ class TramiteFlujoService
     }
 
     /**
+     * ¿Hay un paso previo registrado (derivación o ingreso) para volver desde el nodo actual?
+     */
+    public function puedeRetrocederEnGrafo(Tramite $tramite): bool
+    {
+        if ($tramite->estado !== EstadoTramite::EN_PROCESO || !$tramite->id_nodo_actual) {
+            return false;
+        }
+
+        return $this->ultimoMovimientoEntradaAlNodoActual($tramite) !== null;
+    }
+
+    /**
+     * Deshace el último avance hacia el nodo actual (DERIVAR_NODO o ACEPTAR_INGRESO).
+     *
+     * @throws Exception
+     */
+    public function retrocederEnFlujoConfigurable(Tramite $tramite, ?Usuario $actor = null): Tramite
+    {
+        $actor = $actor ?? Auth::user();
+        if (!$actor instanceof Usuario) {
+            throw new Exception('Usuario no autenticado');
+        }
+
+        return DB::transaction(function () use ($tramite, $actor) {
+            $tramite->load('nodoActual');
+
+            if ($tramite->estado !== EstadoTramite::EN_PROCESO) {
+                throw new Exception('Solo se puede retroceder en EN_PROCESO');
+            }
+
+            if (!$tramite->id_nodo_actual || !$tramite->nodoActual) {
+                throw new Exception('El trámite no tiene nodo actual');
+            }
+
+            $nodoActual = $tramite->nodoActual;
+            if (!$actor->esAdministrador() && !$this->usuarioInternoPuedeActuarEnNodo($actor, $nodoActual)) {
+                throw new Exception('No tiene permiso para retroceder el flujo en este nodo');
+            }
+
+            $mov = $this->ultimoMovimientoEntradaAlNodoActual($tramite);
+            if (!$mov) {
+                throw new Exception('No hay historial para retroceder desde este nodo');
+            }
+
+            $nodoDesdeIdActual = (int) $tramite->id_nodo_actual;
+
+            if ($mov->accion === 'DERIVAR_NODO') {
+                if (!$mov->nodo_desde_id) {
+                    throw new Exception('Movimiento de derivación inconsistente');
+                }
+
+                $nodoAnterior = FlujoNodo::query()->findOrFail($mov->nodo_desde_id);
+                $tramite->id_nodo_actual = (int) $nodoAnterior->id;
+                $tramite->id_usuario = $this->primerUsuarioIdEnNodo($nodoAnterior);
+                $tramite->save();
+
+                $this->registrarMovimiento($tramite, (int) $actor->id, 'RETROCEDER_NODO', $nodoDesdeIdActual, (int) $nodoAnterior->id, [
+                    'movimiento_revertido_id' => $mov->id,
+                ]);
+
+                return $tramite->fresh(['procedimiento', 'nodoActual']);
+            }
+
+            if ($mov->accion === 'ACEPTAR_INGRESO') {
+                $tramite->id_nodo_actual = null;
+                $tramite->estado = EstadoTramite::PENDIENTE;
+                $tramite->save();
+
+                $this->registrarMovimiento($tramite, (int) $actor->id, 'RETROCEDER_INGRESO', $nodoDesdeIdActual, null, [
+                    'movimiento_revertido_id' => $mov->id,
+                ]);
+
+                return $tramite->fresh(['procedimiento', 'nodoActual']);
+            }
+
+            throw new Exception('Tipo de movimiento no reversible');
+        });
+    }
+
+    private function ultimoMovimientoEntradaAlNodoActual(Tramite $tramite): ?TramiteMovimiento
+    {
+        return TramiteMovimiento::query()
+            ->where('tramite_id', $tramite->id)
+            ->whereIn('accion', ['DERIVAR_NODO', 'ACEPTAR_INGRESO'])
+            ->where('nodo_hasta_id', $tramite->id_nodo_actual)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    /**
      * @throws Exception
      */
     private function resolverTransicionSaliente(FlujoNodo $desde, string $modoDerivacion, ?int $haciaNodoId): FlujoTransicion
