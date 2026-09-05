@@ -39,7 +39,8 @@ class TramiteWorkflowService
     }
 
     /**
-     * Aceptar trámite (cambiar a EN_PROCESO o VERIFICADO según nivel final)
+     * Aceptar trámite (cambiar a EN_PROCESO)
+     * Si el procedimiento tiene id_nodo_entrada, activa modo configurable
      * 
      * @param int $tramiteId
      * @return Tramite
@@ -57,7 +58,6 @@ class TramiteWorkflowService
             }
 
             // Validar que el usuario puede actuar sobre este trámite
-            // (debe ser el responsable y tener el nivel correcto)
             $this->validarNivelActual($tramite, $usuario->id);
 
             // Validar que el trámite ya está asignado al nivel 1
@@ -69,8 +69,14 @@ class TramiteWorkflowService
             }
 
             // Cambiar estado de PENDIENTE a EN_PROCESO
-            // El trámite ya está asignado al usuario correcto y nivel_actual = 1 desde su creación
             $tramite->estado = EstadoTramite::EN_PROCESO;
+
+            // Si el procedimiento tiene nodo de entrada configurado, activar modo configurable
+            if ($tramite->procedimiento && $tramite->procedimiento->id_nodo_entrada) {
+                $tramite->id_nodo_actual = $tramite->procedimiento->id_nodo_entrada;
+                $tramite->modo_derivacion = 'AUTO';
+            }
+
             $tramite->save();
 
             return $tramite->fresh();

@@ -6,6 +6,7 @@ use App\Domain\Tramites\ModoDerivacion;
 use App\Models\Tramite;
 use App\Models\Procedimiento;
 use App\Models\Usuario;
+use App\Models\UsuariosNiveles;
 use App\Services\Tramites\TramiteFlujoService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
@@ -110,17 +111,28 @@ class TramiteCreacionService
                 $numeroPaginas = $this->contarPaginasPDF($rutaArchivo);
             }
 
-            $this->validarFlujoDeEntradaConfigurado($procedimiento);
+            // Buscar usuario de Nivel 1 para el área del procedimiento (id_area = nivel_1.id)
+            $usuarioNivel1 = null;
+            if ($procedimiento->id_area) {
+                $nivel1Usuario = UsuariosNiveles::where('nivel', 1)
+                    ->where('id_nivel', $procedimiento->id_area)
+                    ->whereHas('usuario', fn($q) => $q->where('tipo_user', 2))
+                    ->first();
+                if ($nivel1Usuario) {
+                    $usuarioNivel1 = $nivel1Usuario->id_usuario;
+                }
+            }
 
-            // PENDIENTE sin nodo: id_nodo_actual null hasta que un área acepte el ingreso.
-            // id_usuario = quien registra (FK obligatoria); la responsabilidad por nodo la dan los equipos.
+            // PENDIENTE en Nivel 1 (legacy): asignado al usuario del área correspondiente
+            // id_nodo_actual = null → modo legacy (niveles 1-4)
+            // Al aceptar, si el procedimiento tiene id_nodo_entrada, se activará modo configurable
             $tramite = Tramite::create([
                 'archivo_adjunto' => $nombreArchivo,
                 'id_procedimiento' => $datos['id_procedimiento'],
-                'id_usuario' => $usuario->id,
+                'id_usuario' => $usuarioNivel1 ?? $usuario->id,  // Responsable Nivel 1 o fallback
                 'creado_por' => $usuario->id,
                 'estado' => 'PENDIENTE',
-                'nivel_actual' => null,
+                'nivel_actual' => 1,
                 'id_nodo_actual' => null,
                 'modo_derivacion' => ModoDerivacion::AUTO,
                 'tipo_tramite' => $tipoTramite,
@@ -313,39 +325,6 @@ class TramiteCreacionService
             ]);
             // Si falla, retornar 1 como valor por defecto
             return 1;
-        }
-    }
-
-    /**
-     * El procedimiento debe tener nodo de entrada y al menos un interno en algún equipo de ese nodo.
-     *
-     * @throws Exception
-     */
-    private function validarFlujoDeEntradaConfigurado(Procedimiento $procedimiento): void
-    {
-        $procedimiento->loadMissing('nodoEntrada.equipos.miembros');
-
-        if (!$procedimiento->id_nodo_entrada || !$procedimiento->nodoEntrada) {
-            throw new Exception(
-                'El procedimiento no tiene nodo de entrada configurado. ' .
-                'Configure el flujo y el nodo de entrada en administración.'
-            );
-        }
-
-        $nodo = $procedimiento->nodoEntrada;
-        if ((int) $nodo->id_procedimiento !== (int) $procedimiento->id) {
-            throw new Exception('El nodo de entrada no pertenece a este procedimiento.');
-        }
-
-        $tieneInterno = $nodo->equipos->contains(function ($equipo) {
-            return $equipo->miembros->contains(fn (Usuario $u) => (int) $u->tipo_user === 2);
-        });
-
-        if (!$tieneInterno) {
-            throw new Exception(
-                'El nodo de entrada no tiene equipos con usuarios internos asignados. ' .
-                'Configure al menos un equipo y un usuario interno en administración.'
-            );
         }
     }
 }

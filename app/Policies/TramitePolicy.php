@@ -154,6 +154,46 @@ class TramitePolicy
     }
 
     /**
+     * Determinar si el usuario puede derivar a otro Nivel 1
+     * Solo en trámites PENDIENTE en nivel 1
+     * 
+     * @param Usuario $usuario
+     * @param Tramite $tramite
+     * @return bool
+     */
+    public function derivarNivel1(Usuario $usuario, Tramite $tramite): bool
+    {
+        if (!$usuario->estaActivo() || $tramite->estado !== 'PENDIENTE' || $tramite->nivel_actual !== 1) {
+            return false;
+        }
+
+        if ($usuario->esAdministrador()) {
+            return true;
+        }
+
+        // El usuario actual asignado al trámite (Nivel 1) puede derivar
+        if ((int) $tramite->id_usuario === (int) $usuario->id) {
+            return true;
+        }
+
+        // Usuario interno del mismo Nivel 1 (misma área)
+        if ($usuario->esInterno()) {
+            $tramite->loadMissing('procedimiento');
+            if ($tramite->procedimiento && $tramite->procedimiento->id_area) {
+                $esMismoNivel1 = \App\Models\UsuariosNiveles::where('id_usuario', $usuario->id)
+                    ->where('nivel', 1)
+                    ->where('id_nivel', $tramite->procedimiento->id_area)
+                    ->exists();
+                if ($esMismoNivel1) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Determinar si el usuario puede rechazar un trámite
      * 
      * @param Usuario $usuario
