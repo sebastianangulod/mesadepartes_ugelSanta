@@ -14,8 +14,7 @@ return new class extends Migration
     {
         Schema::create('flujo_nodos', function (Blueprint $table) {
             $table->id();
-            // Misma precisión que procedimientos.id (int en BD legada)
-            $table->integer('id_procedimiento');
+            $table->foreignId('id_procedimiento')->constrained('procedimientos')->cascadeOnDelete();
             $table->string('nombre', 150);
             $table->string('slug', 80)->nullable()->comment('Identificador estable opcional para reglas');
             $table->unsignedSmallInteger('orden')->default(0);
@@ -23,11 +22,6 @@ return new class extends Migration
             $table->boolean('puede_rechazar_definitivo')->default(false);
             $table->boolean('es_terminal')->default(false)->comment('Nodo de cierre del flujo (referencia UX)');
             $table->timestamps();
-
-            $table->foreign('id_procedimiento')
-                ->references('id')
-                ->on('procedimientos')
-                ->cascadeOnDelete();
 
             $table->index(['id_procedimiento', 'orden']);
         });
@@ -70,18 +64,12 @@ return new class extends Migration
         Schema::create('flujo_equipo_usuario', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('equipo_id');
-            // usuarios.id es bigint firmado en BD legada (no unsigned)
-            $table->bigInteger('usuario_id');
+            $table->foreignId('usuario_id')->constrained('usuarios')->cascadeOnDelete();
             $table->timestamps();
 
             $table->foreign('equipo_id')
                 ->references('id')
                 ->on('flujo_equipos')
-                ->cascadeOnDelete();
-
-            $table->foreign('usuario_id')
-                ->references('id')
-                ->on('usuarios')
                 ->cascadeOnDelete();
 
             $table->unique(['equipo_id', 'usuario_id'], 'flujo_equipo_usuario_equipo_usuario_unique');
@@ -90,24 +78,13 @@ return new class extends Migration
 
         Schema::create('tramite_movimientos', function (Blueprint $table) {
             $table->id();
-            // Misma precisión que tramites.id (int en BD legada)
-            $table->integer('tramite_id');
-            $table->bigInteger('usuario_id')->nullable();
+            $table->foreignId('tramite_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('usuario_id')->nullable()->constrained('usuarios')->nullOnDelete();
             $table->string('accion', 80);
             $table->unsignedBigInteger('nodo_desde_id')->nullable();
             $table->unsignedBigInteger('nodo_hasta_id')->nullable();
             $table->json('metadata')->nullable();
             $table->timestamp('created_at')->useCurrent();
-
-            $table->foreign('tramite_id')
-                ->references('id')
-                ->on('tramites')
-                ->cascadeOnDelete();
-
-            $table->foreign('usuario_id')
-                ->references('id')
-                ->on('usuarios')
-                ->nullOnDelete();
 
             $table->foreign('nodo_desde_id')
                 ->references('id')

@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Migración para crear la tabla de niveles
+ * Migración para crear las tablas de niveles jerárquicos (1-4)
  */
 return new class extends Migration
 {
@@ -14,17 +14,44 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('niveles', function (Blueprint $table) {
+        // Nivel 1 (Áreas principales)
+        Schema::create('nivel_1', function (Blueprint $table) {
             $table->id();
             $table->string('nombre', 100);
-            $table->text('descripcion')->nullable();
-            $table->integer('orden')->default(0);
-            $table->enum('estado', ['ACTIVO', 'INACTIVO'])->default('ACTIVO');
             $table->timestamps();
-            
-            // Índices
-            $table->index('estado');
-            $table->index('orden');
+        });
+
+        // Nivel 2 (Subáreas)
+        Schema::create('nivel_2', function (Blueprint $table) {
+            $table->id();
+            $table->string('nombre', 100);
+            $table->unsignedBigInteger('id_nivel1');
+            $table->timestamps();
+
+            $table->foreign('id_nivel1')->references('id')->on('nivel_1')->cascadeOnDelete();
+            $table->index('id_nivel1');
+        });
+
+        // Nivel 3
+        Schema::create('nivel_3', function (Blueprint $table) {
+            $table->id();
+            $table->string('nombre', 100);
+            $table->unsignedBigInteger('id_nivel2');
+            $table->timestamps();
+
+            $table->foreign('id_nivel2')->references('id')->on('nivel_2')->cascadeOnDelete();
+            $table->index('id_nivel2');
+        });
+
+        // Nivel 4
+        Schema::create('nivel_4', function (Blueprint $table) {
+            $table->id();
+            $table->string('nombre', 100);
+            $table->unsignedBigInteger('id_nivel3');
+            $table->timestamps();
+
+            $table->foreign('id_nivel3')->references('id')->on('nivel_3')->cascadeOnDelete();
+            $table->index('id_nivel3');
         });
     }
 
@@ -33,6 +60,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('niveles');
+        Schema::dropIfExists('nivel_4');
+        Schema::dropIfExists('nivel_3');
+        Schema::dropIfExists('nivel_2');
+        Schema::dropIfExists('nivel_1');
     }
 };

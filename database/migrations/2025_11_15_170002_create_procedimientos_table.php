@@ -16,26 +16,25 @@ return new class extends Migration
     {
         Schema::create('procedimientos', function (Blueprint $table) {
             $table->id();
-            $table->string('codigo', 20)->unique();
             $table->string('nombre', 200);
             $table->text('descripcion')->nullable();
-            $table->enum('tipo', ['ADMINISTRATIVO', 'ACADEMICO', 'LEGAL', 'OTRO'])->default('ADMINISTRATIVO');
-            $table->decimal('costo', 10, 2)->default(0.00);
-            $table->integer('tiempo_estimado_dias')->default(15);
-            $table->enum('estado', ['ACTIVO', 'INACTIVO'])->default('ACTIVO');
             $table->unsignedBigInteger('id_area')->nullable();
-            $table->unsignedBigInteger('id_nivel')->nullable();
+            $table->unsignedBigInteger('id_subarea')->nullable();
+            $table->enum('nivel_final', ['2', '3', '4'])->default('4');
+            $table->unsignedBigInteger('id_nivel_final')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
-            
+
             // Índices
-            $table->index('codigo');
-            $table->index('estado');
             $table->index('id_area');
-            $table->index('id_nivel');
-            
+            $table->index('id_subarea');
+            $table->index('id_nivel_final');
+
             // Claves foráneas
-            $table->foreign('id_area')->references('id')->on('areas')->onDelete('set null');
-            $table->foreign('id_nivel')->references('id')->on('niveles')->onDelete('set null');
+            $table->foreign('id_area')->references('id')->on('nivel_1')->onDelete('set null');
+            $table->foreign('id_subarea')->references('id')->on('nivel_2')->onDelete('set null');
+            $table->foreign('id_nivel_final')->references('id')->on('nivel_3')->onDelete('set null');
         });
     }
 
