@@ -109,15 +109,10 @@ return new class extends Migration
         });
 
         Schema::table('tramites', function (Blueprint $table) {
-            $table->unsignedBigInteger('id_nodo_actual')->nullable()->after('nivel_actual');
-            $table->string('modo_derivacion', 20)->default('AUTO')->after('id_nodo_actual');
-
             $table->foreign('id_nodo_actual')
                 ->references('id')
                 ->on('flujo_nodos')
                 ->nullOnDelete();
-
-            $table->index('modo_derivacion');
         });
     }
 
@@ -125,8 +120,6 @@ return new class extends Migration
     {
         Schema::table('tramites', function (Blueprint $table) {
             $table->dropForeign(['id_nodo_actual']);
-            $table->dropIndex(['modo_derivacion']);
-            $table->dropColumn(['id_nodo_actual', 'modo_derivacion']);
         });
 
         Schema::table('procedimientos', function (Blueprint $table) {
