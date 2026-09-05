@@ -30,7 +30,8 @@ return new class extends Migration
             $table->text('motivo_rechazo')->nullable();
             $table->unsignedBigInteger('revisado_por')->nullable();
             $table->dateTime('fecha_revision')->nullable();
-            $table->timestamps();
+            $table->timestamp('fecha_creacion')->nullable();
+            $table->timestamp('updated_at')->nullable();
             $table->softDeletes();
             
             // Índices
@@ -39,7 +40,7 @@ return new class extends Migration
             $table->index('id_usuario');
             $table->index('id_procedimiento');
             $table->index('fecha_presentacion');
-            $table->index('created_at');
+            $table->index('fecha_creacion');
             
             // Claves foráneas
             $table->foreign('id_usuario')->references('id')->on('usuarios')->onDelete('cascade');

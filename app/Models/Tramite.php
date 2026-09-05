@@ -291,7 +291,7 @@ class Tramite extends Model
      */
     public function getAntiguedadDiasAttribute(): int
     {
-        return $this->created_at->diffInDays(now());
+        return $this->fecha_creacion->diffInDays(now());
     }
 
     /**
