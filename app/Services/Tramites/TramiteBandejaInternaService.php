@@ -116,34 +116,46 @@ class TramiteBandejaInternaService
                 break;
 
             case EstadoTramite::EN_PROCESO:
-                $acciones[] = 'OBSERVAR';
-                if ($tramite->modo_derivacion === ModoDerivacion::AUTO) {
-                    $acciones[] = 'MODO_MANUAL';
-                }
-                if ($tramite->id_nodo_actual && $nodo
-                    && $this->tramiteFlujoService->nodoTieneTransicionesSalientes($nodo)) {
-                    $acciones[] = 'DERIVAR';
-                }
-                if ($tramite->id_nodo_actual && $nodo
-                    && $this->tramiteFlujoService->contarMiembrosDistintosEnNodo($nodo) >= 2) {
-                    $acciones[] = 'DERIVAR_ESPECIALISTA';
-                }
-                if (!$tramite->id_nodo_actual) {
-                    $acciones[] = 'DERIVAR';
-                }
-                if ($tramite->id_nodo_actual && $this->tramiteFlujoService->puedeRetrocederEnGrafo($tramite)) {
-                    $acciones[] = 'RETROCEDER';
-                }
-                if ($nodo && $nodo->puede_finalizar) {
-                    $acciones[] = 'OBSERVAR_CON_OFICIO';
-                    if (!$tieneOficio) {
-                        $acciones[] = 'PROCESAR';
-                    } else {
-                        $acciones[] = 'VERIFICAR';
+                // Determinar si es nodo de entrada (orden = 1)
+                $esNodoEntrada = $nodo && $nodo->orden === 1;
+
+                if ($esNodoEntrada) {
+                    // En nodo de entrada (Level 1): solo DERIVAR hacia adelante
+                    if ($tramite->id_nodo_actual && $nodo
+                        && $this->tramiteFlujoService->nodoTieneTransicionesSalientes($nodo)) {
+                        $acciones[] = 'DERIVAR';
                     }
-                }
-                if ($nodo && $nodo->puede_rechazar_definitivo) {
-                    $acciones[] = 'RECHAZAR';
+                } else {
+                    // Nodos intermedios y finales: acciones completas
+                    $acciones[] = 'OBSERVAR';
+                    if ($tramite->modo_derivacion === ModoDerivacion::AUTO) {
+                        $acciones[] = 'MODO_MANUAL';
+                    }
+                    if ($tramite->id_nodo_actual && $nodo
+                        && $this->tramiteFlujoService->nodoTieneTransicionesSalientes($nodo)) {
+                        $acciones[] = 'DERIVAR';
+                    }
+                    if ($tramite->id_nodo_actual && $nodo
+                        && $this->tramiteFlujoService->contarMiembrosDistintosEnNodo($nodo) >= 2) {
+                        $acciones[] = 'DERIVAR_ESPECIALISTA';
+                    }
+                    if (!$tramite->id_nodo_actual) {
+                        $acciones[] = 'DERIVAR';
+                    }
+                    if ($tramite->id_nodo_actual && $this->tramiteFlujoService->puedeRetrocederEnGrafo($tramite)) {
+                        $acciones[] = 'RETROCEDER';
+                    }
+                    if ($nodo && $nodo->puede_finalizar) {
+                        $acciones[] = 'OBSERVAR_CON_OFICIO';
+                        if (!$tieneOficio) {
+                            $acciones[] = 'PROCESAR';
+                        } else {
+                            $acciones[] = 'VERIFICAR';
+                        }
+                    }
+                    if ($nodo && $nodo->puede_rechazar_definitivo) {
+                        $acciones[] = 'RECHAZAR';
+                    }
                 }
                 break;
 

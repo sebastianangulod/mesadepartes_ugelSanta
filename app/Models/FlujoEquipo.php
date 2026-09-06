@@ -14,6 +14,8 @@ class FlujoEquipo extends Model
     protected $fillable = [
         'nodo_id',
         'nombre',
+        'nombre_tecnico',
+        'nombre_visible',
     ];
 
     public function nodo(): BelongsTo
@@ -30,5 +32,13 @@ class FlujoEquipo extends Model
     public function equipoUsuarioFilas(): HasMany
     {
         return $this->hasMany(FlujoEquipoUsuario::class, 'equipo_id');
+    }
+
+    /**
+     * Nombre para mostrar en UI: prioriza nombre_visible, fallback a nombre_tecnico, luego nombre
+     */
+    public function getNombreDisplayAttribute(): string
+    {
+        return $this->nombre_visible ?? $this->nombre_tecnico ?? $this->nombre ?? '';
     }
 }

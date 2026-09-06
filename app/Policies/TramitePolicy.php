@@ -210,6 +210,11 @@ class TramitePolicy
             return true;
         }
 
+        // En nodo de entrada (orden=1), no permitir RECHAZAR después de ACEPTAR
+        if ($this->esNodoEntrada($tramite)) {
+            return false;
+        }
+
         $estadosOk = in_array($tramite->estado, [
             \App\Domain\Tramites\EstadoTramite::PENDIENTE,
             \App\Domain\Tramites\EstadoTramite::EN_PROCESO,
@@ -243,6 +248,11 @@ class TramitePolicy
 
         if ($usuario->esAdministrador()) {
             return true;
+        }
+
+        // En nodo de entrada (orden=1), no permitir OBSERVAR después de ACEPTAR
+        if ($this->esNodoEntrada($tramite)) {
+            return false;
         }
 
         $estadosOk = in_array($tramite->estado, [
@@ -331,5 +341,17 @@ class TramitePolicy
         $nodo = $tramite->nodoActual ?? $tramite->procedimiento?->nodoEntrada;
 
         return $nodo && $this->tramiteFlujoService->usuarioInternoPuedeActuarEnNodo($usuario, $nodo);
+    }
+
+    /**
+     * Verifica si el trámite está en el nodo de entrada (orden = 1)
+     * En el nodo de entrada, después de ACEPTAR, solo se permite DERIVAR
+     */
+    private function esNodoEntrada(Tramite $tramite): bool
+    {
+        $tramite->loadMissing('nodoActual');
+        return $tramite->id_nodo_actual
+            && $tramite->nodoActual
+            && $tramite->nodoActual->orden === 1;
     }
 }

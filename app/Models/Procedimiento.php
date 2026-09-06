@@ -4,6 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use App\Models\FlujoNodo;
+use App\Models\FlujoEquipo;
+use App\Models\FlujoTransicion;
+use App\Models\Nivel1;
+use App\Models\Nivel2;
+use App\Models\Nivel3;
+use App\Models\Nivel4;
 
 /**
  * Modelo Procedimiento
@@ -286,18 +295,232 @@ class Procedimiento extends Model
         return $query->where('id_nivel', $nivelId);
     }
 
-    /**
-     * Scope para búsqueda
-     * 
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $termino
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    public function scopeBuscar($query, $termino)
-    {
-        return $query->where(function ($q) use ($termino) {
-            // Solo buscamos en 'nombre' ya que 'codigo' y 'descripcion' no existen en la tabla real
-            $q->where('nombre', 'like', "%{$termino}%");
-        });
+/**
+ * Scope para búsqueda
+ * 
+ * @param \Illuminate\Database\Eloquent\Builder $query
+ * @param string $termino
+ * @return \Illuminate\Database\Eloquent\Builder
+ */
+public function scopeBuscar($query, $termino)
+{
+    return $query->where(function ($q) use ($termino) {
+        // Solo buscamos en 'nombre' ya que 'codigo' y 'descripcion' no existen en la tabla real
+        $q->where('nombre', 'like', "%{$termino}%");
+    });
+}
+
+/**
+ * Boot: auto-crear nodos y equipos del flujo configurable
+ */
+protected static function booted(): void
+{
+    static::created(function (self $procedimiento) {
+        $procedimiento->crearFlujoConfigurativo();
+    });
+
+    static::updated(function (self $procedimiento) {
+        // Solo regenerar si cambiaron los niveles
+        $dirty = $procedimiento->getDirty();
+        if (isset($dirty['id_area']) || isset($dirty['id_subarea']) || 
+            isset($dirty['nivel_final']) || isset($dirty['id_nivel_final'])) {
+            $procedimiento->crearFlujoConfigurativo();
+        }
+    });
+}
+
+/**
+ * Crear/actualizar nodos y equipos del flujo configurable basado en niveles del procedimiento
+ * Genera: Nivel 1 → Nivel 2 → ... → Nivel Final
+ * Cada nodo tiene 1 equipo con nombre técnico y visible
+ */
+public function crearFlujoConfigurativo(): void
+{
+    if (!$this->id_area) {
+        return; // Sin área no hay flujo
     }
+
+    $niveles = $this->obtenerNivelesDelProcedimiento();
+    if (empty($niveles)) {
+        return;
+    }
+
+    DB::transaction(function () use ($niveles) {
+        $nodoAnteriorId = null;
+        $nodoEntradaId = null;
+
+        foreach ($niveles as $index => $nivelData) {
+            [$nivelNumero, $idNivel, $nombreNivel, $esFinal] = $nivelData;
+
+            // Nombre técnico: "Nivel X - NombreNivel"
+            $nombreTecnico = "Nivel {$nivelNumero} - {$nombreNivel}";
+            // Nombre visible: usa el nombre del nivel (admin puede cambiarlo después)
+            $nombreVisible = $nombreNivel;
+
+            // Crear o actualizar nodo
+            $nodo = FlujoNodo::updateOrCreate(
+                [
+                    'id_procedimiento' => $this->id,
+                    'orden' => $index + 1,
+                ],
+                [
+                    'nombre' => $nombreTecnico,
+                    'slug' => 'nivel-' . $nivelNumero . '-' . Str::slug($nombreNivel),
+                    'puede_finalizar' => $esFinal,
+                    'puede_rechazar_definitivo' => $esFinal,
+                    'es_terminal' => $esFinal,
+                ]
+            );
+
+            // Crear o actualizar equipo para este nodo
+            $equipo = FlujoEquipo::updateOrCreate(
+                ['nodo_id' => $nodo->id],
+                [
+                    'nombre' => $nombreTecnico,
+                    'nombre_tecnico' => $nombreTecnico,
+                    'nombre_visible' => $nombreVisible,
+                ]
+            );
+
+            // El primer nodo es el de entrada
+            if ($index === 0) {
+                $nodoEntradaId = $nodo->id;
+            }
+
+            // Crear transición desde nodo anterior
+            if ($nodoAnteriorId) {
+                FlujoTransicion::updateOrCreate(
+                    [
+                        'desde_nodo_id' => $nodoAnteriorId,
+                        'hacia_nodo_id' => $nodo->id,
+                    ],
+                    [
+                        'es_default_auto' => true,
+                    ]
+                );
+            }
+
+            $nodoAnteriorId = $nodo->id;
+        }
+
+// Actualizar nodo de entrada del procedimiento
+            if ($nodoEntradaId) {
+                $this->updateQuietly(['id_nodo_entrada' => $nodoEntradaId]);
+            }
+
+            // Sincronizar usuarios_niveles existentes a los nuevos equipos
+            $this->syncUsuariosNivelesToEquipos();
+        });
+}
+
+/**
+ * Obtener niveles que conforman el flujo del procedimiento
+ * @return array<int, array<int|string|bool>>
+ */
+private function obtenerNivelesDelProcedimiento(): array
+{
+    $niveles = [];
+
+    // Nivel 1 (Área) - siempre requerido
+    if ($this->id_area) {
+        $nivel1 = Nivel1::find($this->id_area);
+        if ($nivel1) {
+            $esFinal = ($this->nivel_final === '1'); // Poco común pero posible
+            $niveles[] = [1, $nivel1->id, $nivel1->nombre, $esFinal];
+        }
+    }
+
+    // Nivel 2 (Subárea)
+    if ($this->id_subarea) {
+        $nivel2 = Nivel2::find($this->id_subarea);
+        if ($nivel2) {
+            $esFinal = ($this->nivel_final === '2' && $this->id_nivel_final == $nivel2->id);
+            $niveles[] = [2, $nivel2->id, $nivel2->nombre, $esFinal];
+        }
+    }
+
+    // Nivel 3
+    if (in_array($this->nivel_final, ['3', '4'])) {
+        $idNivel3 = null;
+        if ($this->nivel_final === '3') {
+            $idNivel3 = $this->id_nivel_final;
+        } elseif ($this->nivel_final === '4' && $this->id_nivel_final) {
+            $nivel4 = Nivel4::find($this->id_nivel_final);
+            if ($nivel4 && $nivel4->id_nivel3) {
+                $idNivel3 = $nivel4->id_nivel3;
+            }
+        }
+        if ($idNivel3) {
+            $nivel3 = Nivel3::find($idNivel3);
+            if ($nivel3) {
+                $esFinal = ($this->nivel_final === '3' && $this->id_nivel_final == $nivel3->id);
+                $niveles[] = [3, $nivel3->id, $nivel3->nombre, $esFinal];
+            }
+        }
+    }
+
+    // Nivel 4
+    if ($this->nivel_final === '4' && $this->id_nivel_final) {
+        $nivel4 = Nivel4::find($this->id_nivel_final);
+        if ($nivel4) {
+            $niveles[] = [4, $nivel4->id, $nivel4->nombre, true];
+        }
+    }
+
+    return $niveles;
+}
+
+/**
+ * Sincronizar usuarios_niveles existentes a los equipos del flujo configurativo
+ */
+private function syncUsuariosNivelesToEquipos(): void
+{
+    // Para cada nivel del procedimiento, buscar usuarios en usuarios_niveles
+    // y agregarlos a los equipos correspondientes
+    $equipos = FlujoEquipo::whereHas('nodo', function ($q) {
+        $q->where('id_procedimiento', $this->id);
+    })->get();
+
+    foreach ($equipos as $equipo) {
+        // Extraer nivel y nombre del nombre_tecnico: "Nivel X - NombreNivel"
+        if (!preg_match('/^Nivel (\d+) - (.+)$/', $equipo->nombre_tecnico, $matches)) {
+            continue;
+        }
+        $nivelNumero = (int) $matches[1];
+        $nivelNombre = $matches[2];
+
+        // Determinar tabla del nivel según el número
+        $tablaNivel = match ($nivelNumero) {
+            1 => 'nivel_1',
+            2 => 'nivel_2',
+            3 => 'nivel_3',
+            4 => 'nivel_4',
+            default => null,
+        };
+
+        if (!$tablaNivel) {
+            continue;
+        }
+
+        // Buscar usuarios en usuarios_niveles para este nivel y nombre
+        $usuariosNiveles = UsuariosNiveles::where('nivel', $nivelNumero)
+            ->where('id_nivel', function ($q) use ($tablaNivel, $nivelNombre) {
+                $q->select('id')->from($tablaNivel)->where('nombre', $nivelNombre);
+            })
+            ->whereHas('usuario', function ($q) {
+                $q->where('tipo_user', 2); // Solo internos
+            })
+            ->get();
+
+        foreach ($usuariosNiveles as $un) {
+            FlujoEquipoUsuario::updateOrCreate(
+                [
+                    'equipo_id' => $equipo->id,
+                    'usuario_id' => $un->id_usuario,
+                ],
+                []
+            );
+        }
+    }
+}
 }

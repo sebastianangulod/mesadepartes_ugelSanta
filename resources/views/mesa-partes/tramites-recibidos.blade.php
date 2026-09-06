@@ -560,9 +560,17 @@
         
         if (tramite.accionesPermitidas && tramite.accionesPermitidas.length > 0) {
             const etiquetasAccion = {
-                'MODO_MANUAL': 'Activar derivación manual',
+                'ACEPTAR': 'Aceptar',
+                'OBSERVAR': 'Observar',
                 'OBSERVAR_CON_OFICIO': 'Observar con oficio',
-                'RETROCEDER': 'Retroceder en el flujo',
+                'RECHAZAR': 'Rechazar',
+                'DERIVAR': 'Derivar',
+                'DERIVAR_ESPECIALISTA': 'Derivar a especialista',
+                'MODO_MANUAL': 'Activar derivación manual',
+                'RETROCEDER': 'Retroceder',
+                'VERIFICAR': 'Verificar',
+                'PROCESAR': 'Procesar',
+                'CORREGIR': 'Corregir',
             };
             tramite.accionesPermitidas.forEach(acc => {
                 const btn = document.createElement('button');
