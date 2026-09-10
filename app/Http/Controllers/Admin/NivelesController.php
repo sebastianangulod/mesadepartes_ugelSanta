@@ -59,9 +59,92 @@ class NivelesController extends Controller
      */
     public function obtenerNivel1()
     {
-        // Implementar: retornar JSON con niveles 1
-        // Formato: [{id, nombre, descripcion, estado}]
-        // Orden: por nombre ascendente
+        try {
+            $niveles1 = Nivel1::orderBy('nombre')
+                ->get(['id', 'nombre']);
+
+            return response()->json([
+                'success' => true,
+                'data' => $niveles1
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener niveles 1: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener todos los niveles 2 (sin filtro de padre)
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function obtenerTodosNivel2()
+    {
+        try {
+            $niveles2 = Nivel2::with('nivel1:id,nombre')
+                ->orderBy('nombre')
+                ->get(['id', 'nombre', 'id_nivel1']);
+
+            return response()->json([
+                'success' => true,
+                'data' => $niveles2
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener niveles 2: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener todos los niveles 3 (sin filtro de padre)
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function obtenerTodosNivel3()
+    {
+        try {
+            $niveles3 = Nivel3::with('nivel2:id,nombre')
+                ->orderBy('nombre')
+                ->get(['id', 'nombre', 'id_nivel2']);
+
+            return response()->json([
+                'success' => true,
+                'data' => $niveles3
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener niveles 3: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener todos los niveles 4 (sin filtro de padre)
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function obtenerTodosNivel4()
+    {
+        try {
+            $niveles4 = Nivel4::with('nivel3:id,nombre')
+                ->orderBy('nombre')
+                ->get(['id', 'nombre', 'id_nivel3']);
+
+            return response()->json([
+                'success' => true,
+                'data' => $niveles4
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener niveles 4: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -152,6 +235,7 @@ class NivelesController extends Controller
             'nivel' => 'required|string|in:nivel_1,nivel_2,nivel_3,nivel_4',
             'nombre' => 'required|string|max:55',
             'id_parent' => 'nullable|integer',
+            'orden' => 'nullable|integer|min:0|max:65535',
         ]);
 
         if ($validator->fails()) {
@@ -165,6 +249,7 @@ class NivelesController extends Controller
             $nivel = $request->nivel;
             $nombre = strtoupper(trim($request->nombre));
             $idParent = $request->id_parent;
+            $orden = $request->orden ?? 0;
 
             // Crear el nivel según el tipo
             switch ($nivel) {
@@ -172,6 +257,7 @@ class NivelesController extends Controller
                     // Nivel 1 no tiene padre
                     $nuevoNivel = Nivel1::create([
                         'nombre' => $nombre,
+                        'orden' => $orden,
                     ]);
                     break;
                 case 'nivel_2':
@@ -185,6 +271,7 @@ class NivelesController extends Controller
                     $nuevoNivel = Nivel2::create([
                         'nombre' => $nombre,
                         'id_nivel1' => $idParent,
+                        'orden' => $orden,
                     ]);
                     break;
                 case 'nivel_3':
@@ -198,6 +285,7 @@ class NivelesController extends Controller
                     $nuevoNivel = Nivel3::create([
                         'nombre' => $nombre,
                         'id_nivel2' => $idParent,
+                        'orden' => $orden,
                     ]);
                     break;
                 case 'nivel_4':
@@ -211,6 +299,7 @@ class NivelesController extends Controller
                     $nuevoNivel = Nivel4::create([
                         'nombre' => $nombre,
                         'id_nivel3' => $idParent,
+                        'orden' => $orden,
                     ]);
                     break;
             }
@@ -256,6 +345,7 @@ class NivelesController extends Controller
         $validator = Validator::make($request->all(), [
             'nivel' => 'required|string|in:nivel_1,nivel_2,nivel_3,nivel_4',
             'nombre' => 'required|string|max:55',
+            'orden' => 'nullable|integer|min:0|max:65535',
         ]);
 
         if ($validator->fails()) {
@@ -268,6 +358,7 @@ class NivelesController extends Controller
         try {
             $nivel = $request->nivel;
             $nombre = strtoupper(trim($request->nombre));
+            $orden = $request->orden ?? 0;
 
             // Obtener y actualizar el nivel según el tipo
             switch ($nivel) {
@@ -285,7 +376,10 @@ class NivelesController extends Controller
                     break;
             }
 
-            $nivelModel->update(['nombre' => $nombre]);
+            $nivelModel->update([
+                'nombre' => $nombre,
+                'orden' => $orden,
+            ]);
 
             return response()->json([
                 'success' => true,

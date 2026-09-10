@@ -6,6 +6,7 @@ use App\Domain\Tramites\EstadoTramite;
 use App\Domain\Tramites\ModoDerivacion;
 use App\Models\FlujoNodo;
 use App\Models\FlujoTransicion;
+use App\Models\Procedimiento;
 use App\Models\Tramite;
 use App\Models\TramiteMovimiento;
 use App\Models\Usuario;
@@ -94,7 +95,7 @@ class TramiteFlujoService
         return DB::transaction(function () use ($tramite, $actor) {
             $tramite->load('nodoActual');
 
-            if ($tramite->modo_derivacion === ModoDerivacion::MANUAL_FORZADO) {
+            if ($tramite->esModoManual()) {
                 return $tramite;
             }
 
@@ -107,9 +108,50 @@ class TramiteFlujoService
             }
 
             $tramite->modo_derivacion = ModoDerivacion::MANUAL_FORZADO;
+            $tramite->modo_manual_por_usuario = null;
             $tramite->save();
 
             $this->registrarMovimiento($tramite, (int) $actor->id, 'MODO_MANUAL_FORZADO', $tramite->id_nodo_actual, $tramite->id_nodo_actual, []);
+
+            return $tramite->fresh(['nodoActual']);
+        });
+    }
+
+    /**
+     * Desactiva el modo manual forzado y vuelve a AUTO
+     *
+     * @param Tramite $tramite
+     * @param Usuario|null $actor
+     * @return Tramite
+     * @throws Exception
+     */
+    public function desactivarModoDerivacionManual(Tramite $tramite, ?Usuario $actor = null): Tramite
+    {
+        $actor = $actor ?? Auth::user();
+        if (!$actor instanceof Usuario) {
+            throw new Exception('Usuario no autenticado');
+        }
+
+        return DB::transaction(function () use ($tramite, $actor) {
+            $tramite->load('nodoActual');
+
+            if (!$tramite->esModoManual()) {
+                return $tramite;
+            }
+
+            if (!$tramite->id_nodo_actual || !$tramite->nodoActual) {
+                throw new Exception('El trámite no tiene nodo actual asignado');
+            }
+
+            if (!$actor->esAdministrador() && !$this->usuarioInternoPuedeActuarEnNodo($actor, $tramite->nodoActual)) {
+                throw new Exception('No tiene permiso para cambiar el modo de derivación en este nodo');
+            }
+
+            $tramite->modo_manual_por_usuario = null;
+            $tramite->modo_derivacion = ModoDerivacion::AUTO;
+            $tramite->save();
+
+            $this->registrarMovimiento($tramite, (int) $actor->id, 'MODO_AUTO_RESTAURADO', $tramite->id_nodo_actual, $tramite->id_nodo_actual, []);
 
             return $tramite->fresh(['nodoActual']);
         });
@@ -210,7 +252,16 @@ class TramiteFlujoService
                 throw new Exception('No tiene permiso para derivar en este nodo');
             }
 
-            $modo = $tramite->modo_derivacion ?? ModoDerivacion::AUTO;
+            $modo = $tramite->esModoManual() ? ModoDerivacion::MANUAL_FORZADO : ModoDerivacion::AUTO;
+
+            // Los nodos autorizados a finalizar (puede_finalizar) no pueden derivar en
+            // modo manual: al desactivar la derivación automática solo pueden reactivarla.
+            if ($modo === ModoDerivacion::MANUAL_FORZADO && $nodoDesde->puede_finalizar) {
+                throw new Exception(
+                    'El nodo actual está autorizado a finalizar: no puede derivar en modo manual. Reactive la derivación automática para poder derivar.'
+                );
+            }
+
             $transicion = $this->resolverTransicionSaliente($nodoDesde, $modo, $haciaNodoId);
             $nodoHasta = $transicion->nodoHacia;
             if (!$nodoHasta) {
@@ -378,8 +429,32 @@ class TramiteFlujoService
     /**
      * @throws Exception
      */
-    private function resolverTransicionSaliente(FlujoNodo $desde, string $modoDerivacion, ?int $haciaNodoId): FlujoTransicion
+    private function resolverTransicionSaliente(FlujoNodo $desde, string $modoDerivacion, ?int $haciaNodoId): object
     {
+        // En modo manual con destino explícito: permitir derivar a CUALQUIER nodo del
+        // procedimiento, incluso desde un nodo terminal (nivel final) sin transiciones.
+        // En modo AUTO con destino explícito desde nodo final (puede_finalizar): también permitir.
+        if (($modoDerivacion === ModoDerivacion::MANUAL_FORZADO || ($modoDerivacion === ModoDerivacion::AUTO && (bool) $desde->puede_finalizar)) && $haciaNodoId !== null) {
+            $nodoHasta = FlujoNodo::query()
+                ->where('id', $haciaNodoId)
+                ->where('id_procedimiento', $desde->id_procedimiento)
+                ->where('id', '!=', $desde->id) // No auto-derivar
+                ->first();
+
+            if (!$nodoHasta) {
+                throw new Exception('El nodo destino no existe o no pertenece a este procedimiento');
+            }
+
+            // Crear una transición virtual para mantener compatibilidad
+            return (object) [
+                'id' => 0,
+                'desde_nodo_id' => $desde->id,
+                'hacia_nodo_id' => $nodoHasta->id,
+                'es_default_auto' => false,
+                'nodoHacia' => $nodoHasta,
+            ];
+        }
+
         /** @var Collection<int, FlujoTransicion> $transiciones */
         $transiciones = FlujoTransicion::query()
             ->where('desde_nodo_id', $desde->id)
@@ -387,6 +462,26 @@ class TramiteFlujoService
             ->get();
 
         if ($transiciones->isEmpty()) {
+            // Nodo terminal (nivel final) sin transiciones: en modo AUTO la derivación
+            // reinicia el flujo enviando el trámite al nodo de entrada del procedimiento.
+            // Así, cualquier usuario asignado al nivel final puede volver a derivar el
+            // trámite cuando la derivación automática está activada.
+            if ($modoDerivacion === ModoDerivacion::AUTO && (bool) $desde->es_terminal) {
+                $nodoEntrada = $this->nodoEntradaDelProcedimiento((int) $desde->id_procedimiento);
+
+                if ($nodoEntrada && (int) $nodoEntrada->id !== (int) $desde->id) {
+                    return (object) [
+                        'id' => 0,
+                        'desde_nodo_id' => $desde->id,
+                        'hacia_nodo_id' => $nodoEntrada->id,
+                        'es_default_auto' => true,
+                        'nodoHacia' => $nodoEntrada,
+                    ];
+                }
+
+                throw new Exception('El trámite está en el nivel final y el procedimiento no tiene un nodo de entrada para reiniciar el flujo');
+            }
+
             throw new Exception('No hay transiciones configuradas desde el nodo actual');
         }
 
@@ -398,20 +493,8 @@ class TramiteFlujoService
         }
 
         if ($modoDerivacion === ModoDerivacion::MANUAL_FORZADO) {
-            if ($haciaNodoId !== null) {
-                $elegida = $transiciones->firstWhere('hacia_nodo_id', $haciaNodoId);
-                if (!$elegida) {
-                    throw new Exception('El nodo destino no es una transición válida desde el nodo actual');
-                }
-
-                return $elegida;
-            }
-
-            if ($transiciones->count() === 1) {
-                return $transiciones->first();
-            }
-
-            throw new Exception('En modo manual debe enviar hacia_nodo_id cuando hay más de una transición posible');
+            // Si no se especifica destino en manual, lanzar error
+            throw new Exception('En modo manual debe especificar el nodo destino');
         }
 
         $defaultes = $transiciones->where('es_default_auto', true)->values();
@@ -454,6 +537,23 @@ class TramiteFlujoService
     }
 
     /**
+     * Nodo de entrada configurado del procedimiento (usado para reiniciar el flujo
+     * cuando se deriva desde el nodo terminal / nivel final en modo AUTO).
+     */
+    private function nodoEntradaDelProcedimiento(int $procedimientoId): ?FlujoNodo
+    {
+        $entradaId = Procedimiento::query()
+            ->where('id', $procedimientoId)
+            ->value('id_nodo_entrada');
+
+        if (!$entradaId) {
+            return null;
+        }
+
+        return FlujoNodo::query()->find($entradaId);
+    }
+
+    /**
      * Nodo usado para permisos (actual o entrada), igual criterio que la bandeja interna.
      */
     public function nodoContextoPermisos(Tramite $tramite): ?FlujoNodo
@@ -468,17 +568,39 @@ class TramiteFlujoService
     }
 
     /**
-     * Transiciones salientes desde el nodo actual (para UI de derivación manual).
+     * Obtiene las opciones de derivación para un trámite.
+     * En modo AUTO: solo transiciones desde el nodo actual (excepto nodos con puede_finalizar, que pueden derivar a cualquier nodo).
+     * En modo MANUAL_FORZADO: TODOS los nodos del procedimiento (excepto el actual).
      *
      * @return list<array{id:int, hacia_nodo_id:int, nombre_destino:string, es_default_auto:bool}>
      */
     public function listarOpcionesDerivacionDesdeTramite(Tramite $tramite): array
     {
-        $tramite->loadMissing('nodoActual');
+        $tramite->loadMissing(['nodoActual', 'procedimiento']);
         if (!$tramite->id_nodo_actual || !$tramite->nodoActual) {
             return [];
         }
 
+        $esManual = $tramite->esModoManual();
+        $esNodoFinal = (bool) $tramite->nodoActual->puede_finalizar;
+
+        if ($esManual || $esNodoFinal) {
+            // En modo manual O en nodo final: TODOS los nodos del procedimiento excepto el actual
+            return $tramite->procedimiento->flujoNodos
+                ->where('id', '!=', $tramite->nodoActual->id)
+                ->map(function (FlujoNodo $nodo) {
+                    return [
+                        'id' => (int) $nodo->id,
+                        'hacia_nodo_id' => (int) $nodo->id,
+                        'nombre_destino' => $nodo->nombre,
+                        'es_default_auto' => false,
+                    ];
+                })
+                ->values()
+                ->all();
+        }
+
+        // Modo AUTO (nodo no final): solo transiciones definidas desde el nodo actual
         return FlujoTransicion::query()
             ->where('desde_nodo_id', $tramite->nodoActual->id)
             ->with('nodoHacia')

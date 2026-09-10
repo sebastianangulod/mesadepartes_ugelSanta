@@ -154,6 +154,62 @@ class TramitePolicy
     }
 
     /**
+     * Determinar si el usuario puede activar la derivación manual
+     *
+     * @param Usuario $usuario
+     * @param Tramite $tramite
+     * @return bool
+     */
+    public function modoManual(Usuario $usuario, Tramite $tramite): bool
+    {
+        if (!$usuario->estaActivo() || $tramite->esModoManual()) {
+            return false;
+        }
+
+        if ($usuario->esAdministrador()) {
+            return true;
+        }
+
+        // Usuario interno del mismo nodo actual puede forzar a MANUAL
+        if ($usuario->esInterno()) {
+            $tramite->loadMissing('nodoActual');
+            if ($tramite->nodoActual && $this->tramiteFlujoService->usuarioInternoPuedeActuarEnNodo($usuario, $tramite->nodoActual)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Determinar si el usuario puede restaurar la derivación automática
+     *
+     * @param Usuario $usuario
+     * @param Tramite $tramite
+     * @return bool
+     */
+    public function modoAuto(Usuario $usuario, Tramite $tramite): bool
+    {
+        if (!$usuario->estaActivo() || !$tramite->esModoManual()) {
+            return false;
+        }
+
+        if ($usuario->esAdministrador()) {
+            return true;
+        }
+
+        // Usuario interno del mismo nodo actual puede restaurar a AUTO
+        if ($usuario->esInterno()) {
+            $tramite->loadMissing('nodoActual');
+            if ($tramite->nodoActual && $this->tramiteFlujoService->usuarioInternoPuedeActuarEnNodo($usuario, $tramite->nodoActual)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Determinar si el usuario puede derivar a otro Nivel 1
      * Solo en trámites PENDIENTE en nivel 1
      * 

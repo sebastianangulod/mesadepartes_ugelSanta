@@ -28,6 +28,10 @@ return new class extends Migration
             $table->tinyInteger('nivel_actual')->nullable()->comment('Nivel legacy del trámite (1-4)');
             $table->unsignedBigInteger('id_nodo_actual')->nullable()->comment('Nodo del flujo configurable');
             $table->string('modo_derivacion', 20)->default('AUTO');
+            $table->unsignedBigInteger('modo_manual_por_usuario')->nullable()
+                ->comment('ID del usuario que activó modo manual (null = AUTO para todos)');
+            
+            $table->foreign('modo_manual_por_usuario')->references('id')->on('usuarios')->onDelete('set null');
             $table->unsignedBigInteger('id_usuario');
             $table->unsignedBigInteger('creado_por')->nullable();
             $table->unsignedBigInteger('id_procedimiento')->nullable();

@@ -27,7 +27,8 @@ class Nivel4 extends Model
     protected $fillable = [
         'id',
         'nombre',
-        'id_nivel3'
+        'id_nivel3',
+        'orden'
     ];
 
     /**

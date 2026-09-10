@@ -9,6 +9,7 @@
         <!-- Filtros -->
         <div class="bg-white rounded-lg shadow p-6 mb-6">
             <form id="filtrosForm" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                @csrf
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Estado</label>
                     <select name="estado" id="filtro_estado" class="w-full p-2 border rounded">
@@ -265,6 +266,7 @@
 
 @push('scripts')
 <script>
+    console.log('=== tramites-recibidos script loaded ===');
     // Variables globales
     window.TIPO_USER = {{ Auth::user()->tipo_user }};
     window.USER_ID = {{ Auth::user()->id }};
@@ -390,6 +392,7 @@
 
     // Cargar trámites dinámicamente
     function cargarTramites(pagina = 1) {
+        console.log('=== cargarTramites called ===', { pagina });
         const formData = new FormData(document.getElementById('filtrosForm'));
         filtrosActuales = {
             estado: formData.get('estado'),
@@ -417,14 +420,14 @@
             body: payload
         })
         .then(res => {
-            console.log('Respuesta recibida', res.status, res.statusText);
+            console.log('=== Response received ===', res.status, res.statusText);
             if (!res.ok) {
                 throw new Error(`HTTP error! status: ${res.status}`);
             }
             return res.json();
         })
         .then(data => {
-            console.log('Datos recibidos:', data);
+            console.log('=== Data received ===', data);
             if (data.status === 'success') {
                 renderTramites(data.tramites || []);
                 paginaActual = data.pagina_actual || 1;
@@ -437,7 +440,7 @@
             }
         })
         .catch(error => {
-            console.error('Error completo:', error);
+            console.error('=== Error completo ===', error);
             document.getElementById('tramitesTableBody').innerHTML = 
                 '<tr><td colspan="9" class="text-center py-4 text-red-500">Error al cargar los trámites: ' + error.message + '</td></tr>';
         });
@@ -445,10 +448,16 @@
 
     // Renderizar trámites en la tabla
     function renderTramites(tramites) {
+        console.log('=== renderTramites called ===', { count: tramites?.length });
         const tbody = document.getElementById('tramitesTableBody');
+        if (!tbody) {
+            console.error('=== tbody NOT FOUND ===', 'tramitesTableBody');
+            return;
+        }
         tbody.innerHTML = '';
         
         if (!tramites || tramites.length === 0) {
+            console.log('=== No tramites to render ===');
             tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4">No hay trámites para mostrar</td></tr>';
             return;
         }
@@ -550,7 +559,7 @@
     }
 
     // Modal de acciones
-    window.abrirModalAcciones = function(idTramite) {
+    window.abrirModalAcciones = async function(idTramite) {
         const tramite = tramitesCache[idTramite];
         if (!tramite) return alert('No se encontró el trámite.');
         
@@ -567,20 +576,125 @@
                 'DERIVAR': 'Derivar',
                 'DERIVAR_ESPECIALISTA': 'Derivar a especialista',
                 'MODO_MANUAL': 'Activar derivación manual',
+                'MODO_AUTO': 'Restaurar derivación automática',
                 'RETROCEDER': 'Retroceder',
                 'VERIFICAR': 'Verificar',
                 'PROCESAR': 'Procesar',
                 'CORREGIR': 'Corregir',
             };
+            
+            // DEBUG: Log trámite data
+            console.log('=== Tramite data for modal ===', {
+                id: tramite.id,
+                modo_derivacion: tramite.modo_derivacion,
+                id_nodo_actual: tramite.id_nodo_actual,
+                nodo_puede_finalizar: tramite.nodo_puede_finalizar,
+                nodo_es_terminal: tramite.nodo_es_terminal,
+                accionesPermitidas: tramite.accionesPermitidas
+            });
+            
+            // En modo manual O en nodos finales (puede_finalizar), cargar opciones de derivación para DERIVAR
+            const esManual = tramite.id_nodo_actual && (tramite.modo_derivacion === 'MANUAL_FORZADO' || tramite.modo_derivacion === true);
+            // También cargar opciones si el nodo actual tiene puede_finalizar (para permitir elegir destino en AUTO)
+            // Verificar tanto el campo nuevo como el fallback nodo_es_terminal
+            const nodoPuedeFinalizar = tramite.nodo_puede_finalizar === true || tramite.nodo_puede_finalizar === 'true' || tramite.nodo_es_terminal === true || tramite.nodo_es_terminal === 'true';
+            const esNodoFinal = tramite.id_nodo_actual && nodoPuedeFinalizar;
+            const debeCargarOpciones = (esManual || esNodoFinal) && tramite.accionesPermitidas.includes('DERIVAR');
+            
+            console.log('=== DEBUG CONDITIONS ===', {
+                id_nodo_actual: tramite.id_nodo_actual,
+                modo_derivacion: tramite.modo_derivacion,
+                nodo_puede_finalizar: tramite.nodo_puede_finalizar,
+                nodo_es_terminal: tramite.nodo_es_terminal,
+                nodoPuedeFinalizar: nodoPuedeFinalizar,
+                esManual: esManual,
+                esNodoFinal: esNodoFinal,
+                tieneDERIVAR: tramite.accionesPermitidas.includes('DERIVAR'),
+                debeCargarOpciones: debeCargarOpciones,
+                accionesPermitidas: tramite.accionesPermitidas
+            });
+            
+            let opcionesDerivacion = [];
+            
+            if (debeCargarOpciones) {
+                try {
+                    console.log('=== Fetching derivacion-opciones for ===', idTramite);
+                    const rOp = await fetch(`/tramites/${idTramite}/flujo/derivacion-opciones`, { 
+                        headers: { 'Accept': 'application/json' } 
+                    });
+                    console.log('=== Response status ===', rOp.status);
+                    const op = await rOp.json();
+                    console.log('=== Response JSON ===', op);
+                    opcionesDerivacion = op.transiciones || [];
+                    console.log('=== Derivacion opciones loaded ===', opcionesDerivacion);
+                } catch (e) {
+                    console.warn('No se pudieron cargar opciones de derivación', e);
+                }
+            } else {
+                console.log('=== NOT loading derivacion-opciones ===', { debeCargarOpciones, esManual, esNodoFinal, tieneDERIVAR: tramite.accionesPermitidas.includes('DERIVAR') });
+            }
+            
+            console.log('=== Final Dropdown conditions ===', { esManual, esNodoFinal, debeCargarOpciones, opcionesCount: opcionesDerivacion.length });
+            
             tramite.accionesPermitidas.forEach(acc => {
-                const btn = document.createElement('button');
-                btn.className = 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded';
-                btn.textContent = etiquetasAccion[acc] || acc;
-                btn.onclick = function() {
-                    modal.classList.add('hidden');
-                    ejecutarAccion(acc, idTramite);
-                };
-                cont.appendChild(btn);
+                // En modo manual o nodo final con DERIVAR, mostrar dropdown + botón
+                if (acc === 'DERIVAR' && debeCargarOpciones && opcionesDerivacion.length > 0) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'w-full';
+                    
+                    const label = document.createElement('label');
+                    label.className = 'block text-sm font-medium text-gray-700 mb-1';
+                    label.textContent = 'Derivar a:';
+                    wrapper.appendChild(label);
+                    
+                    const select = document.createElement('select');
+                    select.className = 'w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-2';
+                    select.id = 'derivarDestinoSelect';
+                    
+                    if (opcionesDerivacion.length === 1) {
+                        const opt = document.createElement('option');
+                        opt.value = opcionesDerivacion[0].hacia_nodo_id;
+                        opt.textContent = opcionesDerivacion[0].nombre_destino + ' (auto)';
+                        opt.selected = true;
+                        select.appendChild(opt);
+                        select.disabled = true;
+                    } else {
+                        const opt0 = document.createElement('option');
+                        opt0.value = '';
+                        opt0.textContent = 'Seleccionar destino...';
+                        opt0.disabled = true;
+                        opt0.selected = true;
+                        select.appendChild(opt0);
+                        opcionesDerivacion.forEach(op => {
+                            const opt = document.createElement('option');
+                            opt.value = op.hacia_nodo_id;
+                            opt.textContent = op.nombre_destino + (op.es_default_auto ? ' (predeterminado)' : '');
+                            select.appendChild(opt);
+                        });
+                    }
+                    wrapper.appendChild(select);
+                    
+                    const btn = document.createElement('button');
+                    btn.className = 'w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded';
+                    btn.textContent = 'Derivar';
+                    btn.onclick = function() {
+                        const destinoId = document.getElementById('derivarDestinoSelect').value;
+                        if (!destinoId) return alert('Seleccione un destino');
+                        modal.classList.add('hidden');
+                        derivarTramiteConDestino(idTramite, parseInt(destinoId));
+                    };
+                    wrapper.appendChild(btn);
+                    cont.appendChild(wrapper);
+                } else {
+                    const btn = document.createElement('button');
+                    btn.className = 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded w-full mb-2';
+                    btn.textContent = etiquetasAccion[acc] || acc;
+                    btn.onclick = function() {
+                        modal.classList.add('hidden');
+                        ejecutarAccion(acc, idTramite);
+                    };
+                    cont.appendChild(btn);
+                }
             });
         } else {
             cont.innerHTML = '<p class="text-gray-500">No hay acciones disponibles</p>';
@@ -613,6 +727,9 @@
                 break;
             case 'MODO_MANUAL':
                 activarModoManualTramite(idTramite);
+                break;
+            case 'MODO_AUTO':
+                desactivarModoManualTramite(idTramite);
                 break;
             case 'RECHAZAR':
                 rechazarTramite(idTramite);
@@ -661,7 +778,12 @@
     }
 
     window.derivarTramite = async function(id) {
-        if (!confirm('¿Está seguro de derivar este trámite al siguiente nivel?')) return;
+        const tInfo = tramitesCache[id];
+        const reiniciaFlujo = tInfo && tInfo.id_nodo_actual && tInfo.nodo_es_terminal && tInfo.modo_derivacion !== 'MANUAL_FORZADO';
+        const mensajeConfirm = reiniciaFlujo
+            ? '¿Derivar este trámite? Al estar en el nivel final, la derivación automática lo enviará al inicio del flujo.'
+            : '¿Está seguro de derivar este trámite al siguiente nivel?';
+        if (!confirm(mensajeConfirm)) return;
 
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
         const headersJson = {
@@ -718,6 +840,32 @@
         .catch(() => alert('Error de red al intentar derivar el trámite.'));
     }
 
+    // Derivar en modo manual con destino específico (desde dropdown en modal)
+    window.derivarTramiteConDestino = async function(id, destinoId) {
+        const csrf = document.querySelector('meta[name="csrf-token"]').content;
+        const headersJson = {
+            'X-CSRF-TOKEN': csrf,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+        };
+
+        fetch(`/tramites/${id}/derivar`, {
+            method: 'POST',
+            headers: headersJson,
+            body: JSON.stringify({ hacia_nodo_id: destinoId }),
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message || 'Trámite derivado correctamente.');
+                cargarTramites(paginaActual);
+            } else {
+                alert(data.message || 'Error al derivar el trámite.');
+            }
+        })
+        .catch(() => alert('Error de red al intentar derivar el trámite.'));
+    }
+
     window.retrocederTramite = function(id) {
         if (!confirm('¿Retroceder el trámite al paso anterior del flujo (derivación o ingreso)?')) return;
         fetch(`/tramites/${id}/flujo/retroceder`, {
@@ -759,6 +907,28 @@
             }
         })
         .catch(() => alert('Error de red al activar el modo manual.'));
+    };
+
+    window.desactivarModoManualTramite = function(id) {
+        if (!confirm('¿Restaurar derivación automática para este trámite?')) return;
+
+        fetch(`/tramites/${id}/flujo/modo-auto`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message || 'Derivación automática restaurada.');
+                cargarTramites(paginaActual);
+            } else {
+                alert(data.message || 'Error al restaurar el modo automático.');
+            }
+        })
+        .catch(() => alert('Error de red al restaurar el modo automático.'));
     };
 
     window.aceptarTramite = function(id) {
@@ -899,21 +1069,95 @@
         })
         .then(res => res.json())
         .then(data => {
-            if (data.success && data.niveles && data.niveles.length > 0) {
-                data.niveles.forEach(nivel => {
+            if (!data.success) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500">' + (data.message || 'Error al cargar datos') + '</td></tr>';
+                return;
+            }
+
+            // 1. Mostrar posición actual
+            if (data.posicion_actual) {
+                const pos = data.posicion_actual;
+                tbody.innerHTML += `
+                    <tr class="bg-blue-50 font-semibold">
+                        <td class="py-2 px-4 border" colspan="4">
+                            📍 <strong>Posición Actual:</strong> ${pos.nodo_nombre} (Orden: ${pos.nodo_orden}) 
+                            <span class="ml-2 px-2 py-0.5 text-xs rounded ${pos.puede_finalizar ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}">
+                                ${pos.puede_finalizar ? 'Nodo Final' : 'Nodo Intermedio'}
+                            </span>
+                            <span class="ml-2 px-2 py-0.5 text-xs rounded ${pos.modo_derivacion === 'MANUAL_FORZADO' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">
+                                ${pos.modo_derivacion === 'MANUAL_FORZADO' ? 'Manual' : 'Automático'}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }
+
+            // 2. Mostrar historial de movimientos (ruta real)
+            if (data.historial && data.historial.length > 0) {
+                tbody.innerHTML += `
+                    <tr class="bg-gray-100 font-semibold">
+                        <td class="py-2 px-4 border" colspan="4">📋 Historial de Movimientos (${data.historial.length})</td>
+                    </tr>
+                `;
+                data.historial.forEach((mov, index) => {
+                    const desde = mov.nodo_desde ? `${mov.nodo_desde.nombre} (Ord: ${mov.nodo_desde.orden})` : '—';
+                    const hacia = mov.nodo_hacia ? `${mov.nodo_hacia.nombre} (Ord: ${mov.nodo_hacia.orden})` : '—';
+                    const usuario = mov.usuario ? `${mov.usuario.nombre} (${mov.usuario.email})` : 'Sistema';
+                    
                     tbody.innerHTML += `
-                        <tr>
-                            <td class="py-2 px-4 border bg-gray-100 font-bold">Nivel ${nivel.nivel}</td>
-                            <td class="py-2 px-4 border">${nivel.nombre || '-'}</td>
+                        <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
+                            <td class="py-2 px-4 border text-xs text-gray-600">${mov.fecha}</td>
+                            <td class="py-2 px-4 border">
+                                <span class="px-2 py-0.5 rounded text-xs ${mov.accion.includes('DERIVAR') ? 'bg-blue-100 text-blue-800' : mov.accion.includes('OBSERVAR') ? 'bg-yellow-100 text-yellow-800' : mov.accion.includes('VERIFICAR') ? 'bg-green-100 text-green-800' : mov.accion.includes('RECHAZAR') ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}">
+                                    ${mov.accion_legible}
+                                </span>
+                            </td>
+                            <td class="py-2 px-4 border text-sm">
+                                <div><strong>De:</strong> ${desde}</div>
+                                <div><strong>A:</strong> ${hacia}</div>
+                            </td>
+                            <td class="py-2 px-4 border text-xs text-gray-600">${usuario}</td>
                         </tr>
                     `;
                 });
             } else {
-                tbody.innerHTML = '<tr><td colspan="2" class="text-center py-4">No disponible</td></tr>';
+                tbody.innerHTML += `
+                    <tr class="bg-gray-50">
+                        <td class="py-2 px-4 border text-center text-gray-500" colspan="4">Sin historial de movimientos</td>
+                    </tr>
+                `;
+            }
+
+            // 3. Mostrar niveles estáticos (ruta esperada)
+            if (data.niveles_estaticos && data.niveles_estaticos.length > 0) {
+                tbody.innerHTML += `
+                    <tr class="bg-gray-100 font-semibold">
+                        <td class="py-2 px-4 border" colspan="4">🗺️ Ruta Esperada (Procedimiento)</td>
+                    </tr>
+                `;
+                data.niveles_estaticos.forEach(nivel => {
+                    const esActual = data.posicion_actual && data.posicion_actual.nodo_orden === nivel.orden;
+                    tbody.innerHTML += `
+                        <tr class="${esActual ? 'bg-blue-50 font-semibold' : ''}">
+                            <td class="py-2 px-4 border text-center font-bold">${nivel.nivel}</td>
+                            <td class="py-2 px-4 border">${nivel.nombre}</td>
+                            <td class="py-2 px-4 border text-center">
+                                <span class="px-2 py-0.5 rounded text-xs ${nivel.tipo === 'estatico' ? 'bg-gray-100 text-gray-700' : 'bg-blue-100 text-blue-800'}">
+                                    ${nivel.tipo === 'estatico' ? 'Estático' : 'Dinámico'}
+                                </span>
+                            </td>
+                            <td class="py-2 px-4 border text-center">
+                                ${esActual ? '<span class="px-2 py-0.5 rounded text-xs bg-blue-200 text-blue-800">📍 ACTUAL</span>' : ''}
+                            </td>
+                        </tr>
+                    `;
+                });
+            } else {
+                tbody.innerHTML += '<tr><td colspan="4" class="text-center py-4">No disponible</td></tr>';
             }
         })
         .catch(() => {
-            tbody.innerHTML = '<tr><td colspan="2" class="text-center py-4 text-red-500">Error al cargar datos</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500">Error al cargar datos</td></tr>';
         });
     }
 
@@ -1182,6 +1426,7 @@
             });
         });
 
+        console.log('=== Calling cargarTramites(1) ===');
         // Cargar trámites inicialmente
         cargarTramites(1);
     });

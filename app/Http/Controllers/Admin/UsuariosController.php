@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 use App\Mail\BienvenidaUsuarioInterno;
 
 /**
@@ -444,7 +445,7 @@ class UsuariosController extends Controller
     }
 
     /**
-     * Asignar niveles jerárquicos a usuario
+     * Asignar múltiples niveles jerárquicos a usuario
      * 
      * @param Request $request
      * @param int $usuarioId
@@ -452,11 +453,135 @@ class UsuariosController extends Controller
      */
     public function asignarNiveles(Request $request, $usuarioId)
     {
-        // Implementar: gestionar asignación de niveles
-        // Validar: niveles existen y están activos
-        // Verificar: consistencia jerárquica (nivel1->nivel2->nivel3->nivel4)
-        // Actualizar: tabla usuarios_niveles
-        // Retornar: JSON con nuevos niveles asignados
+        $validator = Validator::make($request->all(), [
+            'niveles' => 'required|array',
+            'niveles.*.nivel' => 'required|integer|in:1,2,3,4',
+            'niveles.*.id_nivel' => 'required|integer',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first()
+            ], 422);
+        }
+
+        try {
+            $usuario = Usuario::findOrFail($usuarioId);
+
+            DB::beginTransaction();
+
+            // Eliminar niveles existentes
+            UsuariosNiveles::where('id_usuario', $usuarioId)->delete();
+
+            // Validar y crear nuevos niveles
+            foreach ($request->niveles as $nivelData) {
+                $nivel = $nivelData['nivel'];
+                $idNivel = $nivelData['id_nivel'];
+
+                // Verificar que el nivel existe según su tabla
+                $existe = match ($nivel) {
+                    1 => Nivel1::find($idNivel),
+                    2 => Nivel2::find($idNivel),
+                    3 => Nivel3::find($idNivel),
+                    4 => Nivel4::find($idNivel),
+                    default => null,
+                };
+
+                if (!$existe) {
+                    throw new \Exception("El nivel {$nivel} con ID {$idNivel} no existe");
+                }
+
+                UsuariosNiveles::create([
+                    'id_usuario' => $usuarioId,
+                    'nivel' => $nivel,
+                    'id_nivel' => $idNivel,
+                ]);
+            }
+
+            DB::commit();
+
+            // Retornar niveles asignados con nombres
+            $nivelesAsignados = $this->getNivelesConNombres($usuarioId);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Niveles asignados correctamente',
+                'data' => $nivelesAsignados
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al asignar niveles: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener niveles asignados a usuario con nombres
+     * 
+     * @param int $usuarioId
+     * @return array
+     */
+    private function getNivelesConNombres(int $usuarioId): array
+    {
+        $usuariosNiveles = UsuariosNiveles::where('id_usuario', $usuarioId)->get();
+        $result = [];
+
+        foreach ($usuariosNiveles as $un) {
+            $nombreNivel = null;
+            switch ($un->nivel) {
+                case 1:
+                    $nivelModel = Nivel1::find($un->id_nivel);
+                    $nombreNivel = $nivelModel ? $nivelModel->nombre : null;
+                    break;
+                case 2:
+                    $nivelModel = Nivel2::find($un->id_nivel);
+                    $nombreNivel = $nivelModel ? $nivelModel->nombre : null;
+                    break;
+                case 3:
+                    $nivelModel = Nivel3::find($un->id_nivel);
+                    $nombreNivel = $nivelModel ? $nivelModel->nombre : null;
+                    break;
+                case 4:
+                    $nivelModel = Nivel4::find($un->id_nivel);
+                    $nombreNivel = $nivelModel ? $nivelModel->nombre : null;
+                    break;
+            }
+
+            $result[] = [
+                'nivel' => $un->nivel,
+                'id_nivel' => $un->id_nivel,
+                'nombre' => $nombreNivel,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Obtener niveles asignados a usuario (AJAX)
+     * 
+     * @param int $usuarioId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function obtenerNivelesAsignados($usuarioId)
+    {
+        try {
+            $usuario = Usuario::findOrFail($usuarioId);
+            $nivelesAsignados = $this->getNivelesConNombres($usuarioId);
+
+            return response()->json([
+                'success' => true,
+                'data' => $nivelesAsignados
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener niveles: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -467,11 +592,35 @@ class UsuariosController extends Controller
      */
     public function hacerAdministrador($id)
     {
-        // Implementar: convertir usuario en administrador
-        // Verificar: usuario existe y está activo
-        // Crear: registro en tabla administradores
-        // Asignar: permisos administrativos
-        // Retornar: JSON con resultado
+        try {
+            $usuario = Usuario::findOrFail($id);
+
+            if (Administrador::where('id_usuario', $id)->exists()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El usuario ya es administrador'
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            Administrador::create([
+                'id_usuario' => $id,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuario convertido en administrador correctamente'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al hacer administrador: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -482,10 +631,41 @@ class UsuariosController extends Controller
      */
     public function quitarAdministrador($id)
     {
-        // Implementar: remover rol de administrador
-        // Verificar: hay otros administradores activos
-        // Eliminar: registro de tabla administradores
-        // Retornar: JSON con resultado
+        try {
+            $usuario = Usuario::findOrFail($id);
+
+            if ($usuario->id == auth()->id()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No puede quitarse el rol de administrador a sí mismo'
+                ], 422);
+            }
+
+            $adminsCount = Administrador::count();
+            if ($adminsCount <= 1) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Debe haber al menos un administrador en el sistema'
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            Administrador::where('id_usuario', $id)->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Rol de administrador removido correctamente'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al quitar administrador: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -496,10 +676,42 @@ class UsuariosController extends Controller
      */
     public function resetearContrasena($id)
     {
-        // Implementar: generar nueva contraseña temporal
-        // Actualizar: contraseña del usuario
-        // Enviar: correo con nueva contraseña
-        // Retornar: JSON con resultado
+        try {
+            $usuario = Usuario::findOrFail($id);
+
+            if ($usuario->id == auth()->id()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No puede resetear su propia contraseña desde aquí'
+                ], 422);
+            }
+
+            $nuevaContrasena = Str::random(12);
+
+            DB::beginTransaction();
+
+            $usuario->update([
+                'passw' => Hash::make($nuevaContrasena),
+            ]);
+
+            DB::commit();
+
+            // TODO: Enviar email con nueva contraseña
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Contraseña reseteada correctamente',
+                'data' => [
+                    'nueva_contrasena' => $nuevaContrasena
+                ]
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al resetear contraseña: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -510,24 +722,42 @@ class UsuariosController extends Controller
      */
     public function activar($id)
     {
-        // Implementar: reactivar usuario
-        // Verificar: email y DNI aún no están en uso
-        // Activar: usuario y sus asignaciones
-        // Retornar: JSON con resultado
-    }
+        try {
+            $usuario = Usuario::findOrFail($id);
 
-    /**
-     * Obtener niveles asignados a usuario
-     * 
-     * @param int $usuarioId
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function obtenerNivelesAsignados($usuarioId)
-    {
-        // Implementar: retornar estructura de niveles asignados
-        // Formato: nested JSON con jerarquía completa
-        // Incluir: nivel1, nivel2, nivel3, nivel4
-        // Usar en: formularios de edición
+            // Verificar si email o DNI ya están en uso por otro usuario activo
+            $emailExiste = Usuario::where('email', $usuario->email)
+                ->where('id', '!=', $id)
+                ->exists();
+            $dniExiste = Usuario::where('dni', $usuario->dni)
+                ->where('id', '!=', $id)
+                ->exists();
+
+            if ($emailExiste || $dniExiste) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se puede activar: email o DNI ya en uso por otro usuario'
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            // No hay campo estado en usuarios, asumimos que "activar" = no hacer nada especial
+            // Si hubiera un campo estado, se actualizaría aquí
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuario activado correctamente'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al activar usuario: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

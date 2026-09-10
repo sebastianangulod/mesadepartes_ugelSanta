@@ -310,10 +310,23 @@ class TramiteController extends Controller
      */
     public function forzarModoDerivacionManualFlujo(Tramite $tramite): JsonResponse
     {
-        $this->authorize('view', $tramite);
+        $this->authorize('modoManual', $tramite);
+
+        \Log::info('forzarModoDerivacionManualFlujo called', [
+            'tramite_id' => $tramite->id,
+            'modo_derivacion_before' => $tramite->modo_derivacion,
+            'id_nodo_actual' => $tramite->id_nodo_actual,
+            'user_id' => auth()->id(),
+        ]);
 
         try {
             $actualizado = $this->tramiteFlujoService->forzarModoDerivacionManual($tramite);
+
+            \Log::info('forzarModoDerivacionManualFlujo success', [
+                'tramite_id' => $actualizado->id,
+                'modo_derivacion_after' => $actualizado->modo_derivacion,
+                'modo_manual_por_usuario' => $actualizado->modo_manual_por_usuario,
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -321,6 +334,44 @@ class TramiteController extends Controller
                 'data' => $actualizado,
             ]);
         } catch (\Exception $e) {
+            \Log::error('Error activando modo manual: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Desactiva la derivación manual y vuelve a modo AUTO.
+     */
+    public function desactivarModoDerivacionManualFlujo(Tramite $tramite): JsonResponse
+    {
+        $this->authorize('modoAuto', $tramite);
+
+        \Log::info('desactivarModoDerivacionManualFlujo called', [
+            'tramite_id' => $tramite->id,
+            'modo_derivacion_before' => $tramite->modo_derivacion,
+            'id_nodo_actual' => $tramite->id_nodo_actual,
+            'user_id' => auth()->id(),
+        ]);
+
+        try {
+            $actualizado = $this->tramiteFlujoService->desactivarModoDerivacionManual($tramite);
+
+            \Log::info('desactivarModoDerivacionManualFlujo success', [
+                'tramite_id' => $actualizado->id,
+                'modo_derivacion_after' => $actualizado->modo_derivacion,
+                'modo_manual_por_usuario' => $actualizado->modo_manual_por_usuario,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Derivación automática restaurada para este trámite',
+                'data' => $actualizado,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error restaurando modo automático: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -1615,8 +1666,8 @@ class TramiteController extends Controller
     }
 
     /**
-     * Obtener hoja de ruta de un trámite
-     * Equivalente a hojaderuta.php del PHP puro
+     * Obtener hoja de ruta dinámica de un trámite
+     * Muestra: niveles estáticos del procedimiento + historial real de movimientos
      * 
      * @param int $id
      * @return JsonResponse
@@ -1624,97 +1675,37 @@ class TramiteController extends Controller
     public function hojaRuta(int $id): JsonResponse
     {
         try {
-            $tramite = Tramite::with(['procedimiento', 'usuario', 'nodoActual'])->findOrFail($id);
+            $tramite = Tramite::with([
+                'procedimiento', 
+                'usuario', 
+                'nodoActual',
+                'movimientosFlujo.usuario',
+                'movimientosFlujo.nodoDesde',
+                'movimientosFlujo.nodoHacia'
+            ])->findOrFail($id);
             
-            $niveles = [];
+            // 1. Niveles estáticos del procedimiento (ruta esperada)
+            $nivelesEstaticos = $this->obtenerNivelesEstaticos($tramite);
             
-            if ($tramite->procedimiento) {
-                $proc = $tramite->procedimiento;
-                
-                // Nivel 1 (Área)
-                if ($proc->id_area) {
-                    $area = Nivel1::find($proc->id_area);
-                    if ($area) {
-                        $niveles[] = ['nivel' => 1, 'nombre' => $area->nombre];
-                    }
-                }
-                
-                // Nivel 2 (Subárea)
-                if ($proc->id_subarea) {
-                    $subarea = Nivel2::find($proc->id_subarea);
-                    if ($subarea) {
-                        $niveles[] = ['nivel' => 2, 'nombre' => $subarea->nombre];
-                    }
-                }
-                
-                // Nivel 3 (si corresponde)
-                if (in_array($proc->nivel_final, ['3', '4'])) {
-                    $idNivel3 = null;
-                    if ($proc->nivel_final == '3') {
-                        $idNivel3 = $proc->id_nivel_final;
-                    } elseif ($proc->nivel_final == '4') {
-                        $nivel4 = Nivel4::find($proc->id_nivel_final);
-                        if ($nivel4 && $nivel4->id_nivel3) {
-                            $idNivel3 = $nivel4->id_nivel3;
-                        }
-                    }
-                    
-                    if ($idNivel3) {
-                        $nivel3 = Nivel3::find($idNivel3);
-                        if ($nivel3) {
-                            $niveles[] = ['nivel' => 3, 'nombre' => $nivel3->nombre];
-                        }
-                    }
-                }
-                
-                // Nivel 4 (si corresponde)
-                if ($proc->nivel_final == '4') {
-                    $nivel4 = Nivel4::find($proc->id_nivel_final);
-                    if ($nivel4) {
-                        $niveles[] = ['nivel' => 4, 'nombre' => $nivel4->nombre];
-                    }
-                }
-            }
+            // 2. Historial real de movimientos (ruta real)
+            $historial = $this->obtenerHistorialMovimientos($tramite);
             
-            // Obtener información adicional del trámite
-            $areaNombre = '';
-            $subareaNombre = '';
-            $especialidadNombre = '';
-            
-            if ($tramite->procedimiento) {
-                if ($tramite->procedimiento->id_area) {
-                    $area = Nivel1::find($tramite->procedimiento->id_area);
-                    $areaNombre = $area ? $area->nombre : '';
-                }
-                if ($tramite->procedimiento->id_subarea) {
-                    $subarea = Nivel2::find($tramite->procedimiento->id_subarea);
-                    $subareaNombre = $subarea ? $subarea->nombre : '';
-                }
-                // Especialidad es el nivel final (3 o 4)
-                if ($tramite->procedimiento->nivel_final == '3') {
-                    $nivel3 = Nivel3::find($tramite->procedimiento->id_nivel_final);
-                    $especialidadNombre = $nivel3 ? $nivel3->nombre : '';
-                } elseif ($tramite->procedimiento->nivel_final == '4') {
-                    $nivel4 = Nivel4::find($tramite->procedimiento->id_nivel_final);
-                    $especialidadNombre = $nivel4 ? $nivel4->nombre : '';
-                }
-            }
+            // 3. Posición actual
+            $posicionActual = $this->obtenerPosicionActual($tramite);
             
             return response()->json([
                 'success' => true,
-                'niveles' => $niveles,
+                'niveles_estaticos' => $nivelesEstaticos,
+                'historial' => $historial,
+                'posicion_actual' => $posicionActual,
                 'tramite' => [
                     'id' => $tramite->id,
                     'fecha_creacion' => $tramite->fecha_creacion->format('d/m/Y H:i:s'),
-                    'nombres' => $tramite->usuario->nombres,
-                    'apellido_paterno' => $tramite->usuario->apellido_paterno,
-                    'apellido_materno' => $tramite->usuario->apellido_materno,
+                    'nombres' => $tramite->usuario->nombres ?? '',
+                    'apellido_paterno' => $tramite->usuario->apellido_paterno ?? '',
+                    'apellido_materno' => $tramite->usuario->apellido_materno ?? '',
                     'procedimiento_nombre' => $tramite->procedimiento->nombre ?? 'N/A',
-                    'area_nombre' => $areaNombre,
-                    'subarea_nombre' => $subareaNombre,
-                    'especialidad_nombre' => $especialidadNombre,
                     'estado' => $tramite->estado,
-                    'tramitescol' => $tramite->tramitescol ?? 1,
                     'id_nodo_actual' => $tramite->id_nodo_actual,
                     'nodo_actual_nombre' => $tramite->nodoActual->nombre ?? null,
                     'modo_derivacion' => $tramite->modo_derivacion,
@@ -1726,6 +1717,164 @@ class TramiteController extends Controller
                 'message' => 'Error al obtener la hoja de ruta: ' . $e->getMessage(),
             ], 500);
         }
+    }
+    
+    /**
+     * Obtiene los niveles estáticos del procedimiento (ruta esperada)
+     */
+    private function obtenerNivelesEstaticos(Tramite $tramite): array
+    {
+        $niveles = [];
+        
+        if (!$tramite->procedimiento) {
+            return $niveles;
+        }
+        
+        $proc = $tramite->procedimiento;
+        
+        // Nivel 1 (Área)
+        if ($proc->id_area) {
+            $area = Nivel1::find($proc->id_area);
+            if ($area) {
+                $niveles[] = [
+                    'nivel' => 1, 
+                    'nombre' => $area->nombre,
+                    'tipo' => 'estatico',
+                    'orden' => 1
+                ];
+            }
+        }
+        
+        // Nivel 2 (Subárea)
+        if ($proc->id_subarea) {
+            $subarea = Nivel2::find($proc->id_subarea);
+            if ($subarea) {
+                $niveles[] = [
+                    'nivel' => 2, 
+                    'nombre' => $subarea->nombre,
+                    'tipo' => 'estatico',
+                    'orden' => 2
+                ];
+            }
+        }
+        
+        // Nivel 3 (si corresponde)
+        if (in_array($proc->nivel_final, ['3', '4'])) {
+            $idNivel3 = null;
+            if ($proc->nivel_final == '3') {
+                $idNivel3 = $proc->id_nivel_final;
+            } elseif ($proc->nivel_final == '4') {
+                $nivel4 = Nivel4::find($proc->id_nivel_final);
+                if ($nivel4 && $nivel4->id_nivel3) {
+                    $idNivel3 = $nivel4->id_nivel3;
+                }
+            }
+            
+            if ($idNivel3) {
+                $nivel3 = Nivel3::find($idNivel3);
+                if ($nivel3) {
+                    $niveles[] = [
+                        'nivel' => 3, 
+                        'nombre' => $nivel3->nombre,
+                        'tipo' => 'estatico',
+                        'orden' => 3
+                    ];
+                }
+            }
+        }
+        
+        // Nivel 4 (si corresponde)
+        if ($proc->nivel_final == '4') {
+            $nivel4 = Nivel4::find($proc->id_nivel_final);
+            if ($nivel4) {
+                $niveles[] = [
+                    'nivel' => 4, 
+                    'nombre' => $nivel4->nombre,
+                    'tipo' => 'estatico',
+                    'orden' => 4
+                ];
+            }
+        }
+        
+        return $niveles;
+    }
+    
+    /**
+     * Obtiene el historial real de movimientos del trámite
+     */
+    private function obtenerHistorialMovimientos(Tramite $tramite): array
+    {
+        $historial = [];
+        
+        foreach ($tramite->movimientosFlujo as $mov) {
+            $accionLegible = $this->traducirAccion($mov->accion);
+            
+            $historial[] = [
+                'fecha' => $mov->created_at ? $mov->created_at->format('d/m/Y H:i:s') : 'N/A',
+                'accion' => $mov->accion,
+                'accion_legible' => $accionLegible,
+                'usuario' => $mov->usuario ? [
+                    'nombre' => $mov->usuario->nombres . ' ' . $mov->usuario->apellido_paterno,
+                    'email' => $mov->usuario->email
+                ] : null,
+                'nodo_desde' => $mov->nodoDesde ? [
+                    'id' => $mov->nodoDesde->id,
+                    'nombre' => $mov->nodoDesde->nombre,
+                    'orden' => $mov->nodoDesde->orden
+                ] : null,
+                'nodo_hacia' => $mov->nodoHacia ? [
+                    'id' => $mov->nodoHacia->id,
+                    'nombre' => $mov->nodoHacia->nombre,
+                    'orden' => $mov->nodoHacia->orden
+                ] : null,
+                'metadata' => $mov->metadata,
+            ];
+        }
+        
+        return $historial;
+    }
+    
+    /**
+     * Obtiene la posición actual del trámite
+     */
+    private function obtenerPosicionActual(Tramite $tramite): ?array
+    {
+        if (!$tramite->id_nodo_actual || !$tramite->nodoActual) {
+            return null;
+        }
+        
+        return [
+            'nodo_id' => $tramite->nodoActual->id,
+            'nodo_nombre' => $tramite->nodoActual->nombre,
+            'nodo_orden' => $tramite->nodoActual->orden,
+            'puede_finalizar' => (bool) $tramite->nodoActual->puede_finalizar,
+            'es_terminal' => (bool) $tramite->nodoActual->es_terminal,
+            'estado' => $tramite->estado,
+            'modo_derivacion' => $tramite->modo_derivacion,
+        ];
+    }
+    
+    /**
+     * Traduce la acción técnica a texto legible
+     */
+    private function traducirAccion(string $accion): string
+    {
+        $map = [
+            'ACEPTAR_INGRESO' => 'Ingreso al flujo',
+            'DERIVAR_NODO' => 'Derivación',
+            'DERIVAR_COLEGA' => 'Reasignación a colega',
+            'RETROCEDER_NODO' => 'Retroceso en flujo',
+            'RETROCEDER_INGRESO' => 'Retroceso de ingreso',
+            'MODO_MANUAL_FORZADO' => 'Activación modo manual',
+            'MODO_AUTO_RESTAURADO' => 'Restauración modo automático',
+            'OBSERVAR' => 'Observación',
+            'OBSERVAR_CON_OFICIO' => 'Observación con oficio',
+            'VERIFICAR' => 'Verificación',
+            'RECHAZAR' => 'Rechazo',
+            'PROCESAR_FINALIZAR' => 'Finalización',
+        ];
+        
+        return $map[$accion] ?? $accion;
     }
 
     /**

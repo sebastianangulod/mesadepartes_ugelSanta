@@ -31,17 +31,14 @@ use Illuminate\Support\Facades\Validator;
 class AreasController extends Controller
 {
     /**
-     * Mostrar lista de áreas (Nivel 1)
-     * Equivalente a adminAreas.php del PHP puro
+     * Redirigir a Niveles (gestión unificada de Nivel 1)
      * 
      * @param Request $request
-     * @return \Illuminate\View\View
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function index(Request $request)
     {
-        $areas = Nivel1::orderBy('nombre')->get();
-        
-        return view('admin.areas.index', compact('areas'));
+        return redirect()->route('admin.niveles');
     }
 
     /**

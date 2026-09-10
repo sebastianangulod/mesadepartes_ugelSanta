@@ -26,7 +26,8 @@ class Nivel1 extends Model
      */
     protected $fillable = [
         'id',
-        'nombre'
+        'nombre',
+        'orden'
     ];
 
     /**

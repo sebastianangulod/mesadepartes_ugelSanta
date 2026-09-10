@@ -128,11 +128,25 @@ class TramiteBandejaInternaService
                 } else {
                     // Nodos intermedios y finales: acciones completas
                     $acciones[] = 'OBSERVAR';
-                    if ($tramite->modo_derivacion === ModoDerivacion::AUTO) {
+                    if ($tramite->esModoManual()) {
+                        $acciones[] = 'MODO_AUTO';
+                    } else {
                         $acciones[] = 'MODO_MANUAL';
                     }
-                    if ($tramite->id_nodo_actual && $nodo
-                        && $this->tramiteFlujoService->nodoTieneTransicionesSalientes($nodo)) {
+                    // Derivar: con transiciones salientes (flujo normal) o desde el nodo
+                    // terminal (nivel final). Desde el nodo terminal, en modo AUTO la
+                    // derivación reinicia el flujo hacia el nodo de entrada.
+                    // Excepción: los nodos autorizados a finalizar (puede_finalizar), al
+                    // desactivar la derivación automática (modo manual), no pueden derivar;
+                    // solo pueden reactivar la derivación automática (MODO_AUTO).
+                    $puedeDerivar = $tramite->id_nodo_actual && $nodo
+                        && ($this->tramiteFlujoService->nodoTieneTransicionesSalientes($nodo) || $nodo->es_terminal);
+
+                    if ($nodo && $nodo->puede_finalizar && $tramite->esModoManual()) {
+                        $puedeDerivar = false;
+                    }
+
+                    if ($puedeDerivar) {
                         $acciones[] = 'DERIVAR';
                     }
                     if ($tramite->id_nodo_actual && $nodo

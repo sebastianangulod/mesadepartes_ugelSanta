@@ -159,7 +159,7 @@ class MesaPartesController extends Controller
     public function tramitesRecibidos(Request $request)
     {
         $usuario = auth()->user();
-        
+
         // Obtener filtros de la solicitud
         $filtros = $request->only([
             'numero_tramite',
@@ -396,7 +396,7 @@ class MesaPartesController extends Controller
                 'procedimiento',
                 'usuario',
                 'procedimiento.nodoEntrada.equipos.miembros',
-                'nodoActual.equipos.miembros',
+                'nodoActual', // Load full nodoActual with all columns including puede_finalizar
             ]);
 
             if ($usuario->tipo_user == 2) {
@@ -434,11 +434,39 @@ class MesaPartesController extends Controller
                 ->take($porPagina)
                 ->get();
 
+            \Log::info('Tramites loaded for API', [
+                'user_id' => $usuario->id,
+                'count' => $tramites->count(),
+                'modes' => $tramites->pluck('modo_derivacion')->toArray(),
+                'nodo_actual' => $tramites->pluck('id_nodo_actual')->toArray(),
+                'nodo_puede_finalizar' => $tramites->map(function($t) { 
+                    return $t->nodoActual?->puede_finalizar ?? false; 
+                })->toArray(),
+            ]);
+
             $tramites->transform(function ($tramite) use ($usuario) {
                 $tramite->accionesPermitidas = $this->bandejaInterna->accionesPermitidas($tramite, $usuario);
 
                 return $tramite;
             });
+
+            // Debug: log a sample trámite's full data
+            if ($tramites->count() > 0) {
+                $sample = $tramites->first();
+                \Log::info('Sample trámite data for API response', [
+                    'id' => $sample->id,
+                    'modo_derivacion' => $sample->modo_derivacion,
+                    'id_nodo_actual' => $sample->id_nodo_actual,
+                    'nodoActual_loaded' => $sample->relationLoaded('nodoActual'),
+                    'nodoActual' => $sample->nodoActual ? [
+                        'id' => $sample->nodoActual->id,
+                        'nombre' => $sample->nodoActual->nombre,
+                        'puede_finalizar' => $sample->nodoActual->puede_finalizar,
+                        'es_terminal' => $sample->nodoActual->es_terminal,
+                    ] : null,
+                    'accionesPermitidas' => $sample->accionesPermitidas ?? [],
+                ]);
+            }
 
             return response()->json([
                 'status' => 'success',
@@ -470,6 +498,8 @@ class MesaPartesController extends Controller
                         'dias_transcurridos' => $diasTranscurridos,
                         'id_nodo_actual' => $t->id_nodo_actual,
                         'modo_derivacion' => $t->modo_derivacion,
+                        'nodo_es_terminal' => (bool) ($t->nodoActual?->es_terminal ?? false),
+                        'nodo_puede_finalizar' => (bool) ($t->nodoActual?->puede_finalizar ?? false),
                     ];
                 }),
                 'total' => $total,
@@ -477,6 +507,7 @@ class MesaPartesController extends Controller
                 'pagina_actual' => $pagina,
             ]);
         } catch (\Exception $e) {
+            \Log::error('Error loading tramites: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),

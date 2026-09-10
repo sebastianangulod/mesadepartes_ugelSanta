@@ -106,6 +106,7 @@ Route::middleware(['auth'])->group(function () {
 
         Route::post('/{tramite}/flujo/aceptar-ingreso', [TramiteController::class, 'aceptarIngresoFlujo'])->name('tramites.flujo.aceptar-ingreso');
         Route::post('/{tramite}/flujo/modo-manual', [TramiteController::class, 'forzarModoDerivacionManualFlujo'])->name('tramites.flujo.modo-manual');
+        Route::post('/{tramite}/flujo/modo-auto', [TramiteController::class, 'desactivarModoDerivacionManualFlujo'])->name('tramites.flujo.modo-auto');
         Route::get('/{tramite}/flujo/derivacion-opciones', [TramiteController::class, 'opcionesDerivacionFlujo'])->name('tramites.flujo.derivacion-opciones');
         Route::post('/{tramite}/flujo/retroceder', [TramiteController::class, 'retrocederFlujo'])->name('tramites.flujo.retroceder');
         
@@ -197,8 +198,16 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/usuarios/{id}', [UsuariosController::class, 'destroy'])->name('admin.usuarios.destroy');
         Route::get('/usuarios/{id}/obtener', [UsuariosController::class, 'obtenerUsuario'])->name('admin.usuarios.obtener');
         Route::get('/usuarios/{id}/dependencias', [UsuariosController::class, 'getDependencias'])->name('admin.usuarios.dependencias');
+        // Niveles múltiples
+        Route::get('/usuarios/{id}/niveles', [UsuariosController::class, 'obtenerNivelesAsignados'])->name('admin.usuarios.niveles');
+        Route::put('/usuarios/{id}/niveles', [UsuariosController::class, 'asignarNiveles'])->name('admin.usuarios.niveles.asignar');
+        // Admin roles
+        Route::post('/usuarios/{id}/hacer-admin', [UsuariosController::class, 'hacerAdministrador'])->name('admin.usuarios.hacer-admin');
+        Route::post('/usuarios/{id}/quitar-admin', [UsuariosController::class, 'quitarAdministrador'])->name('admin.usuarios.quitar-admin');
+        Route::post('/usuarios/{id}/resetear-password', [UsuariosController::class, 'resetearContrasena'])->name('admin.usuarios.resetear-password');
+        Route::post('/usuarios/{id}/activar', [UsuariosController::class, 'activar'])->name('admin.usuarios.activar');
         
-        // Áreas (Nivel 1)
+        // Áreas (Nivel 1) - Solo API endpoints (gestión unificada en Niveles)
         Route::get('/areas', [AreasController::class, 'index'])->name('admin.areas');
         Route::post('/areas', [AreasController::class, 'store'])->name('admin.areas.store');
         Route::put('/areas/{id}', [AreasController::class, 'update'])->name('admin.areas.update');
@@ -211,9 +220,14 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/niveles', [NivelesController::class, 'store'])->name('admin.niveles.store');
         Route::put('/niveles/{id}', [NivelesController::class, 'update'])->name('admin.niveles.update');
         Route::delete('/niveles/{id}', [NivelesController::class, 'destroy'])->name('admin.niveles.destroy');
+        Route::get('/niveles/nivel1', [NivelesController::class, 'obtenerNivel1'])->name('admin.niveles.nivel1');
         Route::get('/niveles/nivel2/{nivel1Id}', [NivelesController::class, 'obtenerNivel2'])->name('admin.niveles.nivel2');
         Route::get('/niveles/nivel3/{nivel2Id}', [NivelesController::class, 'obtenerNivel3'])->name('admin.niveles.nivel3');
         Route::get('/niveles/nivel4/{nivel3Id}', [NivelesController::class, 'obtenerNivel4'])->name('admin.niveles.nivel4');
+        // Obtener todos los niveles sin filtro de padre (para asignación múltiple)
+        Route::get('/niveles/nivel2/all', [NivelesController::class, 'obtenerTodosNivel2'])->name('admin.niveles.nivel2.all');
+        Route::get('/niveles/nivel3/all', [NivelesController::class, 'obtenerTodosNivel3'])->name('admin.niveles.nivel3.all');
+        Route::get('/niveles/nivel4/all', [NivelesController::class, 'obtenerTodosNivel4'])->name('admin.niveles.nivel4.all');
         Route::get('/niveles/{id}/dependencias', [NivelesController::class, 'getDependencias'])->name('admin.niveles.dependencias');
         
         // Procedimientos
@@ -225,6 +239,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/procedimientos/{id}/especialistas', [ProcedimientosController::class, 'obtenerEspecialistasDisponibles'])->name('admin.procedimientos.especialistas');
         Route::post('/procedimientos/{id}/asignar-especialistas', [ProcedimientosController::class, 'asignarEspecialistas'])->name('admin.procedimientos.asignar-especialistas');
         Route::get('/procedimientos/{id}/dependencias', [ProcedimientosController::class, 'getDependencias'])->name('admin.procedimientos.dependencias');
+        Route::post('/procedimientos/{id}/clonar', [ProcedimientosController::class, 'clonar'])->name('admin.procedimientos.clonar');
+        // Versionado
+        Route::get('/procedimientos/{id}/versiones', [ProcedimientosController::class, 'historialVersiones'])->name('admin.procedimientos.versiones');
+        Route::post('/procedimientos/{id}/versiones/{versionId}/restaurar', [ProcedimientosController::class, 'restaurarVersion'])->name('admin.procedimientos.versiones.restaurar');
 
         Route::get('/flujo/usuarios-internos', [FlujoProcedimientoController::class, 'usuariosInternos'])->name('admin.flujo.usuarios-internos');
         Route::get('/procedimientos/{procedimiento}/flujo', [FlujoProcedimientoController::class, 'edit'])->name('admin.procedimientos.flujo');

@@ -7,6 +7,7 @@ use App\Models\Procedimiento;
 use App\Models\Usuario;
 use App\Models\UsuariosNiveles;
 use App\Domain\Tramites\EstadoTramite;
+use App\Domain\Tramites\ModoDerivacion;
 use App\Services\Tramites\VoucherService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -74,7 +75,8 @@ class TramiteWorkflowService
             // Si el procedimiento tiene nodo de entrada configurado, activar modo configurable
             if ($tramite->procedimiento && $tramite->procedimiento->id_nodo_entrada) {
                 $tramite->id_nodo_actual = $tramite->procedimiento->id_nodo_entrada;
-                $tramite->modo_derivacion = 'AUTO';
+                $tramite->modo_derivacion = ModoDerivacion::AUTO;
+$tramite->modo_manual_por_usuario = null;
             }
 
             $tramite->save();

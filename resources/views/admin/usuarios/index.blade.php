@@ -125,12 +125,11 @@
                     <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre Completo</th>
                     <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Correo</th>
                     <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Teléfono</th>
-                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nivel</th>
-                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Especialidad</th>
+                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Niveles Asignados</th>
                     <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
                     </tr>
                 </thead>
-            <tbody id="usuariosTable">
+<tbody id="usuariosTable">
                 @forelse($usuarios as $index => $usuario)
                 <tr>
                     <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ $index + 1 }}</td>
@@ -141,19 +140,31 @@
                     <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ $usuario->telefono }}</td>
                     <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
                         @if($usuario->usuariosNiveles->isNotEmpty())
-                            Nivel {{ $usuario->usuariosNiveles->first()->nivel }}
+                            <div class="flex flex-wrap gap-1">
+                                @foreach($usuario->usuariosNiveles as $un)
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                        Nivel {{ $un->nivel }}
+                                        @if($un->nivelModelo)
+                                            : {{ $un->nivelModelo->nombre }}
+                                        @endif
+                                    </span>
+                                @endforeach
+                            </div>
                         @else
-                            Sin asignar
+                            <span class="text-gray-500 text-sm">Sin asignar</span>
                         @endif
-                            </td>
-                    <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                        {{ $usuario->nombre_nivel ?? 'Sin asignar' }}
-                            </td>
+                    </td>
                     <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
                         <button onclick="editarUsuario({{ $usuario->id }})" 
                                 class="text-green-500 hover:text-green-700 mr-2" title="Editar">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                        </button>
+                        <button onclick="abrirModalNiveles({{ $usuario->id }}, '{{ $usuario->nombres }} {{ $usuario->apellido_paterno }}')" 
+                                class="text-purple-500 hover:text-purple-700 mr-2" title="Asignar Niveles">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 002-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                             </svg>
                         </button>
                         @if($usuario->id != auth()->id())
@@ -168,7 +179,7 @@
                         </tr>
                     @empty
                         <tr>
-                    <td colspan="7" class="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center text-gray-500">
+                    <td colspan="6" class="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center text-gray-500">
                         No hay usuarios registrados
                             </td>
                         </tr>
@@ -489,6 +500,61 @@
         <div class="px-6 py-4 border-t-2 border-gray-300 flex justify-end space-x-2">
             <button type="button" onclick="closeModal('modalDeleteUser')" class="btn-secondary">Cancelar</button>
             <button type="button" onclick="confirmarEliminarUsuario()" class="btn-danger">Eliminar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Asignar Niveles Múltiples -->
+<div id="modalAsignarNiveles" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="overflow-y: auto;">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl relative my-auto modal-content border-2 border-gray-200" style="max-height: 90vh; overflow-y: auto;">
+        <div class="sticky top-0 bg-white border-b-2 border-gray-300 px-6 py-4 z-10 rounded-t-lg">
+            <h3 class="text-xl font-bold text-gray-900">Asignar Niveles</h3>
+            <p class="text-sm text-gray-600 mt-1" id="modalNivelesUsuarioNombre"></p>
+        </div>
+        <div class="p-6">
+            <input type="hidden" id="nivelesUsuarioId" name="id">
+            
+            <!-- Niveles asignados actualmente -->
+            <div class="mb-6">
+                <h4 class="text-sm font-semibold text-gray-700 mb-3">Niveles asignados actualmente</h4>
+                <div id="nivelesAsignadosContainer" class="space-y-2 max-h-48 overflow-y-auto border border-gray-300 rounded-md p-4 bg-gray-50">
+                    <div class="text-center text-gray-500 py-4" id="nivelesAsignadosEmpty">
+                        <p>No hay niveles asignados</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Agregar nuevo nivel -->
+            <div class="mb-6">
+                <h4 class="text-sm font-semibold text-gray-700 mb-3">Agregar nivel</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label for="nuevoNivel" class="block text-sm font-medium text-gray-700 mb-1">Nivel</label>
+                        <select id="nuevoNivel" name="nivel" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="cargarOpcionesNivel(this.value)">
+                            <option value="">Seleccione nivel</option>
+                            <option value="1">Nivel 1</option>
+                            <option value="2">Nivel 2</option>
+                            <option value="3">Nivel 3</option>
+                            <option value="4">Nivel 4</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="nuevoIdNivel" class="block text-sm font-medium text-gray-700 mb-1">Unidad</label>
+                        <select id="nuevoIdNivel" name="id_nivel" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" disabled>
+                            <option value="">Primero seleccione nivel</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button type="button" onclick="agregarNivelUsuario()" class="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200" disabled id="btnAgregarNivel">
+                            Agregar
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-2 mt-6 pt-4 border-t-2 border-gray-300">
+                <button type="button" onclick="closeModal('modalAsignarNiveles')" class="btn-secondary">Cerrar</button>
+            </div>
         </div>
     </div>
 </div>
@@ -1572,6 +1638,207 @@
             validatePassword(this.value);
         });
     }
+
+    // Funciones para gestión de niveles múltiples
+    function abrirModalNiveles(id, nombre) {
+        document.getElementById('nivelesUsuarioId').value = id;
+        document.getElementById('modalNivelesUsuarioNombre').textContent = nombre;
+        
+        // Cargar niveles asignados
+        cargarNivelesAsignados(id);
+        
+        // Resetear formulario de agregar
+        document.getElementById('nuevoNivel').value = '';
+        document.getElementById('nuevoIdNivel').innerHTML = '<option value="">Primero seleccione nivel</option>';
+        document.getElementById('nuevoIdNivel').disabled = true;
+        document.getElementById('btnAgregarNivel').disabled = true;
+        
+        openModal('modalAsignarNiveles');
+    }
+
+    function cargarNivelesAsignados(usuarioId) {
+        fetch(`/admin/usuarios/${usuarioId}/niveles`, {
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('nivelesAsignadosContainer');
+            const emptyMsg = document.getElementById('nivelesAsignadosEmpty');
+            
+            if (data.success && data.data && data.data.length > 0) {
+                emptyMsg.style.display = 'none';
+                let html = '';
+                data.data.forEach(nivel => {
+                    const nivelLabels = { 1: 'Nivel 1', 2: 'Nivel 2', 3: 'Nivel 3', 4: 'Nivel 4' };
+                    html += `
+                        <div class="flex items-center justify-between p-2 bg-white border rounded">
+                            <span class="font-medium text-gray-900">${nivelLabels[nivel.nivel] || 'Nivel ' + nivel.nivel}: ${nivel.nombre || 'N/A'}</span>
+                            <button type="button" onclick="eliminarNivelUsuario(${usuarioId}, ${nivel.nivel})" 
+                                    class="text-red-500 hover:text-red-700 text-sm" title="Eliminar">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            } else {
+                emptyMsg.style.display = 'block';
+                container.innerHTML = '';
+                container.appendChild(emptyMsg);
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar niveles:', error);
+        });
+    }
+
+    function cargarOpcionesNivel(nivel) {
+        const select = document.getElementById('nuevoIdNivel');
+        const btn = document.getElementById('btnAgregarNivel');
+        
+        select.innerHTML = '<option value="">Cargando...</option>';
+        select.disabled = true;
+        btn.disabled = true;
+        
+        if (!nivel) {
+            select.innerHTML = '<option value="">Primero seleccione nivel</option>';
+            return;
+        }
+        
+        let url = '';
+        if (nivel === '1') {
+            url = '{{ route("api.areas") }}';
+        } else if (nivel === '2') {
+            url = '{{ route("admin.niveles.nivel2.all") }}';
+        } else if (nivel === '3') {
+            url = '{{ route("admin.niveles.nivel3.all") }}';
+        } else if (nivel === '4') {
+            url = '{{ route("admin.niveles.nivel4.all") }}';
+        }
+        
+        fetch(url, { headers: { 'Accept': 'application/json' } })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.data) {
+                    select.innerHTML = '<option value="">Seleccione unidad</option>';
+                    data.data.forEach(item => {
+                        const opt = document.createElement('option');
+                        opt.value = item.id;
+                        opt.textContent = item.nombre;
+                        select.appendChild(opt);
+                    });
+                    select.disabled = false;
+                    btn.disabled = false;
+                } else {
+                    select.innerHTML = '<option value="">Sin datos disponibles</option>';
+                }
+            })
+            .catch(() => {
+                select.innerHTML = '<option value="">Error al cargar</option>';
+                select.disabled = false;
+                btn.disabled = false;
+            });
+    }
+
+    function agregarNivelUsuario() {
+        const usuarioId = document.getElementById('nivelesUsuarioId').value;
+        const nivel = document.getElementById('nuevoNivel').value;
+        const idNivel = document.getElementById('nuevoIdNivel').value;
+        
+        if (!nivel || !idNivel) {
+            alert('Seleccione nivel y unidad');
+            return;
+        }
+        
+        const btn = document.getElementById('btnAgregarNivel');
+        btn.disabled = true;
+        btn.textContent = 'Agregando...';
+        
+        fetch(`/admin/usuarios/${usuarioId}/niveles`, {
+            method: 'PUT',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                niveles: [{ nivel: parseInt(nivel), id_nivel: parseInt(idNivel) }]
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Recargar niveles asignados
+                cargarNivelesAsignados(usuarioId);
+                // Resetear formulario
+                document.getElementById('nuevoNivel').value = '';
+                document.getElementById('nuevoIdNivel').innerHTML = '<option value="">Primero seleccione nivel</option>';
+                document.getElementById('nuevoIdNivel').disabled = true;
+                btn.disabled = true;
+                btn.textContent = 'Agregar';
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al agregar nivel');
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.textContent = 'Agregar';
+        });
+    }
+
+    function eliminarNivelUsuario(usuarioId, nivel) {
+        if (!confirm('¿Eliminar este nivel del usuario?')) return;
+        
+        // Obtener niveles actuales y enviar lista sin el que se quiere eliminar
+        fetch(`/admin/usuarios/${usuarioId}/niveles`, {
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.data) {
+                const nuevosNiveles = data.data.filter(n => n.nivel !== nivel);
+                
+                fetch(`/admin/usuarios/${usuarioId}/niveles`, {
+                    method: 'PUT',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ niveles: nuevosNiveles })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        cargarNivelesAsignados(usuarioId);
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                });
+            }
+        });
+    }
+
+    // Actualizar la lista de modales para ESC
+    const originalModals = ['modalAddUser', 'modalEditUser', 'modalDeleteUser'];
+    const allModals = ['modalAddUser', 'modalEditUser', 'modalDeleteUser', 'modalAsignarNiveles'];
+    
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            allModals.forEach(modalId => {
+                const modal = document.getElementById(modalId);
+                if (modal && !modal.classList.contains('hidden')) {
+                    closeModal(modalId);
+                }
+            });
+        }
+    });
 </script>
 @endpush
 @endsection

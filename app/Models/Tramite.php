@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Domain\Tramites\EstadoTramite;
+use App\Domain\Tramites\ModoDerivacion;
 
 /**
  * Modelo Tramite
@@ -59,6 +60,7 @@ class Tramite extends Model
         'nivel_actual',
         'id_nodo_actual',
         'modo_derivacion',
+        'modo_manual_por_usuario',
         'ultimo_estado',
         'id_usuario',
         'creado_por',
@@ -268,6 +270,16 @@ class Tramite extends Model
         }
 
         return basename($this->archivo_adjunto);
+    }
+
+    /**
+     * Verifica si el trámite está en modo manual (global)
+     * 
+     * @return bool
+     */
+    public function esModoManual(): bool
+    {
+        return $this->modo_derivacion === ModoDerivacion::MANUAL_FORZADO;
     }
 
     /**
