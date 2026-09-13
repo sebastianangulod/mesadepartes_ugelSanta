@@ -140,7 +140,7 @@
                     </label>
                     <select id="departamento" name="departamento" 
                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            onchange="cargarProvincias(this.value)" required>
+                            required>
                         <option value="">Seleccione un departamento</option>
                         @foreach($departamentos as $departamento)
                             <option value="{{ $departamento->id }}" 
@@ -161,7 +161,6 @@
                     </label>
                     <select id="provincia" name="provincia" 
                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            onchange="cargarDistritos(this.value)" 
                             @if(!($usuario->distrito && $usuario->distrito->provincia)) disabled @endif
                             data-provincia-id="{{ $usuario->distrito && $usuario->distrito->provincia ? $usuario->distrito->provincia_id : '' }}"
                             required>
@@ -338,6 +337,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const departamentoSelect = document.getElementById('departamento');
     const provinciaSelect = document.getElementById('provincia');
     const distritoSelect = document.getElementById('distrito_id');
+    
+    // Event listeners para selects en cascada
+    if (departamentoSelect) {
+        departamentoSelect.addEventListener('change', function() {
+            cargarProvincias(this.value);
+        });
+    }
+    
+    if (provinciaSelect) {
+        provinciaSelect.addEventListener('change', function() {
+            cargarDistritos(this.value);
+        });
+    }
     
     // Si hay un departamento seleccionado, cargar provincias
     if (departamentoSelect && departamentoSelect.value) {

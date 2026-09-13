@@ -280,8 +280,7 @@
             <div>
                 <label for="departamentoUsuario" class="block text-sm font-medium text-gray-700 mb-1">Departamento</label>
                 <select id="departamentoUsuario" name="departamentoUsuario" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        onchange="cargarProvincias(this.value)">
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">Seleccione un departamento</option>
                 </select>
             </div>
@@ -290,7 +289,7 @@
                 <label for="provinciaUsuario" class="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
                 <select id="provinciaUsuario" name="provinciaUsuario" 
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                        disabled onchange="cargarDistritos(this.value)">
+                        disabled>
                     <option value="">Seleccione una provincia</option>
                 </select>
             </div>
@@ -308,8 +307,7 @@
             <div>
                 <label for="nivel1" class="block text-sm font-medium text-gray-700 mb-1">Nivel 1</label>
                 <select id="nivel1" name="nivel1" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        onchange="cargarNivel2(this.value)">
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">Seleccione Nivel 1</option>
                 </select>
             </div>
@@ -318,7 +316,7 @@
                 <label for="nivel2" class="block text-sm font-medium text-gray-700 mb-1">Nivel 2</label>
                 <select id="nivel2" name="nivel2" 
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                        disabled onchange="cargarNivel3(this.value)">
+                        disabled>
                     <option value="">Seleccione Nivel 2</option>
                 </select>
             </div>
@@ -327,7 +325,7 @@
                 <label for="nivel3" class="block text-sm font-medium text-gray-700 mb-1">Nivel 3</label>
                 <select id="nivel3" name="nivel3" 
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                        disabled onchange="cargarNivel4(this.value)">
+                        disabled>
                     <option value="">Seleccione Nivel 3</option>
                 </select>
             </div>
@@ -676,6 +674,43 @@
         cargarEditDepartamentos();
         cargarNivel1();
         cargarEditNivel1();
+        
+        // Event listeners para selects en cascada (ubicación)
+        const deptoSelect = document.getElementById('departamentoUsuario');
+        const provSelect = document.getElementById('provinciaUsuario');
+        const distSelect = document.getElementById('distritoUsuario');
+        
+        if (deptoSelect) {
+            deptoSelect.addEventListener('change', function() {
+                cargarProvincias(this.value);
+            });
+        }
+        if (provSelect) {
+            provSelect.addEventListener('change', function() {
+                cargarDistritos(this.value);
+            });
+        }
+        
+        // Event listeners para selects en cascada (niveles)
+        const n1Select = document.getElementById('nivel1');
+        const n2Select = document.getElementById('nivel2');
+        const n3Select = document.getElementById('nivel3');
+        
+        if (n1Select) {
+            n1Select.addEventListener('change', function() {
+                cargarNivel2(this.value);
+            });
+        }
+        if (n2Select) {
+            n2Select.addEventListener('change', function() {
+                cargarNivel3(this.value);
+            });
+        }
+        if (n3Select) {
+            n3Select.addEventListener('change', function() {
+                cargarNivel4(this.value);
+            });
+        }
         
         // Validar formato DNI (solo números)
         const dniInput = document.getElementById('dniUsuario');
