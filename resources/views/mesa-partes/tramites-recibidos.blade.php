@@ -1,8 +1,8 @@
 @extends('layouts.mesa-partes')
 
-@section('title', 'Trámites Recibidos')
+@section('title', 'Mis Trámites')
 
-@section('header', 'Listado de los Trámites Recibidos')
+@section('header', 'Mis Trámites')
 
 @section('content')
         
@@ -79,6 +79,7 @@
 
         <!-- Tabla de Trámites -->
         <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
             <table class="min-w-full">
                 <thead>
                     <tr class="bg-gray-100">
@@ -97,6 +98,7 @@
                     <!-- Los trámites se cargarán dinámicamente -->
                 </tbody>
             </table>
+            </div>
 
             <!-- Paginación -->
             <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
@@ -160,15 +162,28 @@
 
 <!-- Modal para corregir trámite -->
 <div id="modalCorregir" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm relative">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
+        <button id="cerrarModalCorregir" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
         <h2 class="text-lg font-bold mb-4">Corregir Trámite</h2>
+        <p class="text-sm text-gray-600 mb-4">El trámite se encuentra <span class="font-semibold text-orange-600">OBSERVADO</span>. Adjunte el documento corregido (PDF) para subsanar la observación.</p>
         <form id="formCorregir" enctype="multipart/form-data">
             @csrf
             <input type="hidden" name="id_tramite" id="corregir_id_tramite">
-            <input type="file" name="archivo_adjunto" id="corregir_archivo" accept="application/pdf" class="mb-4 w-full" required />
-            <div class="flex justify-end">
-                <button type="button" id="cerrarModalCorregir" class="mr-2 px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Cancelar</button>
-                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Enviar Corrección</button>
+            <div class="mb-4">
+                <label for="corregir_archivo" class="block text-sm font-medium text-gray-700 mb-1">
+                    Documento corregido (PDF) <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                    <input type="file" name="archivo_adjunto" id="corregir_archivo" accept="application/pdf" required 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                           onchange="validarArchivoPDF(this, 'corregir_archivo_error')">
+                    <div id="corregir_archivo_error" class="mt-1 text-sm text-red-600 hidden"></div>
+                </div>
+                <p class="mt-1 text-xs text-gray-500">Máximo 10 MB. Solo archivos PDF.</p>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" id="cerrarModalCorregirBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition-colors">Cancelar</button>
+                <button type="submit" id="btnEnviarCorreccion" disabled class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors opacity-50 cursor-not-allowed">Enviar Corrección</button>
             </div>
             <div id="corregirMensaje" class="mt-3 text-sm"></div>
         </form>
@@ -177,15 +192,28 @@
 
 <!-- Modal para subir oficio (usuario externo) -->
 <div id="modalOficio" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-    <div class="relative top-20 mx-auto p-5 border w-4/5 max-w-2xl shadow-lg rounded-md bg-white">
-        <h3 class="text-xl font-bold mb-4">Subir Oficio</h3>
+    <div class="relative top-20 mx-auto p-6 w-full max-w-md shadow-lg rounded-lg bg-white">
+        <button onclick="cerrarModalOficio()" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+        <h3 class="text-xl font-bold mb-4">Subir Oficio de Subsanación</h3>
+        <p class="text-sm text-gray-600 mb-4">El trámite fue <span class="font-semibold text-orange-600">OBSERVADO</span> y requiere un oficio de respuesta. Adjunte el oficio (PDF) para continuar el trámite.</p>
         <form id="formOficio" enctype="multipart/form-data">
             @csrf
-            <input type="file" name="archivo_oficio" accept="application/pdf" required class="mb-4 w-full">
+            <div class="mb-4">
+                <label for="archivo_oficio" class="block text-sm font-medium text-gray-700 mb-1">
+                    Oficio de subsanación (PDF) <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                    <input type="file" name="archivo_oficio" id="archivo_oficio" accept="application/pdf" required 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                           onchange="validarArchivoPDF(this, 'oficio_archivo_error')">
+                    <div id="oficio_archivo_error" class="mt-1 text-sm text-red-600 hidden"></div>
+                </div>
+                <p class="mt-1 text-xs text-gray-500">Máximo 10 MB. Solo archivos PDF.</p>
+            </div>
             <input type="hidden" name="id_tramite" id="id_tramite_oficio">
-            <div class="flex justify-end">
-                <button type="button" onclick="cerrarModalOficio()" class="mr-2 px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Cerrar</button>
-                <button type="submit" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">Subir</button>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="cerrarModalOficio()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition-colors">Cerrar</button>
+                <button type="submit" id="btnSubirOficio" disabled class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors opacity-50 cursor-not-allowed">Subir Oficio</button>
             </div>
         </form>
     </div>
@@ -205,12 +233,10 @@
                           class="w-full p-2 border rounded" 
                           placeholder="Ingrese el motivo de la observación..."></textarea>
             </div>
-            <div class="mb-4">
-                <label for="oficio_archivo" class="block text-gray-700 text-sm font-bold mb-2">
-                    Archivo de Oficio (PDF) <span class="text-red-500">*</span>
-                </label>
-                <input type="file" name="oficio" id="oficio_archivo" accept="application/pdf" required class="w-full">
-            </div>
+            <p class="text-sm text-gray-600 mb-4 bg-yellow-50 p-3 rounded">
+                <strong>Nota:</strong> El oficio debe ser adjuntado por el creador del trámite después de esta observación.
+                Hasta que se adjunte el oficio, no podrá realizar ninguna acción sobre este trámite.
+            </p>
             <input type="hidden" name="id_tramite" id="id_tramite_observar_oficio">
             <div class="flex justify-end">
                 <button type="button" onclick="cerrarModalObservarConOficio()" class="mr-2 px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Cerrar</button>
@@ -219,7 +245,32 @@
         </form>
     </div>
 </div>
-                    
+
+<!-- Modal para ver observación (usuario externo e interno) -->
+<div id="modalObservacion" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
+        <button onclick="cerrarModalObservacion()" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+        <h3 class="text-xl font-bold mb-4">Motivo de la Observación</h3>
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Observación</label>
+            <div id="observacionTexto" class="w-full px-3 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 min-h-[80px] whitespace-pre-wrap"></div>
+        </div>
+        <div id="oficioSection" class="mb-4 hidden">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Oficio adjunto</label>
+            <div class="flex items-center gap-2">
+                <button id="btnVerOficioObservacion" type="button" 
+                        class="px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm rounded-lg font-medium transition-colors">
+                    Ver Oficio
+                </button>
+                <span class="text-sm text-gray-500">Documento oficial de la observación</span>
+            </div>
+        </div>
+        <div class="flex justify-end">
+            <button type="button" onclick="cerrarModalObservacion()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition-colors">Cerrar</button>
+        </div>
+    </div>
+</div>
+
 <!-- Modal de Acciones -->
 <div id="modalAccionesTramite" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
     <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm relative">
@@ -248,18 +299,16 @@
     
     .acciones-buttons {
         display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
+        gap: 6px;
+        flex-wrap: nowrap;
+        align-items: center;
     }
     .acciones-buttons button {
-        padding: 6px 12px;
-        border-radius: 4px;
-        font-size: 0.9em;
-        transition: all 0.3s ease;
-    }
-    .acciones-buttons button:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        height: 28px;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
 </style>
 @endpush
@@ -500,14 +549,16 @@
                         </a>
                     ` : 'Sin voucher'}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 align-middle">
                     <button onclick="verHojaRuta(${tramite.id})" 
-                            class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-2 rounded text-xs mb-1 mr-1">
+                            class="bg-blue-500 hover:bg-blue-600 text-white font-bold px-2 rounded text-xs">
                         Hoja de Ruta
                     </button>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 acciones-buttons">
-                    ${generarBotonesAccion(tramite)}
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 align-middle">
+                    <div class="acciones-buttons">
+                        ${generarBotonesAccion(tramite)}
+                    </div>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -523,21 +574,35 @@
             return botones;
         }
         
-        // Ver oficio si existe
-        if (tramite.oficio) {
+        // Botón "Ver observación" SOLO para usuarios externos (tipo_user = 1) en trámites observados
+        const esUsuarioExterno = window.TIPO_USER === 1;
+        if (esUsuarioExterno && tramite.estado === 'OBSERVADO') {
+            botones += `<button onclick="verObservacion(${tramite.id})" 
+                        class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-2 rounded text-xs mr-1"
+                        title="Ver motivo de la observación">
+                        Ver observación</button>`;
+        }
+        
+        // Ver oficio solo si existe y NO requiere oficio pendiente
+        if (tramite.oficio && !tramite.requiere_oficio) {
             botones += `<button onclick="verOficio('${tramite.oficio}', ${tramite.id})" 
-                        class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-1 px-2 rounded text-xs mb-1 mr-1">
+                        class="bg-purple-500 hover:bg-purple-600 text-white font-bold px-2 rounded text-xs mr-1">
                         Ver Oficio</button>`;
         }
+        // Si requiere oficio o no hay oficio, NO mostrar el botón "Ver Oficio" (oculto)
         
         // Botón de acciones si hay acciones permitidas
         if (tramite.accionesPermitidas && tramite.accionesPermitidas.length > 0) {
             botones += `<button onclick="abrirModalAcciones(${tramite.id})" 
-                        class="bg-gray-700 hover:bg-gray-900 text-white font-bold py-1 px-2 rounded text-xs mb-1">
+                        class="bg-gray-700 hover:bg-gray-900 text-white font-bold px-2 rounded text-xs">
                         Acciones</button>`;
         } else {
-            botones += `<button class="bg-gray-300 text-gray-500 cursor-not-allowed px-2 py-1 rounded text-xs mb-1" disabled>
-                        Sin acciones</button>`;
+            // Mostrar estado de acciones: sin acciones o requiere oficio
+            const tooltip = tramite.requiere_oficio 
+                ? 'Requiere oficio del creador para habilitar acciones' 
+                : 'Sin acciones disponibles';
+            botones += `<button class="bg-gray-300 text-gray-500 cursor-not-allowed px-2 rounded text-xs" disabled title="${tooltip}">
+                        ${tramite.requiere_oficio ? 'Requiere oficio' : 'Sin acciones'}</button>`;
         }
         
         return botones;
@@ -581,6 +646,7 @@
                 'VERIFICAR': 'Verificar',
                 'PROCESAR': 'Procesar',
                 'CORREGIR': 'Corregir',
+                'SUBIR_OFICIO': 'Subir oficio',
             };
             
             // DEBUG: Log trámite data
@@ -743,6 +809,9 @@
             case 'PROCESAR':
                 procesarTramite(idTramite);
                 break;
+            case 'SUBIR_OFICIO':
+                mostrarModalOficio(idTramite);
+                break;
         }
     }
 
@@ -750,6 +819,11 @@
     window.mostrarModalCorregir = function(idTramite) {
         document.getElementById('corregir_id_tramite').value = idTramite;
         document.getElementById('modalCorregir').classList.remove('hidden');
+    }
+
+    window.mostrarModalOficio = function(idTramite) {
+        document.getElementById('id_tramite_oficio').value = idTramite;
+        document.getElementById('modalOficio').classList.remove('hidden');
     }
 
     window.observarTramite = function(id) {
@@ -1181,14 +1255,104 @@
         window.open(`/tramites/${tramiteId}/archivo/${nombreDocumento}`, '_blank');
     }
 
-    window.abrirModalOficio = function(idTramite) {
+    // Ver observación modal
+    window.verObservacion = function(idTramite) {
+        const tramite = tramitesCache[idTramite];
+        if (!tramite) return alert('No se encontró el trámite.');
+
+        const modal = document.getElementById('modalObservacion');
+        const textoDiv = document.getElementById('observacionTexto');
+        const oficioSection = document.getElementById('oficioSection');
+        const btnVerOficio = document.getElementById('btnVerOficioObservacion');
+
+        // Mostrar el texto de la observación
+        textoDiv.textContent = tramite.observaciones || 'Sin observación registrada.';
+
+        // Mostrar/ocultar sección de oficio
+        if (tramite.oficio && !tramite.requiere_oficio) {
+            oficioSection.classList.remove('hidden');
+            btnVerOficio.onclick = () => verOficio(tramite.oficio, idTramite);
+        } else {
+            oficioSection.classList.add('hidden');
+        }
+
+        modal.classList.remove('hidden');
+    }
+
+    window.cerrarModalObservacion = function() {
+        document.getElementById('modalObservacion').classList.add('hidden');
+    }
+
+    // Validar archivo PDF en el cliente
+    function validarArchivoPDF(input, errorId) {
+        const errorDiv = document.getElementById(errorId);
+        const submitBtn = input.id === 'corregir_archivo' ? document.getElementById('btnEnviarCorreccion') : document.getElementById('btnSubirOficio');
+        
+        if (!input.files || input.files.length === 0) {
+            if (errorDiv) {
+                errorDiv.textContent = 'Debe seleccionar un archivo';
+                errorDiv.classList.remove('hidden');
+            }
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            return false;
+        }
+
+        const file = input.files[0];
+        
+        if (file.type !== 'application/pdf') {
+            if (errorDiv) {
+                errorDiv.textContent = 'Solo se permiten archivos PDF';
+                errorDiv.classList.remove('hidden');
+            }
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            input.value = '';
+            return false;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+            if (errorDiv) {
+                errorDiv.textContent = 'El archivo no debe superar los 10MB';
+                errorDiv.classList.remove('hidden');
+            }
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            input.value = '';
+            return false;
+        }
+
+        if (errorDiv) {
+            errorDiv.classList.add('hidden');
+        }
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+        return true;
+    }
+
+    window.mostrarModalOficio = function(idTramite) {
         document.getElementById('id_tramite_oficio').value = idTramite;
         document.getElementById('modalOficio').classList.remove('hidden');
+        // Reset form state
+        document.getElementById('formOficio').reset();
+        document.getElementById('oficio_archivo_error').classList.add('hidden');
+        const btn = document.getElementById('btnSubirOficio');
+        btn.disabled = true;
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
     }
 
     window.cerrarModalOficio = function() {
         document.getElementById('modalOficio').classList.add('hidden');
         document.getElementById('formOficio').reset();
+        document.getElementById('oficio_archivo_error').classList.add('hidden');
     }
 
     // Event Listeners
@@ -1203,6 +1367,20 @@
             document.getElementById('modalCorregir').classList.add('hidden');
             document.getElementById('formCorregir').reset();
             document.getElementById('corregirMensaje').textContent = '';
+            document.getElementById('corregir_archivo_error').classList.add('hidden');
+            const btn = document.getElementById('btnEnviarCorreccion');
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+        };
+        
+        document.getElementById('cerrarModalCorregirBtn').onclick = function() {
+            document.getElementById('modalCorregir').classList.add('hidden');
+            document.getElementById('formCorregir').reset();
+            document.getElementById('corregirMensaje').textContent = '';
+            document.getElementById('corregir_archivo_error').classList.add('hidden');
+            const btn = document.getElementById('btnEnviarCorreccion');
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
         };
 
         // Formulario de corregir
@@ -1210,7 +1388,15 @@
             e.preventDefault();
             const formData = new FormData(this);
             const mensajeDiv = document.getElementById('corregirMensaje');
+            
+            // Validar archivo
+            const archivoInput = document.getElementById('corregir_archivo');
+            if (!validarArchivoPDF(archivoInput, 'corregir_archivo_error')) {
+                return;
+            }
+            
             mensajeDiv.textContent = 'Enviando...';
+            mensajeDiv.className = 'mt-3 text-sm text-blue-600';
             
             fetch(`/tramites/${formData.get('id_tramite')}/corregir`, {
                 method: 'POST',
@@ -1224,41 +1410,42 @@
             .then(data => {
                 if (data.success) {
                     mensajeDiv.textContent = 'Corrección enviada correctamente.';
+                    mensajeDiv.className = 'mt-3 text-sm text-green-600';
                     setTimeout(() => {
                         document.getElementById('modalCorregir').classList.add('hidden');
                         this.reset();
                         mensajeDiv.textContent = '';
+                        document.getElementById('corregir_archivo_error').classList.add('hidden');
+                        const btn = document.getElementById('btnEnviarCorreccion');
+                        btn.disabled = true;
+                        btn.classList.add('opacity-50', 'cursor-not-allowed');
                         cargarTramites(paginaActual);
                     }, 1200);
                 } else {
                     mensajeDiv.textContent = data.message || 'Error al corregir el trámite.';
+                    mensajeDiv.className = 'mt-3 text-sm text-red-600';
                 }
             })
             .catch(() => {
                 mensajeDiv.textContent = 'Error al enviar la corrección.';
+                mensajeDiv.className = 'mt-3 text-sm text-red-600';
             });
         };
 
         // Formulario de oficio (usuario externo)
         document.getElementById('formOficio').onsubmit = function(e) {
             e.preventDefault();
+            
+            const archivoInput = document.getElementById('archivo_oficio');
+            if (!validarArchivoPDF(archivoInput, 'oficio_archivo_error')) {
+                return;
+            }
+            
             const formData = new FormData(this);
-            const archivoInput = formData.get('archivo_oficio');
-            
-            if (!archivoInput || archivoInput.size === 0) {
-                alert('Por favor seleccione un archivo PDF');
-                return;
-            }
-            
-            if (archivoInput.type !== 'application/pdf') {
-                alert('Solo se permiten archivos PDF');
-                return;
-            }
-            
-            if (archivoInput.size > 10 * 1024 * 1024) {
-                alert('El archivo no debe superar los 10MB');
-                return;
-            }
+            const btn = document.getElementById('btnSubirOficio');
+            const originalText = btn.textContent;
+            btn.textContent = 'Subiendo...';
+            btn.disabled = true;
             
             fetch(`/tramites/${formData.get('id_tramite')}/subir-oficio`, {
                 method: 'POST',
@@ -1278,42 +1465,37 @@
                     alert(data.message || 'Error al subir el oficio');
                 }
             })
-            .catch(() => alert('Error de red al intentar subir el oficio'));
+            .catch(() => alert('Error de red al intentar subir el oficio'))
+            .finally(() => {
+                btn.textContent = originalText;
+            });
         };
 
         // Formulario de observar con oficio (usuario interno)
         document.getElementById('formObservarConOficio').onsubmit = function(e) {
             e.preventDefault();
             const formData = new FormData(this);
-            const archivoInput = formData.get('oficio');
+            const observacion = formData.get('observacion');
+            const idTramite = formData.get('id_tramite');
             
-            if (!archivoInput || archivoInput.size === 0) {
-                alert('Por favor seleccione un archivo PDF');
+            if (!observacion || observacion.trim() === '') {
+                alert('Por favor ingrese el motivo de la observación');
                 return;
             }
             
-            if (archivoInput.type !== 'application/pdf') {
-                alert('Solo se permiten archivos PDF');
-                return;
-            }
-            
-            if (archivoInput.size > 10 * 1024 * 1024) {
-                alert('El archivo no debe superar los 10MB');
-                return;
-            }
-            
-            fetch(`/tramites/${formData.get('id_tramite')}/observar-con-oficio`, {
+            fetch(`/tramites/${idTramite}/observar-con-oficio`, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
                 },
-                body: formData
+                body: JSON.stringify({ observacion: observacion })
             })
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    alert('Trámite observado correctamente. El usuario externo deberá adjuntar un oficio de subsanación.');
+                    alert('Trámite observado con oficio correctamente.');
                     cerrarModalObservarConOficio();
                     cargarTramites(paginaActual);
                 } else {

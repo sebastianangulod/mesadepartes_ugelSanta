@@ -72,6 +72,7 @@ class Tramite extends Model
         'numero_voucher',
         'periodo',
         'oficio',
+        'requiere_oficio',
         'rechazado_por',
         'fecha_rechazo',
     ];
@@ -85,6 +86,7 @@ class Tramite extends Model
         'fecha_creacion' => 'datetime',
         'limite_observacion' => 'date',
         'fecha_rechazo' => 'datetime',
+        'requiere_oficio' => 'boolean',
     ];
     
     /**
@@ -209,6 +211,16 @@ class Tramite extends Model
     public function estaVerificado(): bool
     {
         return $this->estado === EstadoTramite::VERIFICADO;
+    }
+
+    /**
+     * Verificar si el trámite requiere oficio del creador
+     * 
+     * @return bool
+     */
+    public function requiereOficio(): bool
+    {
+        return (bool) $this->requiere_oficio;
     }
 
     /**

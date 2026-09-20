@@ -86,13 +86,30 @@ class TramiteBandejaInternaService
         if ((int) $usuario->tipo_user === 1) {
             if ($tramite->estado === EstadoTramite::OBSERVADO
                 && (int) $tramite->creado_por === (int) $usuario->id) {
-                $acciones[] = 'CORREGIR';
+                // Si el trámite requiere oficio (fue observado CON oficio por interno),
+                // el externo debe subir su oficio de respuesta
+                if ((bool) $tramite->requiere_oficio) {
+                    $acciones[] = 'SUBIR_OFICIO';
+                }
+                // Si no requiere oficio pero tiene oficio adjunto, puede subir oficio de subsanación
+                elseif (!is_null($tramite->oficio) && $tramite->oficio !== '') {
+                    $acciones[] = 'SUBIR_OFICIO';
+                }
+                // Si no requiere oficio y no tiene oficio, es observación simple → corregir documento
+                else {
+                    $acciones[] = 'CORREGIR';
+                }
             }
 
             return $acciones;
         }
 
         if ((int) $usuario->tipo_user !== 2) {
+            return $acciones;
+        }
+
+        // Si el trámite requiere oficio del creador, deshabilitar todas las acciones del especialista
+        if ($tramite->requiere_oficio) {
             return $acciones;
         }
 
@@ -161,11 +178,8 @@ class TramiteBandejaInternaService
                     }
                     if ($nodo && $nodo->puede_finalizar) {
                         $acciones[] = 'OBSERVAR_CON_OFICIO';
-                        if (!$tieneOficio) {
-                            $acciones[] = 'PROCESAR';
-                        } else {
-                            $acciones[] = 'VERIFICAR';
-                        }
+                        // Siempre mostrar PROCESAR en nodo final (con o sin oficio)
+                        $acciones[] = 'PROCESAR';
                     }
                     if ($nodo && $nodo->puede_rechazar_definitivo) {
                         $acciones[] = 'RECHAZAR';

@@ -128,21 +128,29 @@
             </li>
             @endif
             
-            <!-- Recepción de Trámites - Solo para usuarios tipo 2 (internos) -->
-            @if(Auth::user()->tipo_user == 2)
+            <!-- Mis Trámites / Recepción de Trámites - Para todos los usuarios autenticados -->
             <li>
-                <a href="{{ route('mesa-partes.tramites-recibidos') }}" 
-                   class="menu-item {{ request()->routeIs('mesa-partes.tramites-recibidos') ? 'active' : '' }}">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
-                    </svg>
-                    Recepción de Trámites
-                    @if(isset($tramitesPendientes) && $tramitesPendientes > 0)
-                        <span class="ml-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">{{ $tramitesPendientes }}</span>
-                    @endif
-                </a>
+                @if(Auth::user()->tipo_user == 2)
+                    <a href="{{ route('mesa-partes.tramites-recibidos') }}" 
+                       class="menu-item {{ request()->routeIs('mesa-partes.tramites-recibidos') ? 'active' : '' }}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                        </svg>
+                        Recepción de Trámites
+                        @if(isset($tramitesPendientes) && $tramitesPendientes > 0)
+                            <span class="ml-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">{{ $tramitesPendientes }}</span>
+                        @endif
+                    </a>
+                @else
+                    <a href="{{ route('mesa-partes.tramites-recibidos') }}" 
+                       class="menu-item {{ request()->routeIs('mesa-partes.tramites-recibidos') ? 'active' : '' }}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                        </svg>
+                        Mis Trámites
+                    </a>
+                @endif
             </li>
-            @endif
         </ul>
     </nav>
 </aside>

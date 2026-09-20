@@ -492,6 +492,8 @@ class MesaPartesController extends Controller
                         'archivo_adjunto' => $t->archivo_adjunto,
                         'voucher' => $t->voucher,
                         'oficio' => $t->oficio,
+                        'observaciones' => $t->observaciones,
+                        'requiere_oficio' => $t->requiere_oficio,
                         'numero_voucher' => $t->numero_voucher,
                         'tramitescol' => $t->tramitescol,
                         'accionesPermitidas' => $t->accionesPermitidas ?? [],

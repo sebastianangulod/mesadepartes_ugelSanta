@@ -1234,7 +1234,8 @@ class TramiteController extends Controller
     }
 
     /**
-     * Observar trámite con oficio adjunto
+     * Observar trámite con oficio (solo motivo, sin adjuntar archivo)
+     * El oficio debe ser subido posteriormente por el creador del trámite
      * 
      * @param Request $request
      * @param int $tramite
@@ -1254,7 +1255,6 @@ class TramiteController extends Controller
 
         $request->validate([
             'observacion' => 'required|string|max:1000',
-            'oficio' => 'required|file|mimes:pdf|max:10240',
         ]);
 
         $this->authorize('observar', $tramite);
@@ -1264,20 +1264,18 @@ class TramiteController extends Controller
                 $tramite = $this->tramiteFlujoService->observarConOficioEnFlujoConfigurable(
                     $tramite,
                     $request->input('observacion'),
-                    $request->file('oficio'),
                     Auth::user()
                 );
             } else {
                 $tramite = $this->tramiteService->observarConOficio(
                     $tid,
-                    $request->input('observacion'),
-                    $request->file('oficio')
+                    $request->input('observacion')
                 );
             }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Trámite observado con oficio exitosamente',
+                'message' => 'Trámite observado con oficio exitosamente. El creador debe adjuntar el oficio.',
                 'data' => $tramite,
             ]);
         } catch (\Exception $e) {
@@ -2000,7 +1998,7 @@ class TramiteController extends Controller
         if (!$archivoValido) {
             try {
                 $oficio = DB::table('oficios')
-                    ->where('id_tramite', $id)
+                    ->where('id_tramite', $tramite->id)
                     ->where('archivo', $nombreArchivo)
                     ->first();
                 
@@ -2013,6 +2011,21 @@ class TramiteController extends Controller
                 }
             } catch (\Exception $e) {
                 // Si la tabla no existe, continuar sin error
+            }
+        }
+
+        // Verificar campo oficio directo en Tramite (cuando se sube oficio desde frontend)
+        if (!$archivoValido && $tramite->oficio) {
+            $nombreArchivoBD = basename($tramite->oficio);
+            if ($nombreArchivoBD === $nombreArchivo || $tramite->oficio === $nombreArchivo) {
+                $rutaRelativa = 'uploads/oficios/' . $nombreArchivoBD;
+                if (Storage::disk('public')->exists($rutaRelativa)) {
+                    $archivoValido = true;
+                    $rutaArchivo = Storage::disk('public')->path($rutaRelativa);
+                } elseif (Storage::disk('local')->exists($rutaRelativa)) {
+                    $archivoValido = true;
+                    $rutaArchivo = Storage::disk('local')->path($rutaRelativa);
+                }
             }
         }
 
@@ -2029,7 +2042,7 @@ class TramiteController extends Controller
             }
             
             \Log::error('Archivo no encontrado', [
-                'tramite_id' => $id,
+                'tramite_id' => $tramite->id,
                 'nombre_archivo' => $nombreArchivo,
                 'archivo_adjunto' => $tramite->archivo_adjunto,
                 'archivo_expediente' => $tramite->archivo_expediente,

@@ -710,13 +710,13 @@ class TramiteFlujoService
 
     /**
      * Observar con oficio (nodo con puede_finalizar).
+     * El oficio debe ser subido posteriormente por el creador del trámite.
      *
      * @throws Exception
      */
     public function observarConOficioEnFlujoConfigurable(
         Tramite $tramite,
         string $observacion,
-        UploadedFile $oficio,
         ?Usuario $actor = null
     ): Tramite {
         $actor = $actor ?? Auth::user();
@@ -724,7 +724,7 @@ class TramiteFlujoService
             throw new Exception('Usuario no autenticado');
         }
 
-        return DB::transaction(function () use ($tramite, $observacion, $oficio, $actor) {
+        return DB::transaction(function () use ($tramite, $observacion, $actor) {
             $tramite->loadMissing('nodoActual');
             $nodo = $tramite->nodoActual;
             if (!$nodo || !$nodo->puede_finalizar) {
@@ -739,12 +739,10 @@ class TramiteFlujoService
                 throw new Exception('No tiene permiso para esta acción en este nodo');
             }
 
-            $this->validarArchivoPdfSubida($oficio);
-            $nombreOficio = $this->guardarPdfSubido($oficio, 'oficios');
-
             $tramite->estado = EstadoTramite::OBSERVADO;
             $tramite->observaciones = $observacion;
-            $tramite->oficio = $nombreOficio;
+            $tramite->oficio = null;
+            $tramite->requiere_oficio = true;
             $tramite->limite_observacion = now()->addDays(2);
             $tramite->save();
 
@@ -776,6 +774,11 @@ class TramiteFlujoService
 
             if (!$actor->esAdministrador() && !$this->usuarioInternoPuedeActuarEnNodo($actor, $nodo)) {
                 throw new Exception('No tiene permiso para verificar en este nodo');
+            }
+
+            // No permitir verificar si requiere oficio del creador
+            if ($tramite->requiere_oficio) {
+                throw new Exception('El trámite requiere oficio del creador antes de poder verificarse');
             }
 
             $ok = $tramite->estado === EstadoTramite::OBSERVADO
@@ -817,15 +820,20 @@ class TramiteFlujoService
                 throw new Exception('No tiene permiso para procesar en este nodo');
             }
 
+            // No permitir procesar si requiere oficio del creador
+            if ($tramite->requiere_oficio) {
+                throw new Exception('El trámite requiere oficio del creador antes de poder procesarse');
+            }
+
             $puede = false;
             if ($tramite->estado === EstadoTramite::VERIFICADO) {
                 $puede = true;
-            } elseif ($tramite->estado === EstadoTramite::EN_PROCESO && empty($tramite->oficio)) {
+            } elseif ($tramite->estado === EstadoTramite::EN_PROCESO && !$tramite->requiere_oficio) {
                 $puede = true;
             }
             if (!$puede) {
                 throw new Exception(
-                    'El trámite solo puede procesarse si está VERIFICADO o en EN_PROCESO sin requerir oficio'
+                    'El trámite solo puede procesarse si está VERIFICADO o en EN_PROCESO sin requerir oficio pendiente'
                 );
             }
 

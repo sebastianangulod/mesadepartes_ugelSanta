@@ -12,6 +12,7 @@ use App\Services\Tramites\VoucherService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Exception;
 
 /**
@@ -225,33 +226,28 @@ $tramite->modo_manual_por_usuario = null;
     }
 
     /**
-     * Observar trámite con oficio adjunto
+     * Observar trámite con oficio (solo motivo, sin adjuntar archivo)
+     * El oficio debe ser subido posteriormente por el creador del trámite
      * 
      * @param int $tramiteId
      * @param string $observacion
-     * @param mixed $oficio
      * @return Tramite
      * @throws Exception
      */
-    public function observarConOficio(int $tramiteId, string $observacion, $oficio): Tramite
+    public function observarConOficio(int $tramiteId, string $observacion): Tramite
     {
-        return DB::transaction(function () use ($tramiteId, $observacion, $oficio) {
+        return DB::transaction(function () use ($tramiteId, $observacion) {
             $tramite = Tramite::with('procedimiento')->findOrFail($tramiteId);
             $usuario = Auth::user();
 
             // Validar que el usuario puede actuar sobre este trámite
             $this->validarNivelActual($tramite, $usuario->id);
 
-            // Validar archivo de oficio
-            $this->validarArchivoPDF($oficio);
-
-            // Guardar oficio
-            $nombreOficio = $this->guardarArchivo($oficio, 'oficios');
-
-            // Actualizar trámite
+            // Actualizar trámite: marcar que requiere oficio del creador
             $tramite->estado = EstadoTramite::OBSERVADO;
             $tramite->observaciones = $observacion;
-            $tramite->oficio = $nombreOficio;
+            $tramite->oficio = null;
+            $tramite->requiere_oficio = true;
             $tramite->limite_observacion = now()->addDays(2);
             $tramite->save();
 
@@ -296,6 +292,7 @@ $tramite->modo_manual_por_usuario = null;
 
             // Actualizar trámite
             $tramite->oficio = $nombreOficio;
+            $tramite->requiere_oficio = false;
             $tramite->estado = EstadoTramite::EN_PROCESO;
             $tramite->ultimo_estado = EstadoTramite::OBSERVADO;
             $tramite->save();
@@ -436,6 +433,11 @@ $tramite->modo_manual_por_usuario = null;
                 throw new Exception('Solo la mesa de partes o el nivel final pueden verificar el trámite');
             }
 
+            // No permitir verificar si requiere oficio del creador
+            if ($tramite->requiere_oficio) {
+                throw new Exception('El trámite requiere oficio del creador antes de poder verificarse');
+            }
+
             // Validar que el trámite esté en estado válido para verificar
             if ($tramite->estado !== EstadoTramite::OBSERVADO && 
                 !($tramite->estado === EstadoTramite::EN_PROCESO && $tramite->oficio)) {
@@ -474,18 +476,23 @@ $tramite->modo_manual_por_usuario = null;
                 throw new Exception('Solo el nivel final puede procesar el trámite');
             }
 
+            // No permitir procesar si requiere oficio del creador
+            if ($tramite->requiere_oficio) {
+                throw new Exception('El trámite requiere oficio del creador antes de poder procesarse');
+            }
+
             // Validar que el trámite pueda ser procesado
             $puedeProcesar = false;
             if ($tramite->estado === EstadoTramite::VERIFICADO) {
                 $puedeProcesar = true;
-            } elseif ($tramite->estado === EstadoTramite::EN_PROCESO && empty($tramite->oficio)) {
+            } elseif ($tramite->estado === EstadoTramite::EN_PROCESO && !$tramite->requiere_oficio) {
                 $puedeProcesar = true;
             }
 
             if (!$puedeProcesar) {
                 throw new Exception(
                     'El trámite solo puede ser procesado si está VERIFICADO o ' .
-                    'en EN_PROCESO sin requerir oficio.'
+                    'en EN_PROCESO sin requerir oficio pendiente.'
                 );
             }
 
@@ -836,7 +843,7 @@ $tramite->modo_manual_por_usuario = null;
     }
 
     /**
-     * Contar páginas de un PDF usando FPDI
+     * Contar páginas de un PDF (sin dependencias externas)
      * 
      * @param string $rutaArchivo
      * @return int
@@ -844,11 +851,46 @@ $tramite->modo_manual_por_usuario = null;
     private function contarPaginasPDF(string $rutaArchivo): int
     {
         try {
-            $pdf = new \setasign\Fpdi\Fpdi();
-            $pageCount = $pdf->setSourceFile($rutaArchivo);
-            return $pageCount;
+            // Método alternativo: leer el archivo y buscar el patrón de páginas
+            // Esto es más simple y no requiere dependencias adicionales
+            $content = @file_get_contents($rutaArchivo);
+            if ($content === false) {
+                Log::warning('No se pudo leer el archivo PDF para contar páginas', ['ruta' => $rutaArchivo]);
+                return 1;
+            }
+            
+            // Buscar el patrón /Count seguido de un número (número de páginas)
+            // Este es un método simple que funciona para la mayoría de PDFs
+            preg_match_all('/\/Count\s+(\d+)/', $content, $matches);
+            
+            if (!empty($matches[1])) {
+                // Tomar el último valor encontrado (generalmente el más grande)
+                $pageCount = max(array_map('intval', $matches[1]));
+                if ($pageCount > 0) {
+                    Log::info('Páginas contadas usando método /Count', ['paginas' => $pageCount]);
+                    return $pageCount;
+                }
+            }
+            
+            // Método alternativo: buscar el patrón /Type\s*\/Page[^s]
+            preg_match_all('/\/Type\s*\/Page[^s]/', $content, $pageMatches);
+            if (!empty($pageMatches[0])) {
+                $pageCount = count($pageMatches[0]);
+                if ($pageCount > 0) {
+                    Log::info('Páginas contadas usando método /Type/Page', ['paginas' => $pageCount]);
+                    return $pageCount;
+                }
+            }
+            
+            // Si no se puede determinar, retornar 1
+            Log::info('No se pudo determinar el número de páginas del PDF, usando valor por defecto', ['ruta' => $rutaArchivo]);
+            return 1;
+            
         } catch (\Exception $e) {
-            // Si falla, retornar 1 como valor por defecto
+            Log::warning('Error al contar páginas del PDF', [
+                'ruta' => $rutaArchivo,
+                'error' => $e->getMessage()
+            ]);
             return 1;
         }
     }
