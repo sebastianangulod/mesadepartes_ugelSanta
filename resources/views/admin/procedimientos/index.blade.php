@@ -116,8 +116,8 @@
                 <tr>
                     <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">#</th>
                     <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre del Procedimiento</th>
-                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Área (Nivel 1)</th>
-                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Subárea (Nivel 2)</th>
+                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nivel 1</th>
+                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nivel 2</th>
                     <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nivel Final</th>
                     <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
                 </tr>
@@ -190,7 +190,7 @@
                        required minlength="3" maxlength="255">
             </div>
             <div class="mb-4">
-                <label for="areaProcedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 1 (Área)</label>
+                <label for="areaProcedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 1 *</label>
                 <select id="areaProcedimiento" name="id_area" 
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                         required onchange="cargarSubareas(this.value)">
@@ -201,18 +201,14 @@
                 </select>
             </div>
             <div class="mb-4">
-                <label for="subareaProcedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 2 (Subárea)</label>
-                <select id="subareaProcedimiento" name="id_subarea" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                        required disabled onchange="cargarNivelesFinales(this.value)">
-                    <option value="">Seleccione Nivel 2</option>
-                </select>
-            </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Nivel Final</label>
-                <div class="flex items-center space-x-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nivel Final *</label>
+                <div class="flex items-center space-x-4 flex-wrap">
                     <label class="inline-flex items-center">
-                        <input type="radio" name="nivel_final" value="3" class="form-radio text-blue-600" required onchange="toggleNivelFinal(3)">
+                        <input type="radio" name="nivel_final" value="2" class="form-radio text-blue-600" onchange="toggleNivelFinal(2)">
+                        <span class="ml-2">Nivel 2</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="nivel_final" value="3" class="form-radio text-blue-600" onchange="toggleNivelFinal(3)">
                         <span class="ml-2">Nivel 3</span>
                     </label>
                     <label class="inline-flex items-center">
@@ -221,8 +217,16 @@
                     </label>
                 </div>
             </div>
+            <div class="mb-4 nivel2-container" style="display: none;">
+                <label for="subareaProcedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 2 *</label>
+                <select id="subareaProcedimiento" name="id_subarea" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        required disabled onchange="cargarNivelesFinales(this.value)">
+                    <option value="">Seleccione Nivel 2</option>
+                </select>
+            </div>
             <div class="mb-4 nivel3-container" style="display: none;">
-                <label for="nivel3Procedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 3 <span class="text-red-500">*</span></label>
+                <label for="nivel3Procedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 3 *</label>
                 <select id="nivel3Procedimiento" name="id_nivel3" 
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         onchange="cargarNivel4DesdeNivel3(this.value)">
@@ -230,7 +234,7 @@
                 </select>
             </div>
             <div class="mb-4 nivel4-container" style="display: none;">
-                <label for="nivel4Procedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 4 <span class="text-red-500">*</span></label>
+                <label for="nivel4Procedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 4 *</label>
                 <select id="nivel4Procedimiento" name="id_nivel_final" 
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">Seleccione Nivel 4</option>
@@ -263,7 +267,7 @@
                        required minlength="3" maxlength="255">
             </div>
             <div class="mb-4">
-                <label for="editAreaProcedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 1 (Área)</label>
+                <label for="editAreaProcedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 1 *</label>
                 <select id="editAreaProcedimiento" name="id_area" 
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                         required onchange="cargarSubareasEdit(this.value)">
@@ -274,18 +278,14 @@
                 </select>
             </div>
             <div class="mb-4">
-                <label for="editSubareaProcedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 2 (Subárea)</label>
-                <select id="editSubareaProcedimiento" name="id_subarea" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                        required onchange="cargarNivelesFinalesEdit(this.value)">
-                    <option value="">Seleccione Nivel 2</option>
-                </select>
-            </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Nivel Final</label>
-                <div class="flex items-center space-x-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nivel Final *</label>
+                <div class="flex items-center space-x-4 flex-wrap">
                     <label class="inline-flex items-center">
-                        <input type="radio" name="edit_nivel_final" value="3" class="form-radio text-blue-600" required onchange="toggleNivelFinalEdit(3)">
+                        <input type="radio" name="edit_nivel_final" value="2" class="form-radio text-blue-600" onchange="toggleNivelFinalEdit(2)">
+                        <span class="ml-2">Nivel 2</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="edit_nivel_final" value="3" class="form-radio text-blue-600" onchange="toggleNivelFinalEdit(3)">
                         <span class="ml-2">Nivel 3</span>
                     </label>
                     <label class="inline-flex items-center">
@@ -294,8 +294,16 @@
                     </label>
                 </div>
             </div>
+            <div class="mb-4 edit-nivel2-container" style="display: none;">
+                <label for="editSubareaProcedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 2 *</label>
+                <select id="editSubareaProcedimiento" name="id_subarea" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        required disabled onchange="cargarNivelesFinalesEdit(this.value)">
+                    <option value="">Seleccione Nivel 2</option>
+                </select>
+            </div>
             <div class="mb-4 edit-nivel3-container" style="display: none;">
-                <label for="editNivel3Procedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 3 <span class="text-red-500">*</span></label>
+                <label for="editNivel3Procedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 3 *</label>
                 <select id="editNivel3Procedimiento" name="id_nivel3" 
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         onchange="cargarNivel4DesdeNivel3Edit(this.value)">
@@ -303,7 +311,7 @@
                 </select>
             </div>
             <div class="mb-4 edit-nivel4-container" style="display: none;">
-                <label for="editNivel4Procedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 4 <span class="text-red-500">*</span></label>
+                <label for="editNivel4Procedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 4 *</label>
                 <select id="editNivel4Procedimiento" name="id_nivel_final" 
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">Seleccione Nivel 4</option>
@@ -624,37 +632,57 @@
     }
 
     function toggleNivelFinal(nivel) {
+        const nivel2Container = document.querySelector('.nivel2-container');
         const nivel3Container = document.querySelector('.nivel3-container');
         const nivel4Container = document.querySelector('.nivel4-container');
+        const nivel2Select = document.getElementById('subareaProcedimiento');
         const nivel3Select = document.getElementById('nivel3Procedimiento');
         const nivel4Select = document.getElementById('nivel4Procedimiento');
-        const subareaSelect = document.getElementById('subareaProcedimiento');
         
-        // Siempre mostrar nivel 3 (es necesario para ambos casos)
-        nivel3Container.style.display = 'block';
+        // Reset all containers
+        nivel2Container.style.display = 'none';
+        nivel3Container.style.display = 'none';
+        nivel4Container.style.display = 'none';
+        nivel2Select.required = false;
+        nivel3Select.required = false;
+        nivel4Select.required = false;
+        nivel2Select.value = '';
+        nivel3Select.value = '';
+        nivel4Select.value = '';
+        nivel2Select.disabled = true;
+        nivel3Select.disabled = true;
+        nivel4Select.disabled = true;
         
-        if (nivel === 3) {
-            // Si termina en nivel 3, solo mostrar selector de nivel 3
-            nivel4Container.style.display = 'none';
+        if (nivel === 2) {
+            // Nivel 2 is final: show Nivel 2 selector, it's the final level
+            nivel2Container.style.display = 'block';
+            nivel2Select.required = true;
+            nivel2Select.disabled = false;
+        } else if (nivel === 3) {
+            // Nivel 3 is final: show Nivel 2 + Nivel 3
+            nivel2Container.style.display = 'block';
+            nivel3Container.style.display = 'block';
+            nivel2Select.required = true;
             nivel3Select.required = true;
-            nivel4Select.required = false;
-            nivel4Select.value = ''; // Limpiar valor
+            nivel2Select.disabled = false;
+            nivel3Select.disabled = false;
         } else if (nivel === 4) {
-            // Si termina en nivel 4, mostrar ambos pero nivel 4 depende de nivel 3
+            // Nivel 4 is final: show Nivel 2 + Nivel 3 + Nivel 4
+            nivel2Container.style.display = 'block';
+            nivel3Container.style.display = 'block';
             nivel4Container.style.display = 'block';
-            nivel3Select.required = true; // Nivel 3 es obligatorio para llegar a nivel 4
+            nivel2Select.required = true;
+            nivel3Select.required = true;
             nivel4Select.required = true;
-            nivel4Select.disabled = true; // Deshabilitar hasta que se seleccione nivel 3
-            
-            // Si ya hay un nivel 3 seleccionado, cargar sus niveles 4
-            if (nivel3Select.value) {
-                cargarNivel4DesdeNivel3(nivel3Select.value);
-            }
+            nivel2Select.disabled = false;
+            nivel3Select.disabled = false;
+            nivel4Select.disabled = true; // Will be enabled when Nivel 3 is selected
         }
         
-        // Si hay subarea seleccionada, recargar niveles 3
-        if (subareaSelect.value) {
-            cargarNivelesFinales(subareaSelect.value);
+        // Load Nivel 2 options if Nivel 1 is selected
+        const areaSelect = document.getElementById('areaProcedimiento');
+        if (areaSelect.value) {
+            cargarSubareas(areaSelect.value);
         }
     }
 
@@ -675,27 +703,29 @@
             return;
         }
         
-        // Validar área
+        // Validar nivel 1
         if (!idArea) {
-            alert('Debe seleccionar un Nivel 1 (Área)');
+            alert('Debe seleccionar un Nivel 1');
             return;
         }
         
-        // Validar subárea
+        // Validar nivel 2
         if (!idSubarea) {
-            alert('Debe seleccionar un Nivel 2 (Subárea)');
+            alert('Debe seleccionar un Nivel 2');
             return;
         }
         
         // Validar que se haya seleccionado un nivel final
-        if (!nivelFinal || (nivelFinal !== '3' && nivelFinal !== '4')) {
-            alert('Debe seleccionar si el procedimiento termina en Nivel 3 o Nivel 4');
+        if (!nivelFinal || !['2', '3', '4'].includes(nivelFinal)) {
+            alert('Debe seleccionar si el procedimiento termina en Nivel 2, Nivel 3 o Nivel 4');
             return;
         }
         
         // Obtener el ID del nivel final según la selección
         let idNivelFinal = null;
-        if (nivelFinal === '3') {
+        if (nivelFinal === '2') {
+            idNivelFinal = idSubarea; // El nivel final es el propio nivel 2 seleccionado
+        } else if (nivelFinal === '3') {
             idNivelFinal = document.getElementById('nivel3Procedimiento').value;
             if (!idNivelFinal) {
                 alert('Debe seleccionar un Nivel 3');
@@ -760,7 +790,17 @@
                 // Cargar subáreas y niveles
                 cargarSubareasEdit(proc.id_area, proc.id_subarea).then(() => {
                     // Configurar nivel final después de cargar los niveles
-                    if (proc.nivel_final == '3') {
+                    if (proc.nivel_final == '2') {
+                        document.querySelector('input[name="edit_nivel_final"][value="2"]').checked = true;
+                        toggleNivelFinalEdit(2);
+                        // Establecer el nivel 2 seleccionado (es el id_subarea)
+                        setTimeout(() => {
+                            const nivel2Select = document.getElementById('editSubareaProcedimiento');
+                            if (nivel2Select && proc.id_subarea) {
+                                nivel2Select.value = proc.id_subarea;
+                            }
+                        }, 500);
+                    } else if (proc.nivel_final == '3') {
                         document.querySelector('input[name="edit_nivel_final"][value="3"]').checked = true;
                         toggleNivelFinalEdit(3);
                         // Establecer el nivel 3 seleccionado
@@ -916,37 +956,57 @@
     }
 
     function toggleNivelFinalEdit(nivel) {
+        const nivel2Container = document.querySelector('.edit-nivel2-container');
         const nivel3Container = document.querySelector('.edit-nivel3-container');
         const nivel4Container = document.querySelector('.edit-nivel4-container');
+        const nivel2Select = document.getElementById('editSubareaProcedimiento');
         const nivel3Select = document.getElementById('editNivel3Procedimiento');
         const nivel4Select = document.getElementById('editNivel4Procedimiento');
-        const subareaSelect = document.getElementById('editSubareaProcedimiento');
         
-        // Siempre mostrar nivel 3 (es necesario para ambos casos)
-        nivel3Container.style.display = 'block';
+        // Reset all containers
+        nivel2Container.style.display = 'none';
+        nivel3Container.style.display = 'none';
+        nivel4Container.style.display = 'none';
+        nivel2Select.required = false;
+        nivel3Select.required = false;
+        nivel4Select.required = false;
+        nivel2Select.value = '';
+        nivel3Select.value = '';
+        nivel4Select.value = '';
+        nivel2Select.disabled = true;
+        nivel3Select.disabled = true;
+        nivel4Select.disabled = true;
         
-        if (nivel === 3) {
-            // Si termina en nivel 3, solo mostrar selector de nivel 3
-            nivel4Container.style.display = 'none';
+        if (nivel === 2) {
+            // Nivel 2 is final: show Nivel 2 selector, it's the final level
+            nivel2Container.style.display = 'block';
+            nivel2Select.required = true;
+            nivel2Select.disabled = false;
+        } else if (nivel === 3) {
+            // Nivel 3 is final: show Nivel 2 + Nivel 3
+            nivel2Container.style.display = 'block';
+            nivel3Container.style.display = 'block';
+            nivel2Select.required = true;
             nivel3Select.required = true;
-            nivel4Select.required = false;
-            nivel4Select.value = ''; // Limpiar valor
+            nivel2Select.disabled = false;
+            nivel3Select.disabled = false;
         } else if (nivel === 4) {
-            // Si termina en nivel 4, mostrar ambos pero nivel 4 depende de nivel 3
+            // Nivel 4 is final: show Nivel 2 + Nivel 3 + Nivel 4
+            nivel2Container.style.display = 'block';
+            nivel3Container.style.display = 'block';
             nivel4Container.style.display = 'block';
-            nivel3Select.required = true; // Nivel 3 es obligatorio para llegar a nivel 4
+            nivel2Select.required = true;
+            nivel3Select.required = true;
             nivel4Select.required = true;
-            nivel4Select.disabled = true; // Deshabilitar hasta que se seleccione nivel 3
-            
-            // Si ya hay un nivel 3 seleccionado, cargar sus niveles 4
-            if (nivel3Select.value) {
-                cargarNivel4DesdeNivel3Edit(nivel3Select.value);
-            }
+            nivel2Select.disabled = false;
+            nivel3Select.disabled = false;
+            nivel4Select.disabled = true; // Will be enabled when Nivel 3 is selected
         }
         
-        // Si hay subarea seleccionada, recargar niveles 3
-        if (subareaSelect.value) {
-            cargarNivelesFinalesEdit(subareaSelect.value);
+        // Load Nivel 2 options if Nivel 1 is selected
+        const areaSelect = document.getElementById('editAreaProcedimiento');
+        if (areaSelect.value) {
+            cargarSubareasEdit(areaSelect.value);
         }
     }
 
@@ -954,41 +1014,37 @@
         event.preventDefault();
         const form = event.target;
         
-        // Obtener valores directamente de los elementos del formulario
         const id = document.getElementById('editProcedimientoId').value;
         const nombre = document.getElementById('editNombreProcedimiento').value.trim();
         const idArea = document.getElementById('editAreaProcedimiento').value;
         const idSubarea = document.getElementById('editSubareaProcedimiento').value;
         const nivelFinal = form.querySelector('input[name="edit_nivel_final"]:checked')?.value;
         
-        // Validar nombre
         if (!nombre || nombre.length < 3) {
             alert('El nombre del procedimiento es obligatorio y debe tener al menos 3 caracteres');
             document.getElementById('editNombreProcedimiento').focus();
             return;
         }
         
-        // Validar área
         if (!idArea) {
-            alert('Debe seleccionar un Nivel 1 (Área)');
+            alert('Debe seleccionar un Nivel 1');
             return;
         }
         
-        // Validar subárea
         if (!idSubarea) {
-            alert('Debe seleccionar un Nivel 2 (Subárea)');
+            alert('Debe seleccionar un Nivel 2');
             return;
         }
         
-        // Validar que se haya seleccionado un nivel final
-        if (!nivelFinal || (nivelFinal !== '3' && nivelFinal !== '4')) {
-            alert('Debe seleccionar si el procedimiento termina en Nivel 3 o Nivel 4');
+        if (!nivelFinal || !['2', '3', '4'].includes(nivelFinal)) {
+            alert('Debe seleccionar si el procedimiento termina en Nivel 2, Nivel 3 o Nivel 4');
             return;
         }
         
-        // Obtener el ID del nivel final según la selección
         let idNivelFinal = null;
-        if (nivelFinal === '3') {
+        if (nivelFinal === '2') {
+            idNivelFinal = idSubarea;
+        } else if (nivelFinal === '3') {
             idNivelFinal = document.getElementById('editNivel3Procedimiento').value;
             if (!idNivelFinal) {
                 alert('Debe seleccionar un Nivel 3');

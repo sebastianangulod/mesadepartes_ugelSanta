@@ -272,14 +272,7 @@
                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="ordenNivel">
-                        Orden
-                    </label>
-                    <input type="number" id="ordenNivel" name="orden" min="0" max="65535" value="0"
-                           placeholder="Orden de visualización (0 = primero)" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
+                <p class="text-xs text-gray-500 mb-4">El orden se asigna automáticamente (alfabético por nombre).</p>
                 
                 <div class="flex justify-end space-x-2 mt-6 pt-4 border-t-2 border-gray-300">
                     <button type="button" onclick="closeModal('modalNivel')" class="btn-secondary">Cancelar</button>
@@ -390,7 +383,6 @@
         document.getElementById('nivelId').value = '';
         document.getElementById('nivelParent').value = parentId || '';
         document.getElementById('nombreNivel').value = '';
-        document.getElementById('ordenNivel').value = '0';
         document.getElementById('btnGuardarNivel').textContent = 'Guardar';
         openModal('modalNivel');
     }
@@ -401,12 +393,6 @@
         document.getElementById('nivelId').value = id;
         document.getElementById('nivelParent').value = '';
         document.getElementById('nombreNivel').value = nombre;
-        // Cargar orden si está disponible en el DOM
-        const ordenEl = document.querySelector(`[data-nivel="${nivel.replace('nivel_', '')}"][data-id="${id}"]`);
-        if (ordenEl) {
-            // El orden se puede obtener del data-orden si existe
-        }
-        document.getElementById('ordenNivel').value = '0'; // Default, se puede mejorar
         document.getElementById('btnGuardarNivel').textContent = 'Actualizar';
         openModal('modalNivel');
     }
@@ -423,8 +409,7 @@
         
         const bodyData = {
             nivel: nivel,
-            nombre: document.getElementById('nombreNivel').value,
-            orden: document.getElementById('ordenNivel').value || 0
+            nombre: document.getElementById('nombreNivel').value
         };
         
         // Solo agregar id_parent si no es nivel 1
@@ -480,7 +465,7 @@
                     const dependencias = data.data.dependencias;
                     
                     const labels = {
-                        'nivel2': 'Niveles 2 (Subáreas)',
+                        'nivel2': 'Niveles 2',
                         'nivel3': 'Niveles 3',
                         'nivel4': 'Niveles 4',
                         'procedimientos': 'Procedimientos',

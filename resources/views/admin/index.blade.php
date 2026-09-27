@@ -101,14 +101,11 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                         </svg>
                     </div>
-                    <h3 class="ml-3 text-lg font-semibold text-gray-900">Gestión de Áreas</h3>
+                    <h3 class="ml-3 text-lg font-semibold text-gray-900">Gestión de Niveles</h3>
                 </div>
-                <p class="text-gray-600 mb-4">Administrar áreas y niveles</p>
+                <p class="text-gray-600 mb-4">Administrar Nivel 1, Nivel 2, Nivel 3 y Nivel 4</p>
                 <div class="flex space-x-2">
-                    <a href="{{ route('admin.areas') }}" class="flex-1 text-center bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                        Ver Áreas
-                    </a>
-                    <a href="{{ route('admin.niveles') }}" class="flex-1 text-center bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                    <a href="{{ route('admin.niveles') }}" class="flex-1 text-center bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
                         Ver Niveles
                     </a>
                 </div>

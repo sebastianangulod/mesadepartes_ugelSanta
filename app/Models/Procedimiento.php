@@ -421,7 +421,7 @@ private function obtenerNivelesDelProcedimiento(): array
 {
     $niveles = [];
 
-    // Nivel 1 (Área) - siempre requerido
+    // Nivel 1 - siempre requerido
     if ($this->id_area) {
         $nivel1 = Nivel1::find($this->id_area);
         if ($nivel1) {
@@ -430,7 +430,7 @@ private function obtenerNivelesDelProcedimiento(): array
         }
     }
 
-    // Nivel 2 (Subárea)
+    // Nivel 2
     if ($this->id_subarea) {
         $nivel2 = Nivel2::find($this->id_subarea);
         if ($nivel2) {

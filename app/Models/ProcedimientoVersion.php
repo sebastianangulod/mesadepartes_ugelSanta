@@ -16,6 +16,14 @@ class ProcedimientoVersion extends Model
     protected $table = 'procedimiento_versiones';
 
     /**
+     * Indica si el modelo debe tener timestamps automáticos.
+     * La tabla solo tiene created_at, no updated_at.
+     * 
+     * @var bool
+     */
+    public $timestamps = false;
+
+    /**
      * Atributos que pueden ser asignados masivamente
      */
     protected $fillable = [

@@ -72,7 +72,7 @@ class ProcedimientosController extends Controller
             'nombre' => 'required|string|max:255',
             'id_area' => 'required|exists:nivel_1,id',
             'id_subarea' => 'required|exists:nivel_2,id',
-            'nivel_final' => 'required|in:3,4', // Solo nivel 3 o 4
+            'nivel_final' => 'required|in:2,3,4',
             'id_nivel_final' => 'required|integer',
         ]);
 
@@ -397,13 +397,13 @@ class ProcedimientosController extends Controller
     {
         $nodosFinales = $procedimiento->flujoNodos()
             ->where('puede_finalizar', true)
-            ->get(['nombre', 'nombre_tecnico']);
+            ->get(['nombre']);
         
         $niveles = [];
         
         foreach ($nodosFinales as $nodo) {
-            // El nombre técnico tiene formato: "Nivel X - NombreNivel"
-            if (preg_match('/^Nivel (\d+) - (.+)$/', $nodo->nombre_tecnico ?? $nodo->nombre, $matches)) {
+            // El nombre tiene formato: "Nivel X - NombreNivel"
+            if (preg_match('/^Nivel (\d+) - (.+)$/', $nodo->nombre, $matches)) {
                 $nivelNumero = (int) $matches[1];
                 $nivelNombre = $matches[2];
                 
@@ -782,7 +782,17 @@ return ProcedimientoVersion::create([
      */
     private function validarCoherenciaNivelFinal(string $nivelFinal, int $idNivelFinal, int $idArea, int $idSubarea): ?string
     {
-        if ($nivelFinal === '3') {
+        if ($nivelFinal === '2') {
+            // Para nivel 2, el id_nivel_final debe ser igual al id_subarea
+            if ($idNivelFinal != $idSubarea) {
+                return 'Para nivel final 2, el ID del nivel final debe coincidir con la subárea (Nivel 2) seleccionada';
+            }
+            // Verificar que el nivel 2 pertenezca al nivel 1 (área) seleccionado
+            $nivel2 = Nivel2::find($idSubarea);
+            if ($nivel2 && $nivel2->id_nivel1 != $idArea) {
+                return 'La subárea (Nivel 2) seleccionada no pertenece al área (Nivel 1) seleccionada';
+            }
+        } elseif ($nivelFinal === '3') {
             $nivel3 = Nivel3::find($idNivelFinal);
             if (!$nivel3) {
                 return 'El nivel 3 especificado no existe';

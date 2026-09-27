@@ -1,10 +1,10 @@
 {{--
-    Vista de Administración de Áreas (Nivel 1)
+    Vista de Administración de Nivel 1
     Equivalente a adminAreas.php del PHP puro
 --}}
 @extends('layouts.admin')
 
-@section('title', 'Administración de Áreas - Mesa de Partes')
+@section('title', 'Administración de Nivel 1 - Mesa de Partes')
 
 @push('styles')
 <style>
@@ -49,16 +49,16 @@
 @section('content')
     
     <div class="flex justify-between items-center mb-6">
-        <h2 class="text-3xl font-bold text-gray-900">Administración de Áreas</h2>
+        <h2 class="text-3xl font-bold text-gray-900">Administración de Nivel 1</h2>
         <button onclick="openModal('modalAddArea')" class="btn-primary flex items-center">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
             </svg>
-            Añadir Área
+            Añadir Nivel 1
         </button>
     </div>
 
-    <!-- Tabla de Áreas -->
+    <!-- Tabla de Nivel 1 -->
     <div class="bg-white shadow-md rounded-lg overflow-hidden">
         <table class="min-w-full leading-normal">
             <thead>
@@ -101,7 +101,7 @@
                 @empty
                 <tr>
                     <td colspan="3" class="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center text-gray-500">
-                        No hay áreas registradas
+                        No hay registros de Nivel 1
                     </td>
                 </tr>
                 @endforelse
@@ -110,23 +110,23 @@
     </div>
 </div>
 
-<!-- Modal Añadir Área -->
+<!-- Modal Añadir Nivel 1 -->
 <div id="modalAddArea" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="overflow-y: auto;">
     <div class="bg-white rounded-lg shadow-xl w-full max-w-md border-2 border-gray-200">
         <div class="sticky top-0 bg-white border-b-2 border-gray-300 px-6 py-4 z-10 rounded-t-lg">
-            <h2 class="text-xl font-bold text-gray-900">Añadir Área</h2>
+            <h2 class="text-xl font-bold text-gray-900">Añadir Nivel 1</h2>
         </div>
         <div class="p-6">
         <form id="formCrearArea" onsubmit="crearArea(event)">
             @csrf
             <div class="mb-4">
                 <label class="block text-gray-700 text-sm font-bold mb-2" for="nombreArea">
-                    Nombre del Área
+                    Nombre del Nivel 1
                 </label>
                 <input type="text" id="nombreArea" name="nombre" required
                        pattern="[A-Za-záéíóúñÁÉÍÓÚÑ\s]{3,55}"
                        title="El nombre debe contener solo letras y espacios, entre 3 y 55 caracteres"
-                       placeholder="Nombre del Área" 
+                       placeholder="Nombre del Nivel 1" 
                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <div id="errorNombreArea" class="text-red-500 text-sm mt-1 hidden"></div>
             </div>
@@ -139,11 +139,11 @@
     </div>
 </div>
 
-<!-- Modal Editar Área -->
+<!-- Modal Editar Nivel 1 -->
 <div id="modalEditArea" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="overflow-y: auto;">
     <div class="bg-white rounded-lg shadow-xl w-full max-w-md border-2 border-gray-200">
         <div class="sticky top-0 bg-white border-b-2 border-gray-300 px-6 py-4 z-10 rounded-t-lg">
-            <h2 class="text-xl font-bold text-gray-900">Editar Área</h2>
+            <h2 class="text-xl font-bold text-gray-900">Editar Nivel 1</h2>
         </div>
         <div class="p-6">
         <form id="formEditarArea" onsubmit="actualizarArea(event)">
@@ -152,11 +152,11 @@
             <input type="hidden" id="editAreaId" name="id">
             <div class="mb-4">
                 <label class="block text-gray-700 text-sm font-bold mb-2" for="editAreaName">
-                    Nombre del Área
+                    Nombre del Nivel 1
                 </label>
                 <input type="text" id="editAreaName" name="nombre" required
                        pattern="[A-Za-záéíóúñÁÉÍÓÚÑ\s]{3,55}"
-                       placeholder="Nombre del Área" 
+                       placeholder="Nombre del Nivel 1" 
                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
                 <div class="flex justify-end space-x-2 mt-6 pt-4 border-t-2 border-gray-300">
@@ -168,18 +168,18 @@
     </div>
 </div>
 
-<!-- Modal Eliminar Área -->
+<!-- Modal Eliminar Nivel 1 -->
 <div id="modalDeleteArea" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="backdrop-filter: blur(4px);">
     <div class="bg-white rounded-lg shadow-xl w-full max-w-md border-2 border-gray-200">
         <div class="px-6 py-4 border-b-2 border-gray-300">
-            <h2 class="text-2xl font-bold text-red-600">Eliminar Área</h2>
+            <h2 class="text-2xl font-bold text-red-600">Eliminar Nivel 1</h2>
         </div>
         <div class="px-6 py-4">
         <form id="formEliminarArea" onsubmit="confirmarEliminarArea(event)">
             @csrf
             @method('DELETE')
             <input type="hidden" id="deleteAreaId" name="id">
-            <p class="mb-4 text-gray-700">¿Estás seguro de que deseas eliminar el área <strong id="deleteAreaName"></strong>?</p>
+            <p class="mb-4 text-gray-700">¿Estás seguro de que deseas eliminar el Nivel 1 <strong id="deleteAreaName"></strong>?</p>
             
             <!-- Información de elementos relacionados -->
             <div id="deleteAreaDependencias" class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg hidden">
@@ -264,7 +264,7 @@
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al crear el área');
+            alert('Error al crear el Nivel 1');
         });
     }
 
@@ -301,7 +301,7 @@
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al actualizar el área');
+            alert('Error al actualizar el Nivel 1');
         });
     }
 
@@ -315,7 +315,7 @@
         openModal('modalDeleteArea');
     }
     
-    // Función para cargar dependencias del área
+    // Función para cargar dependencias del Nivel 1
     function cargarDependenciasArea(id) {
         fetch(`/admin/areas/${id}/dependencias`)
             .then(response => response.json())
@@ -328,7 +328,7 @@
                     const dependencias = data.data.dependencias;
                     
                     const labels = {
-                        'nivel2': 'Niveles 2 (Subáreas)',
+                        'nivel2': 'Niveles 2',
                         'procedimientos': 'Procedimientos'
                     };
                     
@@ -374,7 +374,7 @@
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al eliminar el área');
+            alert('Error al eliminar el Nivel 1');
         });
     }
 </script>

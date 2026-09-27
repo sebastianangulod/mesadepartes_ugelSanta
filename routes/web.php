@@ -258,6 +258,8 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/procedimientos/{procedimiento}/flujo/equipos/{equipo}', [FlujoProcedimientoController::class, 'destroyEquipo'])->name('admin.procedimientos.flujo.equipos.destroy');
         Route::post('/procedimientos/{procedimiento}/flujo/equipos/{equipo}/miembros', [FlujoProcedimientoController::class, 'attachMiembro'])->name('admin.procedimientos.flujo.equipos.miembros.attach');
         Route::delete('/procedimientos/{procedimiento}/flujo/equipos/{equipo}/miembros/{usuario}', [FlujoProcedimientoController::class, 'detachMiembro'])->name('admin.procedimientos.flujo.equipos.miembros.detach');
+        Route::post('/procedimientos/{procedimiento}/flujo/regenerar-jerarquia', [FlujoProcedimientoController::class, 'regenerarDesdeJerarquia'])->name('admin.procedimientos.flujo.regenerar-jerarquia');
+        Route::post('/procedimientos/{procedimiento}/flujo/sincronizar-usuarios', [FlujoProcedimientoController::class, 'sincronizarUsuariosNiveles'])->name('admin.procedimientos.flujo.sincronizar-usuarios');
     });
     
     // Rutas adicionales del sistema

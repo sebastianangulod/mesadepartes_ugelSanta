@@ -100,17 +100,20 @@ class FlujoProcedimientoController extends Controller
         $data = $request->validate([
             'nombre' => 'required|string|max:150',
             'slug' => 'nullable|string|max:80',
-            'orden' => 'nullable|integer|min:0|max:65535',
             'puede_finalizar' => 'boolean',
             'puede_rechazar_definitivo' => 'boolean',
             'es_terminal' => 'boolean',
         ]);
 
+        // Auto-assign orden: max existing + 1
+        $maxOrden = FlujoNodo::where('id_procedimiento', $procedimiento->id)->max('orden') ?? 0;
+        $orden = $maxOrden + 1;
+
         $nodo = FlujoNodo::create([
             'id_procedimiento' => $procedimiento->id,
             'nombre' => $data['nombre'],
             'slug' => $data['slug'] ?? null,
-            'orden' => $data['orden'] ?? 0,
+            'orden' => $orden,
             'puede_finalizar' => $data['puede_finalizar'] ?? false,
             'puede_rechazar_definitivo' => $data['puede_rechazar_definitivo'] ?? false,
             'es_terminal' => $data['es_terminal'] ?? false,
@@ -126,7 +129,6 @@ class FlujoProcedimientoController extends Controller
         $data = $request->validate([
             'nombre' => 'sometimes|string|max:150',
             'slug' => 'nullable|string|max:80',
-            'orden' => 'sometimes|integer|min:0|max:65535',
             'puede_finalizar' => 'boolean',
             'puede_rechazar_definitivo' => 'boolean',
             'es_terminal' => 'boolean',
@@ -299,6 +301,26 @@ class FlujoProcedimientoController extends Controller
         $desde = FlujoNodo::find($transicion->desde_nodo_id);
         if (!$desde || (int) $desde->id_procedimiento !== (int) $procedimiento->id) {
             abort(404);
+        }
+    }
+
+    public function regenerarDesdeJerarquia(Procedimiento $procedimiento): JsonResponse
+    {
+        try {
+            $procedimiento->crearFlujoConfigurativo();
+            return response()->json(['success' => true, 'message' => 'Flujo regenerado desde la jerarquía de niveles.']);
+        } catch (Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error al regenerar: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function sincronizarUsuariosNiveles(Procedimiento $procedimiento): JsonResponse
+    {
+        try {
+            $procedimiento->syncUsuariosNivelesToEquipos();
+            return response()->json(['success' => true, 'message' => 'Usuarios sincronizados desde usuarios_niveles a equipos.']);
+        } catch (Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error al sincronizar: ' . $e->getMessage()], 500);
         }
     }
 }

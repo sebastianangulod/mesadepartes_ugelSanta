@@ -235,7 +235,6 @@ class NivelesController extends Controller
             'nivel' => 'required|string|in:nivel_1,nivel_2,nivel_3,nivel_4',
             'nombre' => 'required|string|max:55',
             'id_parent' => 'nullable|integer',
-            'orden' => 'nullable|integer|min:0|max:65535',
         ]);
 
         if ($validator->fails()) {
@@ -249,7 +248,7 @@ class NivelesController extends Controller
             $nivel = $request->nivel;
             $nombre = strtoupper(trim($request->nombre));
             $idParent = $request->id_parent;
-            $orden = $request->orden ?? 0;
+            $orden = 0; // Auto-asignado, no se usa para ordenar (se usa nombre)
 
             // Crear el nivel según el tipo
             switch ($nivel) {
@@ -345,7 +344,6 @@ class NivelesController extends Controller
         $validator = Validator::make($request->all(), [
             'nivel' => 'required|string|in:nivel_1,nivel_2,nivel_3,nivel_4',
             'nombre' => 'required|string|max:55',
-            'orden' => 'nullable|integer|min:0|max:65535',
         ]);
 
         if ($validator->fails()) {
@@ -358,7 +356,6 @@ class NivelesController extends Controller
         try {
             $nivel = $request->nivel;
             $nombre = strtoupper(trim($request->nombre));
-            $orden = $request->orden ?? 0;
 
             // Obtener y actualizar el nivel según el tipo
             switch ($nivel) {
@@ -378,7 +375,6 @@ class NivelesController extends Controller
 
             $nivelModel->update([
                 'nombre' => $nombre,
-                'orden' => $orden,
             ]);
 
             return response()->json([
