@@ -46,6 +46,7 @@ return new class extends Migration
             $table->text('observaciones')->nullable();
             $table->date('limite_observacion')->nullable()->comment('Fecha límite para que el ciudadano subsane observaciones');
             $table->string('oficio', 500)->nullable()->comment('Oficio PDF emitido al observar');
+            $table->boolean('requiere_oficio')->default(false)->comment('Indica si el trámite requiere que el creador suba un oficio de subsanación');
             $table->string('voucher', 500)->nullable();
             $table->string('numero_voucher', 50)->nullable();
             $table->text('motivo_rechazo')->nullable();

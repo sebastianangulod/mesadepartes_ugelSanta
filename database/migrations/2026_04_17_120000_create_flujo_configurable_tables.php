@@ -51,6 +51,8 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('nodo_id');
             $table->string('nombre', 120);
+            $table->string('nombre_tecnico', 150)->nullable()->comment('Nombre técnico para lógica del sistema (ej: Nivel 1 - AGI)');
+            $table->string('nombre_visible', 200)->nullable()->comment('Nombre visible para UI (ej: Secretaría de AGI)');
             $table->timestamps();
 
             $table->foreign('nodo_id')

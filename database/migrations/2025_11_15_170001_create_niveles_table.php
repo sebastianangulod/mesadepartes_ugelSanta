@@ -18,7 +18,11 @@ return new class extends Migration
         Schema::create('nivel_1', function (Blueprint $table) {
             $table->id();
             $table->string('nombre', 100);
+            $table->unsignedSmallInteger('orden')->default(0);
             $table->timestamps();
+
+            $table->index('orden');
+            $table->unique('nombre', 'nivel_1_nombre_unique');
         });
 
         // Nivel 2 (Subáreas)
@@ -26,10 +30,13 @@ return new class extends Migration
             $table->id();
             $table->string('nombre', 100);
             $table->unsignedBigInteger('id_nivel1');
+            $table->unsignedSmallInteger('orden')->default(0);
             $table->timestamps();
 
             $table->foreign('id_nivel1')->references('id')->on('nivel_1')->cascadeOnDelete();
             $table->index('id_nivel1');
+            $table->index('orden');
+            $table->unique(['id_nivel1', 'nombre'], 'nivel_2_parent_nombre_unique');
         });
 
         // Nivel 3
@@ -37,10 +44,13 @@ return new class extends Migration
             $table->id();
             $table->string('nombre', 100);
             $table->unsignedBigInteger('id_nivel2');
+            $table->unsignedSmallInteger('orden')->default(0);
             $table->timestamps();
 
             $table->foreign('id_nivel2')->references('id')->on('nivel_2')->cascadeOnDelete();
             $table->index('id_nivel2');
+            $table->index('orden');
+            $table->unique(['id_nivel2', 'nombre'], 'nivel_3_parent_nombre_unique');
         });
 
         // Nivel 4
@@ -48,10 +58,13 @@ return new class extends Migration
             $table->id();
             $table->string('nombre', 100);
             $table->unsignedBigInteger('id_nivel3');
+            $table->unsignedSmallInteger('orden')->default(0);
             $table->timestamps();
 
             $table->foreign('id_nivel3')->references('id')->on('nivel_3')->cascadeOnDelete();
             $table->index('id_nivel3');
+            $table->index('orden');
+            $table->unique(['id_nivel3', 'nombre'], 'nivel_4_parent_nombre_unique');
         });
     }
 

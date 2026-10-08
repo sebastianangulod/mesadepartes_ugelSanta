@@ -34,7 +34,10 @@ return new class extends Migration
             // Claves foráneas
             $table->foreign('id_area')->references('id')->on('nivel_1')->onDelete('set null');
             $table->foreign('id_subarea')->references('id')->on('nivel_2')->onDelete('set null');
-            $table->foreign('id_nivel_final')->references('id')->on('nivel_3')->onDelete('set null');
+            // id_nivel_final SIN foreign key a propósito: puede referenciar nivel_2,
+            // nivel_3 o nivel_4 según nivel_final. La integridad se valida en código.
+            $table->foreign('created_by')->references('id')->on('usuarios')->nullOnDelete();
+            $table->foreign('updated_by')->references('id')->on('usuarios')->nullOnDelete();
         });
     }
 
