@@ -12,8 +12,8 @@ return [
     */
 
     'archivos' => [
-        // Tamaño máximo de archivo en kilobytes (10MB = 10240KB)
-        'max_size' => env('ARCHIVO_MAX_SIZE', 10240),
+        // Tamaño máximo de archivo en kilobytes (25MB = 25600KB)
+        'max_size' => env('ARCHIVO_MAX_SIZE', 25600),
         
         // Tipos de archivo permitidos
         'tipos_permitidos' => [

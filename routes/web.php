@@ -148,6 +148,11 @@ Route::middleware(['auth'])->group(function () {
         
         // Descargar archivo de trámite (protegido)
         Route::get('/{tramite}/archivo/{nombreArchivo}', [TramiteController::class, 'descargarArchivo'])->name('tramites.archivo.descargar');
+
+        // Visor de documento dentro del sistema (protegido)
+        Route::get('/{tramite}/visor/{nombreArchivo}', [TramiteController::class, 'visorDocumento'])->name('tramites.archivo.visor');
+        // Ver documento en el navegador - visor interno (protegido)
+        Route::get('/{tramite}/ver/{nombreArchivo}', [TramiteController::class, 'verArchivo'])->name('tramites.archivo.ver');
         
     });
     

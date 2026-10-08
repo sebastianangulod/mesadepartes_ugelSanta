@@ -168,16 +168,14 @@ $tramite->modo_manual_por_usuario = null;
 
             // Contar páginas del PDF
             $numeroPaginas = $this->contarPaginasPDF(
-                Storage::path('uploads/tramites/' . $nombreArchivo)
+                \App\Support\DocumentStorage::disk()->path($nombreArchivo)
             );
 
             // Obtener el estado anterior, por defecto 'PENDIENTE' si está vacío
             $estadoAnterior = $tramite->ultimo_estado ?: EstadoTramite::PENDIENTE;
 
             // Eliminar archivo anterior si existe
-            if ($tramite->archivo_adjunto && Storage::exists('uploads/tramites/' . $tramite->archivo_adjunto)) {
-                Storage::delete('uploads/tramites/' . $tramite->archivo_adjunto);
-            }
+            \App\Support\DocumentStorage::eliminar($tramite->archivo_adjunto, ['tramites']);
 
             // Actualizar trámite
             $tramite->archivo_adjunto = $nombreArchivo;
@@ -795,9 +793,9 @@ $tramite->modo_manual_por_usuario = null;
             throw new Exception('El archivo debe ser un PDF');
         }
 
-        $maxSize = 10 * 1024 * 1024; // 10MB
+        $maxSize = 25 * 1024 * 1024; // 25MB
         if ($archivo->getSize() > $maxSize) {
-            throw new Exception('El archivo no debe superar los 10MB');
+            throw new Exception('El archivo no debe superar los 25MB');
         }
     }
 
@@ -811,15 +809,13 @@ $tramite->modo_manual_por_usuario = null;
     private function guardarArchivo($archivo, string $directorio): string
     {
         $nombreOriginal = $archivo->getClientOriginalName();
-        $extension = $archivo->getClientOriginalExtension();
+        $extension = strtolower($archivo->getClientOriginalExtension() ?: 'pdf');
         $nombreSanitizado = $this->sanitizarNombreArchivo(
             pathinfo($nombreOriginal, PATHINFO_FILENAME)
         );
         $nombreFinal = time() . '_' . $nombreSanitizado . '.' . $extension;
 
-        $archivo->storeAs('uploads/' . $directorio, $nombreFinal);
-
-        return $nombreFinal;
+        return \App\Support\DocumentStorage::guardar($archivo, $directorio, $nombreFinal);
     }
 
     /**
@@ -1008,13 +1004,8 @@ $tramite->modo_manual_por_usuario = null;
         }
 
         // Eliminar archivos asociados
-        if ($tramite->archivo_adjunto && Storage::exists('uploads/tramites/' . $tramite->archivo_adjunto)) {
-            Storage::delete('uploads/tramites/' . $tramite->archivo_adjunto);
-        }
-
-        if ($tramite->voucher && Storage::exists('uploads/vouchers/' . $tramite->voucher)) {
-            Storage::delete('uploads/vouchers/' . $tramite->voucher);
-        }
+        \App\Support\DocumentStorage::eliminar($tramite->archivo_adjunto, ['tramites']);
+        \App\Support\DocumentStorage::eliminar($tramite->voucher, ['vouchers']);
 
         return $tramite->delete();
     }

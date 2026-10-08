@@ -793,12 +793,12 @@ class TramiteController extends Controller
 
             // Validar el archivo
             $validated = $request->validate([
-                'archivo' => 'required|file|mimes:pdf|max:10240', // 10MB máximo
+                'archivo' => 'required|file|mimes:pdf|max:25600', // 25MB maximo
             ], [
                 'archivo.required' => 'Debe adjuntar un archivo PDF',
                 'archivo.file' => 'El archivo adjunto no es válido',
                 'archivo.mimes' => 'El archivo debe ser un PDF',
-                'archivo.max' => 'El archivo no debe exceder los 10MB',
+                'archivo.max' => 'El archivo no debe exceder los 25MB',
             ]);
             
             // Agregar id_procedimiento al array validado
@@ -991,6 +991,7 @@ class TramiteController extends Controller
     public function buscarParaRastreo(Request $request)
     {
         $validated = $request->validate([
+            'numero_tramite' => 'nullable|integer',
             'numero_voucher' => 'nullable|string',
             'dni_remitente' => 'nullable|string|size:8',
             'tipo_procedimiento' => 'nullable|exists:procedimientos,id',
@@ -1000,6 +1001,11 @@ class TramiteController extends Controller
         ]);
 
         $query = Tramite::with(['procedimiento', 'usuario']);
+
+        // Si hay número de trámite (ID), buscar por ese campo
+        if (!empty($validated['numero_tramite'])) {
+            $query->where('id', $validated['numero_tramite']);
+        }
 
         // Si hay número de voucher, buscar por ese campo
         if (!empty($validated['numero_voucher'])) {
@@ -1030,22 +1036,28 @@ class TramiteController extends Controller
             $query->whereDate('fecha_creacion', '<=', $validated['fecha_hasta']);
         }
 
-        // Si es usuario externo, solo mostrar sus propios trámites
+        // Si es usuario externo, solo mostrar sus propios trámites (los que creó)
         if (Auth::check() && Auth::user()->tipo_user == 1) {
-            $query->where('id_usuario', Auth::id());
+            $query->where(function ($q) {
+                $q->where('creado_por', Auth::id())
+                    ->orWhere(function ($q2) {
+                        $q2->whereNull('creado_por')->where('id_usuario', Auth::id());
+                    });
+            });
         }
 
         $tramites = $query->orderByDesc('fecha_creacion')->get();
 
         // Formatear datos para la respuesta
         $tramitesFormateados = $tramites->map(function ($tramite) {
+            $fecha = $tramite->fecha_creacion;
             return [
                 'id' => $tramite->id,
                 'numero_voucher' => $tramite->numero_voucher ?? ($tramite->id . '-' . ($tramite->periodo ?? date('Y'))),
                 'procedimiento_nombre' => $tramite->procedimiento->nombre ?? 'N/A',
                 'estado' => $tramite->estado,
-                'fecha_creacion' => $tramite->fecha_creacion->format('Y-m-d H:i:s'),
-                'fecha_formateada' => $tramite->fecha_creacion->format('d/m/Y H:i'),
+                'fecha_creacion' => $fecha ? $fecha->format('Y-m-d H:i:s') : null,
+                'fecha_formateada' => $fecha ? $fecha->format('d/m/Y H:i') : 'N/A',
             ];
         });
 
@@ -1083,7 +1095,7 @@ class TramiteController extends Controller
         }
 
         $request->validate([
-            'archivo_adjunto' => 'required|file|mimes:pdf|max:10240',
+            'archivo_adjunto' => 'required|file|mimes:pdf|max:25600',
         ]);
 
         try {
@@ -1320,7 +1332,7 @@ class TramiteController extends Controller
         }
 
         $request->validate([
-            'archivo_oficio' => 'required|file|mimes:pdf|max:10240',
+            'archivo_oficio' => 'required|file|mimes:pdf|max:25600',
         ]);
 
         try {
@@ -1436,7 +1448,7 @@ class TramiteController extends Controller
         $this->authorize('update', $tramite);
 
         $request->validate([
-            'documento' => 'required|file|mimes:pdf|max:10240',
+            'documento' => 'required|file|mimes:pdf|max:25600',
             'descripcion' => 'nullable|string|max:500',
         ]);
 
@@ -1712,7 +1724,7 @@ class TramiteController extends Controller
                 'posicion_actual' => $posicionActual,
                 'tramite' => [
                     'id' => $tramite->id,
-                    'fecha_creacion' => $tramite->fecha_creacion->format('d/m/Y H:i:s'),
+                    'fecha_creacion' => $tramite->fecha_creacion ? $tramite->fecha_creacion->format('d/m/Y H:i:s') : 'N/A',
                     'nombres' => $tramite->usuario->nombres ?? '',
                     'apellido_paterno' => $tramite->usuario->apellido_paterno ?? '',
                     'apellido_materno' => $tramite->usuario->apellido_materno ?? '',
@@ -1921,128 +1933,103 @@ class TramiteController extends Controller
      * @param string $nombreArchivo
      * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\RedirectResponse
      */
+    /**
+     * Visor de documento dentro del sistema (página con el PDF embebido).
+     */
+    public function visorDocumento(int $tramite, string $nombreArchivo)
+    {
+        $tramiteModel = Tramite::with('procedimiento')->findOrFail($tramite);
+
+        $this->authorize('view', $tramiteModel);
+
+        if (!$this->localizarArchivo($tramiteModel, $nombreArchivo)) {
+            abort(404, 'Archivo no encontrado: ' . $nombreArchivo);
+        }
+
+        return view('mesa-partes.visor', [
+            'tramite' => $tramiteModel,
+            'nombreArchivo' => $nombreArchivo,
+        ]);
+    }
+
+    /**
+     * Ver documento del trámite dentro del navegador (visor interno).
+     * Responde el PDF inline para que se abra en la pestaña del sistema.
+     */
+    public function verArchivo(int $tramite, string $nombreArchivo)
+    {
+        $tramite = Tramite::with('procedimiento')->findOrFail($tramite);
+
+        $this->authorize('view', $tramite);
+
+        $rutaArchivo = $this->localizarArchivo($tramite, $nombreArchivo);
+        if (!$rutaArchivo) {
+            abort(404, 'Archivo no encontrado: ' . $nombreArchivo);
+        }
+
+        return response()->file($rutaArchivo, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $nombreArchivo . '"',
+        ]);
+    }
+
+    /**
+     * Localiza el archivo del trámite: valida que pertenezca al trámite y lo
+     * busca primero en disco 'public' y luego en 'local' (compatibilidad con
+     * archivos guardados antes de unificar el almacenamiento).
+     *
+     * @return string|null Ruta absoluta o null si no existe
+     */
+    private function localizarArchivo(Tramite $tramite, string $nombreArchivo): ?string
+    {
+        // Cada campo valida que el nombre pedido coincida con el registrado;
+        // la resolución (ruta con año o legacy por nombre) la hace DocumentStorage.
+        $campos = [
+            [$tramite->archivo_adjunto, ['tramites']],
+            [$tramite->archivo_expediente, ['tramites', 'expedientes']],
+            [$tramite->voucher, ['vouchers']],
+            [$tramite->archivo_voucher, ['vouchers']],
+            [$tramite->oficio, ['oficios']],
+        ];
+
+        foreach ($campos as [$guardado, $dirs]) {
+            if (!$guardado) {
+                continue;
+            }
+            if (basename($guardado) !== $nombreArchivo && $guardado !== $nombreArchivo) {
+                continue;
+            }
+            $ruta = \App\Support\DocumentStorage::localizar($guardado, $dirs);
+            if ($ruta) {
+                return $ruta;
+            }
+        }
+
+        // Compatibilidad: oficios antiguos referenciados en tabla 'oficios' (si existe)
+        try {
+            $oficio = DB::table('oficios')
+                ->where('id_tramite', $tramite->id)
+                ->where('archivo', $nombreArchivo)
+                ->first();
+            if ($oficio) {
+                return \App\Support\DocumentStorage::localizar('uploads/oficios/' . $nombreArchivo, ['oficios']);
+            }
+        } catch (\Throwable) {
+            // Si la tabla no existe, continuar sin error
+        }
+
+        return null;
+    }
+
     public function descargarArchivo(int $tramite, string $nombreArchivo)
     {
         $tramite = Tramite::with('procedimiento')->findOrFail($tramite);
 
         $this->authorize('view', $tramite);
 
-        // Validar que el archivo pertenece al trámite
-        $archivoValido = false;
-        $rutaArchivo = null;
-        $rutaRelativa = null;
+        $rutaArchivo = $this->localizarArchivo($tramite, $nombreArchivo);
 
-        // Verificar archivo adjunto
-        if ($tramite->archivo_adjunto) {
-            $nombreArchivoBD = basename($tramite->archivo_adjunto);
-            if ($nombreArchivoBD === $nombreArchivo || $tramite->archivo_adjunto === $nombreArchivo) {
-                // Intentar primero en disco 'public'
-                $rutaRelativa = 'uploads/tramites/' . $nombreArchivoBD;
-                if (Storage::disk('public')->exists($rutaRelativa)) {
-                    $archivoValido = true;
-                    $rutaArchivo = Storage::disk('public')->path($rutaRelativa);
-                } else {
-                    // Intentar en disco 'local' (por si se guardó antes del cambio)
-                    if (Storage::disk('local')->exists($rutaRelativa)) {
-                        $archivoValido = true;
-                        $rutaArchivo = Storage::disk('local')->path($rutaRelativa);
-                    }
-                }
-            }
-        }
-
-        // Verificar archivo expediente
-        if (!$archivoValido && $tramite->archivo_expediente) {
-            $nombreArchivoBD = basename($tramite->archivo_expediente);
-            if ($nombreArchivoBD === $nombreArchivo || $tramite->archivo_expediente === $nombreArchivo) {
-                $rutaRelativa = 'uploads/tramites/' . $nombreArchivoBD;
-                if (Storage::disk('public')->exists($rutaRelativa)) {
-                    $archivoValido = true;
-                    $rutaArchivo = Storage::disk('public')->path($rutaRelativa);
-                } else {
-                    $rutaRelativa = 'uploads/expedientes/' . $nombreArchivoBD;
-                    if (Storage::disk('public')->exists($rutaRelativa)) {
-                        $archivoValido = true;
-                        $rutaArchivo = Storage::disk('public')->path($rutaRelativa);
-                    }
-                }
-            }
-        }
-
-        // Verificar voucher
-        if (!$archivoValido && $tramite->voucher) {
-            $nombreArchivoBD = basename($tramite->voucher);
-            if ($nombreArchivoBD === $nombreArchivo || $tramite->voucher === $nombreArchivo) {
-                // Intentar primero en disco 'public'
-                $rutaRelativa = 'uploads/vouchers/' . $nombreArchivoBD;
-                if (Storage::disk('public')->exists($rutaRelativa)) {
-                    $archivoValido = true;
-                    $rutaArchivo = Storage::disk('public')->path($rutaRelativa);
-                } else {
-                    // Intentar en disco 'local' (por si se guardó antes del cambio)
-                    if (Storage::disk('local')->exists($rutaRelativa)) {
-                        $archivoValido = true;
-                        $rutaArchivo = Storage::disk('local')->path($rutaRelativa);
-                    } else {
-                        // Intentar en la ruta antigua: storage/app/uploads/vouchers/
-                        $rutaAntigua = storage_path('app/uploads/vouchers/' . $nombreArchivoBD);
-                        if (file_exists($rutaAntigua)) {
-                            $archivoValido = true;
-                            $rutaArchivo = $rutaAntigua;
-                        }
-                    }
-                }
-            }
-        }
-
-        // Verificar archivo_voucher
-        if (!$archivoValido && $tramite->archivo_voucher) {
-            $nombreArchivoBD = basename($tramite->archivo_voucher);
-            if ($nombreArchivoBD === $nombreArchivo || $tramite->archivo_voucher === $nombreArchivo) {
-                $rutaRelativa = 'uploads/vouchers/' . $nombreArchivoBD;
-                if (Storage::disk('public')->exists($rutaRelativa)) {
-                    $archivoValido = true;
-                    $rutaArchivo = Storage::disk('public')->path($rutaRelativa);
-                }
-            }
-        }
-
-        // Verificar oficios (buscar en la tabla de oficios si existe)
-        if (!$archivoValido) {
-            try {
-                $oficio = DB::table('oficios')
-                    ->where('id_tramite', $tramite->id)
-                    ->where('archivo', $nombreArchivo)
-                    ->first();
-                
-                if ($oficio) {
-                    $rutaRelativa = 'uploads/oficios/' . $nombreArchivo;
-                    if (Storage::disk('public')->exists($rutaRelativa)) {
-                        $archivoValido = true;
-                        $rutaArchivo = Storage::disk('public')->path($rutaRelativa);
-                    }
-                }
-            } catch (\Exception $e) {
-                // Si la tabla no existe, continuar sin error
-            }
-        }
-
-        // Verificar campo oficio directo en Tramite (cuando se sube oficio desde frontend)
-        if (!$archivoValido && $tramite->oficio) {
-            $nombreArchivoBD = basename($tramite->oficio);
-            if ($nombreArchivoBD === $nombreArchivo || $tramite->oficio === $nombreArchivo) {
-                $rutaRelativa = 'uploads/oficios/' . $nombreArchivoBD;
-                if (Storage::disk('public')->exists($rutaRelativa)) {
-                    $archivoValido = true;
-                    $rutaArchivo = Storage::disk('public')->path($rutaRelativa);
-                } elseif (Storage::disk('local')->exists($rutaRelativa)) {
-                    $archivoValido = true;
-                    $rutaArchivo = Storage::disk('local')->path($rutaRelativa);
-                }
-            }
-        }
-
-        if (!$archivoValido || !$rutaArchivo) {
+        if (!$rutaArchivo) {
             // Log detallado para debugging
             $rutasBuscadas = [];
             if ($tramite->archivo_adjunto) {

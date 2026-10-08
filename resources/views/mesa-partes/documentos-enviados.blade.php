@@ -60,8 +60,16 @@
                                 <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-300 text-right">
                                     <div class="flex items-center justify-end space-x-2">
                                         @if($documento->archivo_adjunto)
-                                        <a href="{{ asset('uploads/' . $documento->archivo_adjunto) }}" 
+                                        <a href="{{ route('tramites.archivo.visor', ['tramite' => $documento->id, 'nombreArchivo' => basename($documento->archivo_adjunto)]) }}"
                                            class="text-blue-600 hover:text-blue-900"
+                                           title="Ver documento">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                            </svg>
+                                        </a>
+                                        <a href="{{ route('tramites.archivo.descargar', ['tramite' => $documento->id, 'nombreArchivo' => basename($documento->archivo_adjunto)]) }}"
+                                           class="text-gray-600 hover:text-gray-900"
                                            download
                                            title="Descargar archivo">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,7 +79,6 @@
                                         @endif
                                         <a href="{{ route('mesa-partes.voucher', $documento->id) }}" 
                                            class="text-green-600 hover:text-green-900"
-                                           target="_blank"
                                            title="Ver voucher">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>

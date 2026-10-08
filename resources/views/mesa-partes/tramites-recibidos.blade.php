@@ -179,7 +179,7 @@
                            onchange="validarArchivoPDF(this, 'corregir_archivo_error')">
                     <div id="corregir_archivo_error" class="mt-1 text-sm text-red-600 hidden"></div>
                 </div>
-                <p class="mt-1 text-xs text-gray-500">Máximo 10 MB. Solo archivos PDF.</p>
+                <p class="mt-1 text-xs text-gray-500">Máximo 25 MB. Solo archivos PDF.</p>
             </div>
             <div class="flex justify-end gap-2">
                 <button type="button" id="cerrarModalCorregirBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition-colors">Cancelar</button>
@@ -208,7 +208,7 @@
                            onchange="validarArchivoPDF(this, 'oficio_archivo_error')">
                     <div id="oficio_archivo_error" class="mt-1 text-sm text-red-600 hidden"></div>
                 </div>
-                <p class="mt-1 text-xs text-gray-500">Máximo 10 MB. Solo archivos PDF.</p>
+                <p class="mt-1 text-xs text-gray-500">Máximo 25 MB. Solo archivos PDF.</p>
             </div>
             <input type="hidden" name="id_tramite" id="id_tramite_oficio">
             <div class="flex justify-end gap-2">
@@ -524,8 +524,8 @@
                                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-xs text-center" target="_blank">
                                 Descargar
                             </a>
-                            <a href="/tramites/${tramite.id}/archivo/${tramite.archivo_adjunto}" 
-                               class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded text-xs text-center" target="_blank">
+                            <a href="/tramites/${tramite.id}/visor/${tramite.archivo_adjunto}"
+                               class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded text-xs text-center">
                                 Ver
                             </a>
                         </div>
@@ -1365,7 +1365,7 @@
             alert('No hay oficio adjunto');
             return;
         }
-        window.open(`/tramites/${tramiteId}/archivo/${nombreOficio}`, '_blank');
+        window.location.href = `/tramites/${tramiteId}/visor/${nombreOficio}`;
     }
 
     window.verDocumento = function(nombreDocumento, tramiteId) {
@@ -1373,7 +1373,7 @@
             alert('No hay documento adjunto');
             return;
         }
-        window.open(`/tramites/${tramiteId}/archivo/${nombreDocumento}`, '_blank');
+        window.location.href = `/tramites/${tramiteId}/visor/${nombreDocumento}`;
     }
 
     // Ver observación modal
@@ -1436,9 +1436,9 @@
             return false;
         }
 
-        if (file.size > 10 * 1024 * 1024) {
+        if (file.size > 25 * 1024 * 1024) {
             if (errorDiv) {
-                errorDiv.textContent = 'El archivo no debe superar los 10MB';
+                errorDiv.textContent = 'El archivo no debe superar los 25MB';
                 errorDiv.classList.remove('hidden');
             }
             if (submitBtn) {

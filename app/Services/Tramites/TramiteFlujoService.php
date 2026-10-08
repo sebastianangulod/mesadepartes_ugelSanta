@@ -935,20 +935,18 @@ class TramiteFlujoService
             throw new Exception('El archivo debe ser un PDF');
         }
 
-        if ($archivo->getSize() > 10 * 1024 * 1024) {
-            throw new Exception('El archivo no debe superar los 10MB');
+        if ($archivo->getSize() > 25 * 1024 * 1024) {
+            throw new Exception('El archivo no debe superar los 25MB');
         }
     }
 
     private function guardarPdfSubido(UploadedFile $archivo, string $directorio): string
     {
         $nombreOriginal = $archivo->getClientOriginalName();
-        $extension = $archivo->getClientOriginalExtension();
-        $base = preg_replace('/[^a-zA-Z0-9._-]/', '', pathinfo($nombreOriginal, PATHINFO_FILENAME) ?? 'doc');
-        $base = strtolower(substr(str_replace(' ', '_', $base), 0, 100));
+        $extension = strtolower($archivo->getClientOriginalExtension() ?: 'pdf');
+        $base = \App\Support\DocumentStorage::nombreSeguro($nombreOriginal);
         $nombreFinal = time().'_'.$base.'.'.$extension;
-        $archivo->storeAs('uploads/'.$directorio, $nombreFinal);
 
-        return $nombreFinal;
+        return \App\Support\DocumentStorage::guardar($archivo, $directorio, $nombreFinal);
     }
 }

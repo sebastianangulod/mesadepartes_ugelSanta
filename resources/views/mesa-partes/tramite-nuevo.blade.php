@@ -40,7 +40,7 @@
                 <input type="file" id="archivo" name="archivo" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900" required accept=".pdf">
                 <p id="archivoError" class="text-red-500 mt-2 hidden">Por favor, seleccione un archivo PDF.</p>
                 <p class="text-gray-600 text-sm mt-2">
-                    Tamaño máximo: 10MB. Solo archivos PDF.
+                    Tamaño máximo: 25MB. Solo archivos PDF.
                 </p>
             </div>
 
@@ -201,7 +201,7 @@
             var file = this.files[0];
             var fileType = file ? file.type : '';
             var match = ['application/pdf'];
-            var tamañoMaximo = 10485760; // 10MB
+            var tamañoMaximo = 26214400; // 25MB
             
             if (!file) {
                 $('#archivoError').removeClass('hidden');
@@ -218,10 +218,10 @@
                 return;
             }
             
-            // Validar tamaño del archivo (10MB)
+            // Validar tamaño del archivo (25MB)
             if (file.size > tamañoMaximo) {
                 $('#archivoError').removeClass('hidden');
-                $('#archivoError').text('El archivo excede el tamaño máximo permitido de 10MB. Tamaño actual: ' + (file.size / 1048576).toFixed(2) + 'MB');
+                $('#archivoError').text('El archivo excede el tamaño máximo permitido de 25MB. Tamaño actual: ' + (file.size / 1048576).toFixed(2) + 'MB');
                 validarFormulario();
                 return;
             }
@@ -281,10 +281,10 @@
                 return;
             }
             
-            // Validar tamaño (10MB = 10485760 bytes)
-            var tamañoMaximo = 10485760;
+            // Validar tamaño (25MB = 26214400 bytes)
+            var tamañoMaximo = 26214400;
             if (archivo.size > tamañoMaximo) {
-                alert('El archivo no debe exceder los 10MB. Tamaño actual: ' + (archivo.size / 1048576).toFixed(2) + 'MB');
+                alert('El archivo no debe exceder los 25MB. Tamaño actual: ' + (archivo.size / 1048576).toFixed(2) + 'MB');
                 return;
             }
             

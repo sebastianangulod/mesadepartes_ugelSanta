@@ -17,6 +17,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Disco activo para documentos de trámites
+    |--------------------------------------------------------------------------
+    |
+    | Nombre del disco donde el sistema guarda y busca los PDFs.
+    | 'documentos' por defecto (local). No cambiar salvo migración
+    | de almacenamiento indicada por el área de TI.
+    |
+    */
+
+    'documentos_disk' => env('FILESYSTEM_DOCUMENTOS_DISK', 'documentos'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
     |
@@ -45,6 +58,33 @@ return [
             'visibility' => 'public',
             'throw' => false,
             'report' => false,
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | Disco de documentos del sistema
+        |--------------------------------------------------------------------------
+        |
+        | Todos los PDFs de trámites (adjuntos, oficios, vouchers) se guardan
+        | en este disco. Por defecto es local (misma carpeta que 'public',
+        | sin migrar nada). Para escalar a NAS o nube S3-compatible basta
+        | cambiar FILESYSTEM_DOCUMENTOS_* en el .env, sin tocar código.
+        |
+        */
+
+        'documentos' => [
+            'driver' => env('FILESYSTEM_DOCUMENTOS_DRIVER', 'local'),
+            'root' => env('FILESYSTEM_DOCUMENTOS_ROOT', storage_path('app/public')),
+            'url' => env('FILESYSTEM_DOCUMENTOS_URL'),
+            'visibility' => 'private',
+            'throw' => false,
+            'report' => false,
+            'key' => env('FILESYSTEM_DOCUMENTOS_S3_KEY'),
+            'secret' => env('FILESYSTEM_DOCUMENTOS_S3_SECRET'),
+            'region' => env('FILESYSTEM_DOCUMENTOS_S3_REGION', 'us-east-1'),
+            'bucket' => env('FILESYSTEM_DOCUMENTOS_S3_BUCKET'),
+            'endpoint' => env('FILESYSTEM_DOCUMENTOS_S3_ENDPOINT'),
+            'use_path_style_endpoint' => env('FILESYSTEM_DOCUMENTOS_S3_PATH_STYLE', false),
         ],
 
         's3' => [

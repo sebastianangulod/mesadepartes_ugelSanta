@@ -60,7 +60,7 @@ class TramiteRequest extends FormRequest
             
             // Documentos adjuntos
             'documentos' => 'required|array|min:1',
-            'documentos.*' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png|max:10240',
+            'documentos.*' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png|max:25600',
             'documentos.*.descripcion' => 'required|string|max:255',
             
             // Validaciones adicionales para externos
@@ -110,7 +110,7 @@ class TramiteRequest extends FormRequest
             'documentos.required' => 'Debe adjuntar al menos un documento',
             'documentos.*.file' => 'Cada documento debe ser un archivo válido',
             'documentos.*.mimes' => 'Los archivos deben ser de tipo: pdf, doc, docx, xls, xlsx, jpg, jpeg, png',
-            'documentos.*.max' => 'Cada archivo no puede exceder 10MB',
+            'documentos.*.max' => 'Cada archivo no puede exceder 25MB',
         ];
     }
 

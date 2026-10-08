@@ -28,10 +28,6 @@ use Exception;
  */
 class TramiteCreacionService
 {
-    private $uploadPath = 'uploads/tramites/';
-    private $voucherPath = 'uploads/vouchers/';
-    private $expedientePath = 'uploads/expedientes/';
-
     public function __construct(
         private readonly TramiteFlujoService $tramiteFlujoService
     ) {
@@ -104,10 +100,10 @@ class TramiteCreacionService
             // Obtener el periodo actual
             $periodo = date('Y');
 
-            // Contar páginas del PDF si existe
+            // Contar páginas del PDF si existe ($nombreArchivo es ruta relativa)
             $numeroPaginas = 1;
             if ($nombreArchivo) {
-                $rutaArchivo = Storage::path($this->uploadPath . $nombreArchivo);
+                $rutaArchivo = \App\Support\DocumentStorage::disk()->path($nombreArchivo);
                 $numeroPaginas = $this->contarPaginasPDF($rutaArchivo);
             }
 
@@ -171,11 +167,10 @@ class TramiteCreacionService
             ]);
             
             // Limpiar archivo si se subió pero falló la transacción
-            if (isset($nombreArchivo) && Storage::exists($this->uploadPath . $nombreArchivo)) {
-                Storage::delete($this->uploadPath . $nombreArchivo);
-                Log::info('Archivo eliminado tras error', ['nombre_archivo' => $nombreArchivo]);
+            if (isset($nombreArchivo)) {
+                \App\Support\DocumentStorage::eliminar($nombreArchivo, ['tramites']);
             }
-            
+
             return [
                 'success' => false,
                 'message' => $e->getMessage()
@@ -221,14 +216,14 @@ class TramiteCreacionService
             throw new Exception("El archivo debe ser un PDF. Tipo recibido: " . $mimeType);
         }
 
-        // Validar tamaño (10MB = 10485760 bytes)
-        $tamañoMaximo = 10485760;
+        // Validar tamaño (25MB = 26214400 bytes)
+        $tamañoMaximo = 26214400;
         if ($archivo->getSize() > $tamañoMaximo) {
             Log::error('Archivo excede tamaño máximo', [
                 'tamaño' => $archivo->getSize(),
                 'maximo' => $tamañoMaximo,
             ]);
-            throw new Exception("El archivo no debe exceder los 10MB");
+            throw new Exception("El archivo no debe exceder los 25MB");
         }
     }
 
@@ -243,15 +238,14 @@ class TramiteCreacionService
     {
         // Sanitizar nombre del archivo
         $nombreOriginal = $archivo->getClientOriginalName();
-        $extension = $archivo->getClientOriginalExtension();
+        $extension = strtolower($archivo->getClientOriginalExtension() ?: 'pdf');
         $nombreSanitizado = $this->sanitizarNombreArchivo(
             pathinfo($nombreOriginal, PATHINFO_FILENAME)
         );
         $nombreArchivo = time() . '_' . $nombreSanitizado . '.' . $extension;
-        
-        $archivo->storeAs($this->uploadPath, $nombreArchivo, 'public');
 
-        return $nombreArchivo;
+        // Devuelve la ruta relativa (con año) para guardar en BD
+        return \App\Support\DocumentStorage::guardar($archivo, 'tramites', $nombreArchivo);
     }
 
     /**

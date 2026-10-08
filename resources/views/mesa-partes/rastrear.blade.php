@@ -14,21 +14,36 @@
         <div class="bg-white rounded-lg shadow p-6">
             <form id="searchForm" class="mb-6">
                 @csrf
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3">Buscar por</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
                     <div>
-                        <label for="numeroVoucher" class="block text-sm font-medium text-gray-700 mb-1">Número de Voucher</label>
-                        <input type="text" id="numeroVoucher" name="numero_voucher" 
-                               class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                               placeholder="Ingrese el número de voucher"
-                               value="{{ request('numero_voucher') }}">
+                        <label for="numeroTramite" class="block text-sm font-medium text-gray-700 mb-1">N° de Trámite</label>
+                        <input type="number" id="numeroTramite" name="numero_tramite" min="1"
+                               class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="Ej. 4">
                     </div>
                     <div>
+                        <label for="numeroVoucher" class="block text-sm font-medium text-gray-700 mb-1">Número de Voucher</label>
+                        <input type="text" id="numeroVoucher" name="numero_voucher"
+                               class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="Ingrese el número de voucher">
+                    </div>
+                    <div>
+                        <label for="dniRemitente" class="block text-sm font-medium text-gray-700 mb-1">DNI del Remitente</label>
+                        <input type="text" id="dniRemitente" name="dni_remitente" maxlength="8" inputmode="numeric"
+                               class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="8 dígitos">
+                    </div>
+                </div>
+                <h3 class="text-sm font-semibold text-gray-700 mb-3">Filtrar por</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
                         <label for="tipoProcedimiento" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Procedimiento</label>
-                        <select id="tipoProcedimiento" name="tipo_procedimiento" 
+                        <select id="tipoProcedimiento" name="tipo_procedimiento"
                                 class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="">Todos</option>
                             @foreach($procedimientos as $procedimiento)
-                                <option value="{{ $procedimiento->id }}" {{ request('tipo_procedimiento') == $procedimiento->id ? 'selected' : '' }}>
+                                <option value="{{ $procedimiento->id }}">
                                     {{ $procedimiento->nombre }}
                                 </option>
                             @endforeach
@@ -38,90 +53,44 @@
                         <label for="estado" class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
                         <select id="estado" name="estado" class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="">Todos</option>
-                            <option value="PENDIENTE" {{ request('estado') == 'PENDIENTE' ? 'selected' : '' }}>Pendiente</option>
-                            <option value="OBSERVADO" {{ request('estado') == 'OBSERVADO' ? 'selected' : '' }}>Observado</option>
-                            <option value="EN_PROCESO" {{ request('estado') == 'EN_PROCESO' ? 'selected' : '' }}>En Proceso</option>
-                            <option value="VERIFICADO" {{ request('estado') == 'VERIFICADO' ? 'selected' : '' }}>Verificado</option>
-                            <option value="FINALIZADO" {{ request('estado') == 'FINALIZADO' ? 'selected' : '' }}>Finalizado</option>
-                            <option value="RECHAZADO" {{ request('estado') == 'RECHAZADO' ? 'selected' : '' }}>Rechazado</option>
+                            <option value="PENDIENTE">Pendiente</option>
+                            <option value="EN_PROCESO">En Proceso</option>
+                            <option value="OBSERVADO">Observado</option>
+                            <option value="VERIFICADO">Verificado</option>
+                            <option value="FINALIZADO">Finalizado</option>
+                            <option value="RECHAZADO">Rechazado</option>
                         </select>
                     </div>
-                    <div>
-                        <label for="fechaDesde" class="block text-sm font-medium text-gray-700 mb-1">Fecha Desde</label>
-                        <input type="date" id="fechaDesde" name="fecha_desde" 
-                               class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                               value="{{ request('fecha_desde') }}" max="">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="fechaDesde" class="block text-sm font-medium text-gray-700 mb-1">Fecha Desde</label>
+                            <input type="date" id="fechaDesde" name="fecha_desde"
+                                   class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" max="">
+                        </div>
+                        <div>
+                            <label for="fechaHasta" class="block text-sm font-medium text-gray-700 mb-1">Fecha Hasta</label>
+                            <input type="date" id="fechaHasta" name="fecha_hasta"
+                                   class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" max="" min="">
+                        </div>
                     </div>
-                    <div>
-                        <label for="fechaHasta" class="block text-sm font-medium text-gray-700 mb-1">Fecha Hasta</label>
-                        <input type="date" id="fechaHasta" name="fecha_hasta" 
-                               class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                               value="{{ request('fecha_hasta') }}" max="" min="">
-                    </div>
-                    <div class="flex items-end">
-                        <button type="submit" 
-                                class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">
-                            Buscar
-                        </button>
-                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
+                    <button type="submit"
+                            class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                        Buscar
+                    </button>
+                    <button type="button" id="btnLimpiar"
+                            class="w-full bg-gray-200 text-gray-800 py-3 px-4 rounded-lg hover:bg-gray-300 transition-colors">
+                        Limpiar
+                    </button>
                 </div>
             </form>
 
             <!-- Resultados de búsqueda -->
             <div id="resultadosBusqueda" class="mt-4">
-                @if(isset($tramites) && $tramites->count() > 0)
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Voucher</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Procedimiento</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                @foreach($tramites as $tramite)
-                                <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {{ $tramite->numero_voucher ?? ($tramite->id . '-' . ($tramite->periodo ?? date('Y'))) }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {{ $tramite->procedimiento->nombre ?? 'N/A' }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $tramite->estado == 'PENDIENTE' ? 'bg-yellow-100 text-yellow-800' : ($tramite->estado == 'FINALIZADO' ? 'bg-green-100 text-green-800' : ($tramite->estado == 'OBSERVADO' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800')) }}">
-                                            {{ $tramite->estado }}
-                                        </span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        @if($tramite->fecha_creacion)
-                                            {{ $tramite->fecha_creacion->format('d/m/Y H:i') }}
-                                        @else
-                                            N/A
-                                        @endif
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <button onclick="verHojaRuta({{ $tramite->id }})" class="text-blue-600 hover:text-blue-900 mr-3">
-                                            Ver Hoja de Ruta
-                                        </button>
-                                        @if($tramite->estado === 'OBSERVADO')
-                                        <button onclick="mostrarModalCorregir({{ $tramite->id }})" class="text-yellow-600 hover:text-yellow-900">
-                                            Corregir
-                                        </button>
-                                        @endif
-                                    </td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                @elseif(isset($tramites) && $tramites->count() == 0)
-                    <div class="text-center py-4 text-gray-500">
-                        No se encontraron trámites que coincidan con los criterios de búsqueda.
-                    </div>
-                @endif
+                <div class="text-center py-4 text-gray-500">
+                    Use los filtros para buscar trámites.
+                </div>
             </div>
 
             <!-- Indicador de carga -->
@@ -144,43 +113,7 @@
         </div>
         <div class="mt-2">
             <table class="min-w-full bg-white border border-gray-300">
-                <tbody>
-                    <tr>
-                        <th class="py-2 px-4 border bg-gray-100">Expediente N°</th>
-                        <td id="hr-expediente" class="py-2 px-4 border"></td>
-                    </tr>
-                    <tr>
-                        <th class="py-2 px-4 border bg-gray-100">Fecha de Registro</th>
-                        <td id="hr-fecha" class="py-2 px-4 border"></td>
-                    </tr>
-                    <tr>
-                        <th class="py-2 px-4 border bg-gray-100">Solicitante</th>
-                        <td id="hr-solicitante" class="py-2 px-4 border"></td>
-                    </tr>
-                    <tr>
-                        <th class="py-2 px-4 border bg-gray-100">Procedimiento</th>
-                        <td id="hr-procedimiento" class="py-2 px-4 border"></td>
-                    </tr>
-                    <tr>
-                        <th class="py-2 px-4 border bg-gray-100">Área</th>
-                        <td id="hr-area" class="py-2 px-4 border"></td>
-                    </tr>
-                    <tr>
-                        <th class="py-2 px-4 border bg-gray-100">Subárea</th>
-                        <td id="hr-subarea" class="py-2 px-4 border"></td>
-                    </tr>
-                    <tr>
-                        <th class="py-2 px-4 border bg-gray-100">Especialidad</th>
-                        <td id="hr-especialidad" class="py-2 px-4 border"></td>
-                    </tr>
-                    <tr>
-                        <th class="py-2 px-4 border bg-gray-100">Estado</th>
-                        <td id="hr-estado" class="py-2 px-4 border"></td>
-                    </tr>
-                    <tr>
-                        <th class="py-2 px-4 border bg-gray-100">Folios</th>
-                        <td id="hr-folios" class="py-2 px-4 border"></td>
-                    </tr>
+                <tbody id="hr-niveles-tbody">
                 </tbody>
             </table>
         </div>
@@ -402,11 +335,11 @@
         function obtenerClaseEstado(estado) {
             const clases = {
                 'PENDIENTE': 'bg-yellow-100 text-yellow-800',
-                'OBSERVADO': 'bg-red-100 text-red-800',
                 'EN_PROCESO': 'bg-blue-100 text-blue-800',
-                'VERIFICADO': 'bg-green-100 text-green-800',
-                'FINALIZADO': 'bg-gray-100 text-gray-800',
-                'RECHAZADO': 'bg-red-200 text-red-900'
+                'OBSERVADO': 'bg-orange-100 text-orange-800',
+                'VERIFICADO': 'bg-purple-100 text-purple-800',
+                'FINALIZADO': 'bg-green-100 text-green-800',
+                'RECHAZADO': 'bg-red-100 text-red-800'
             };
             return clases[estado] || 'bg-gray-100 text-gray-800';
         }
@@ -436,7 +369,11 @@
         }
 
         window.verHojaRuta = function(idTramite) {
-            fetch('{{ url("/mesa-partes/hoja-ruta") }}/' + idTramite, {
+            const tbody = document.getElementById('hr-niveles-tbody');
+            tbody.innerHTML = '';
+            document.getElementById('hojaRutaModal').classList.remove('hidden');
+
+            fetch(`/mesa-partes/hoja-ruta/${idTramite}`, {
                 method: 'GET',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -445,26 +382,95 @@
             })
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    document.getElementById('hr-expediente').textContent = data.tramite.id;
-                    document.getElementById('hr-fecha').textContent = data.tramite.fecha_creacion;
-                    document.getElementById('hr-solicitante').textContent = 
-                        `${data.tramite.nombres} ${data.tramite.apellido_paterno} ${data.tramite.apellido_materno}`;
-                    document.getElementById('hr-procedimiento').textContent = data.tramite.procedimiento_nombre;
-                    document.getElementById('hr-area').textContent = data.tramite.area_nombre || '-';
-                    document.getElementById('hr-subarea').textContent = data.tramite.subarea_nombre || '-';
-                    document.getElementById('hr-especialidad').textContent = data.tramite.especialidad_nombre || '-';
-                    document.getElementById('hr-estado').textContent = data.tramite.estado;
-                    document.getElementById('hr-folios').textContent = data.tramite.tramitescol || '1';
-                    
-                    document.getElementById('hojaRutaModal').classList.remove('hidden');
+                if (!data.success) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500">' + (data.message || 'Error al cargar datos') + '</td></tr>';
+                    return;
+                }
+
+                // 1. Posición actual
+                if (data.posicion_actual) {
+                    const pos = data.posicion_actual;
+                    tbody.innerHTML += `
+                        <tr class="bg-blue-50 font-semibold">
+                            <td class="py-2 px-4 border" colspan="4">
+                                📍 <strong>Posición Actual:</strong> ${pos.nodo_nombre} (Orden: ${pos.nodo_orden})
+                                <span class="ml-2 px-2 py-0.5 text-xs rounded ${pos.puede_finalizar ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}">
+                                    ${pos.puede_finalizar ? 'Nodo Final' : 'Nodo Intermedio'}
+                                </span>
+                                <span class="ml-2 px-2 py-0.5 text-xs rounded ${pos.modo_derivacion === 'MANUAL_FORZADO' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">
+                                    ${pos.modo_derivacion === 'MANUAL_FORZADO' ? 'Manual' : 'Automático'}
+                                </span>
+                            </td>
+                        </tr>
+                    `;
+                }
+
+                // 2. Historial de movimientos (ruta real)
+                if (data.historial && data.historial.length > 0) {
+                    tbody.innerHTML += `
+                        <tr class="bg-gray-100 font-semibold">
+                            <td class="py-2 px-4 border" colspan="4">📋 Historial de Movimientos (${data.historial.length})</td>
+                        </tr>
+                    `;
+                    data.historial.forEach((mov, index) => {
+                        const desde = mov.nodo_desde ? `${mov.nodo_desde.nombre} (Ord: ${mov.nodo_desde.orden})` : '—';
+                        const hacia = mov.nodo_hacia ? `${mov.nodo_hacia.nombre} (Ord: ${mov.nodo_hacia.orden})` : '—';
+                        const usuario = mov.usuario ? `${mov.usuario.nombre} (${mov.usuario.email})` : 'Sistema';
+
+                        tbody.innerHTML += `
+                            <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
+                                <td class="py-2 px-4 border text-xs text-gray-600">${mov.fecha}</td>
+                                <td class="py-2 px-4 border">
+                                    <span class="px-2 py-0.5 rounded text-xs ${mov.accion.includes('DERIVAR') ? 'bg-blue-100 text-blue-800' : mov.accion.includes('OBSERVAR') ? 'bg-yellow-100 text-yellow-800' : mov.accion.includes('VERIFICAR') ? 'bg-green-100 text-green-800' : mov.accion.includes('RECHAZAR') ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}">
+                                        ${mov.accion_legible}
+                                    </span>
+                                </td>
+                                <td class="py-2 px-4 border text-sm">
+                                    <div><strong>De:</strong> ${desde}</div>
+                                    <div><strong>A:</strong> ${hacia}</div>
+                                </td>
+                                <td class="py-2 px-4 border text-xs text-gray-600">${usuario}</td>
+                            </tr>
+                        `;
+                    });
                 } else {
-                    alert('Error al cargar la hoja de ruta');
+                    tbody.innerHTML += `
+                        <tr class="bg-gray-50">
+                            <td class="py-2 px-4 border text-center text-gray-500" colspan="4">Sin historial de movimientos</td>
+                        </tr>
+                    `;
+                }
+
+                // 3. Ruta esperada del procedimiento
+                if (data.niveles_estaticos && data.niveles_estaticos.length > 0) {
+                    tbody.innerHTML += `
+                        <tr class="bg-gray-100 font-semibold">
+                            <td class="py-2 px-4 border" colspan="4">🗺️ Ruta Esperada (Procedimiento)</td>
+                        </tr>
+                    `;
+                    data.niveles_estaticos.forEach(nivel => {
+                        const esActual = data.posicion_actual && data.posicion_actual.nodo_orden === nivel.orden;
+                        tbody.innerHTML += `
+                            <tr class="${esActual ? 'bg-blue-50 font-semibold' : ''}">
+                                <td class="py-2 px-4 border text-center font-bold">${nivel.nivel}</td>
+                                <td class="py-2 px-4 border">${nivel.nombre}</td>
+                                <td class="py-2 px-4 border text-center">
+                                    <span class="px-2 py-0.5 rounded text-xs ${nivel.tipo === 'estatico' ? 'bg-gray-100 text-gray-700' : 'bg-blue-100 text-blue-800'}">
+                                        ${nivel.tipo === 'estatico' ? 'Estático' : 'Dinámico'}
+                                    </span>
+                                </td>
+                                <td class="py-2 px-4 border text-center">
+                                    ${esActual ? '<span class="px-2 py-0.5 rounded text-xs bg-blue-200 text-blue-800">📍 ACTUAL</span>' : ''}
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML += '<tr><td colspan="4" class="text-center py-4">No disponible</td></tr>';
                 }
             })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error al cargar la hoja de ruta');
+            .catch(() => {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500">Error al cargar datos</td></tr>';
             });
         };
 
@@ -489,22 +495,31 @@
             const formData = new FormData(form);
             const mensajeDiv = document.getElementById('corregirMensaje');
             mensajeDiv.textContent = '';
-            
-            fetch('{{ route("mesa-partes.rastrear.buscar") }}', {
+
+            const idTramite = document.getElementById('corregir_id_tramite').value;
+            const archivoInput = document.getElementById('corregir_archivo');
+            if (!archivoInput.files || archivoInput.files.length === 0) {
+                mensajeDiv.textContent = 'Debe seleccionar un archivo PDF.';
+                mensajeDiv.className = 'text-red-600';
+                return;
+            }
+
+            fetch(`/tramites/${idTramite}/corregir`, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json'
                 },
                 body: formData
             })
             .then(r => r.json())
             .then(data => {
-                if (data.status === 'success' || data.success) {
+                if (data.success) {
                     mensajeDiv.textContent = 'Archivo corregido exitosamente.';
                     mensajeDiv.className = 'text-green-600';
                     setTimeout(() => {
                         cerrarModalCorregir();
-                        location.reload();
+                        buscarTramites();
                     }, 1500);
                 } else {
                     mensajeDiv.textContent = data.message || 'Error al corregir el trámite.';
@@ -515,6 +530,15 @@
                 mensajeDiv.textContent = 'Error al enviar la corrección.';
                 mensajeDiv.className = 'text-red-600';
             });
+        });
+
+        document.getElementById('btnLimpiar').addEventListener('click', function() {
+            searchForm.reset();
+            resultadosBusqueda.innerHTML = `
+                <div class="text-center py-4 text-gray-500">
+                    Use los filtros para buscar trámites.
+                </div>
+            `;
         });
     });
 </script>

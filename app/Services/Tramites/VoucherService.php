@@ -7,7 +7,6 @@ use App\Models\Nivel1;
 use App\Models\Nivel2;
 use App\Models\Nivel3;
 use App\Models\Nivel4;
-use Illuminate\Support\Facades\Storage;
 use Exception;
 
 /**
@@ -52,15 +51,18 @@ class VoucherService
     public function generarVoucher(Tramite $tramite): string
     {
         try {
-            // Asegurar que el directorio existe en el disco 'public'
-            $voucherDir = Storage::disk('public')->path($this->voucherPath);
+            // Directorio con año en el disco de documentos
+            $relDir = $this->voucherPath . date('Y');
+            $disk = \App\Support\DocumentStorage::disk();
+            $voucherDir = $disk->path($relDir);
             if (!is_dir($voucherDir)) {
-                Storage::disk('public')->makeDirectory($this->voucherPath);
+                $disk->makeDirectory($relDir);
             }
 
             // Generar nombre único para el voucher
             $nombreVoucher = 'voucher_' . $tramite->id . '_' . time() . '.pdf';
-            $rutaCompleta = $voucherDir . $nombreVoucher;
+            $rutaCompleta = $voucherDir . DIRECTORY_SEPARATOR . $nombreVoucher;
+            $rutaRelativa = $relDir . '/' . $nombreVoucher;
 
             // Cargar datos completos del trámite
             $tramite->load(['usuario', 'procedimiento']);
@@ -230,10 +232,10 @@ class VoucherService
             $pdf->SetFont('helvetica', 'I', 8);
             $pdf->Cell(0, 5, 'Este documento es un comprobante oficial del trámite realizado en el Sistema de Mesa de Partes.', 0, 1, 'C');
 
-            // Guardar el PDF
+            // Guardar el PDF (devuelve ruta relativa con año para la BD)
             $pdf->Output($rutaCompleta, 'F');
 
-            return $nombreVoucher;
+            return $rutaRelativa;
 
         } catch (\Exception $e) {
             throw new Exception("Error al generar voucher: " . $e->getMessage());

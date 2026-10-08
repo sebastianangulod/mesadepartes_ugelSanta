@@ -105,7 +105,7 @@
                                    id="archivo_expediente"
                                    accept=".pdf,.jpg,.jpeg,.png"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('archivo_expediente') border-red-500 @enderror">
-                            <p class="mt-1 text-xs text-gray-500">Formatos: PDF, JPG, JPEG, PNG. Tamaño máximo: 10MB</p>
+                            <p class="mt-1 text-xs text-gray-500">Formatos: PDF, JPG, JPEG, PNG. Tamaño máximo: 25MB</p>
                             @error('archivo_expediente')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
@@ -120,7 +120,7 @@
                                    id="archivo_voucher"
                                    accept=".pdf,.jpg,.jpeg,.png"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('archivo_voucher') border-red-500 @enderror">
-                            <p class="mt-1 text-xs text-gray-500">Formatos: PDF, JPG, JPEG, PNG. Tamaño máximo: 10MB</p>
+                            <p class="mt-1 text-xs text-gray-500">Formatos: PDF, JPG, JPEG, PNG. Tamaño máximo: 25MB</p>
                             @error('archivo_voucher')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
@@ -199,9 +199,9 @@
         document.getElementById('archivo_expediente').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
-                const maxSize = 10 * 1024 * 1024; // 10MB
+                const maxSize = 25 * 1024 * 1024; // 25MB
                 if (file.size > maxSize) {
-                    alert('El archivo no puede exceder los 10MB');
+                    alert('El archivo no puede exceder los 25MB');
                     e.target.value = '';
                     return;
                 }
@@ -218,9 +218,9 @@
         document.getElementById('archivo_voucher').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
-                const maxSize = 10 * 1024 * 1024; // 10MB
+                const maxSize = 25 * 1024 * 1024; // 25MB
                 if (file.size > maxSize) {
-                    alert('El archivo no puede exceder los 10MB');
+                    alert('El archivo no puede exceder los 25MB');
                     e.target.value = '';
                     return;
                 }
