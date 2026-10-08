@@ -6,7 +6,6 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TramiteController;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\Configuracion\ConfiguracionController;
-use App\Http\Controllers\Admin\AreasController;
 use App\Http\Controllers\Admin\NivelesController;
 use App\Http\Controllers\Admin\ProcedimientosController;
 use App\Http\Controllers\Admin\FlujoProcedimientoController;
@@ -206,17 +205,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/usuarios/{id}/hacer-admin', [UsuariosController::class, 'hacerAdministrador'])->name('admin.usuarios.hacer-admin');
         Route::post('/usuarios/{id}/quitar-admin', [UsuariosController::class, 'quitarAdministrador'])->name('admin.usuarios.quitar-admin');
         Route::post('/usuarios/{id}/resetear-password', [UsuariosController::class, 'resetearContrasena'])->name('admin.usuarios.resetear-password');
-        Route::post('/usuarios/{id}/activar', [UsuariosController::class, 'activar'])->name('admin.usuarios.activar');
         
-        // Áreas (Nivel 1) - Solo API endpoints (gestión unificada en Niveles)
-        Route::get('/areas', [AreasController::class, 'index'])->name('admin.areas');
-        Route::post('/areas', [AreasController::class, 'store'])->name('admin.areas.store');
-        Route::put('/areas/{id}', [AreasController::class, 'update'])->name('admin.areas.update');
-        Route::delete('/areas/{id}', [AreasController::class, 'destroy'])->name('admin.areas.destroy');
-        Route::get('/areas/obtener', [AreasController::class, 'obtenerAreas'])->name('admin.areas.obtener');
-        Route::get('/areas/{id}/dependencias', [AreasController::class, 'getDependencias'])->name('admin.areas.dependencias');
-        
-        // Niveles
+        // Niveles (incluye Nivel 1 = áreas; gestión unificada)
         Route::get('/niveles', [NivelesController::class, 'index'])->name('admin.niveles');
         Route::post('/niveles', [NivelesController::class, 'store'])->name('admin.niveles.store');
         Route::put('/niveles/{id}', [NivelesController::class, 'update'])->name('admin.niveles.update');
@@ -240,16 +230,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/procedimientos/{id}/especialistas', [ProcedimientosController::class, 'obtenerEspecialistasDisponibles'])->name('admin.procedimientos.especialistas');
         Route::post('/procedimientos/{id}/asignar-especialistas', [ProcedimientosController::class, 'asignarEspecialistas'])->name('admin.procedimientos.asignar-especialistas');
         Route::get('/procedimientos/{id}/dependencias', [ProcedimientosController::class, 'getDependencias'])->name('admin.procedimientos.dependencias');
-        Route::post('/procedimientos/{id}/clonar', [ProcedimientosController::class, 'clonar'])->name('admin.procedimientos.clonar');
-        // Versionado
-        Route::get('/procedimientos/{id}/versiones', [ProcedimientosController::class, 'historialVersiones'])->name('admin.procedimientos.versiones');
-        Route::post('/procedimientos/{id}/versiones/{versionId}/restaurar', [ProcedimientosController::class, 'restaurarVersion'])->name('admin.procedimientos.versiones.restaurar');
 
         Route::get('/procedimientos/{procedimiento}/flujo', [FlujoProcedimientoController::class, 'edit'])->name('admin.procedimientos.flujo');
         Route::get('/procedimientos/{procedimiento}/flujo/api', [FlujoProcedimientoController::class, 'estructura'])->name('admin.procedimientos.flujo.api');
-        Route::post('/procedimientos/{procedimiento}/flujo/nodos', [FlujoProcedimientoController::class, 'storeNodo'])->name('admin.procedimientos.flujo.nodos.store');
-        Route::put('/procedimientos/{procedimiento}/flujo/nodos/{nodo}', [FlujoProcedimientoController::class, 'updateNodo'])->name('admin.procedimientos.flujo.nodos.update');
-        Route::delete('/procedimientos/{procedimiento}/flujo/nodos/{nodo}', [FlujoProcedimientoController::class, 'destroyNodo'])->name('admin.procedimientos.flujo.nodos.destroy');
         Route::post('/procedimientos/{procedimiento}/flujo/nodo-entrada', [FlujoProcedimientoController::class, 'setNodoEntrada'])->name('admin.procedimientos.flujo.nodo-entrada');
         Route::post('/procedimientos/{procedimiento}/flujo/regenerar-jerarquia', [FlujoProcedimientoController::class, 'regenerarDesdeJerarquia'])->name('admin.procedimientos.flujo.regenerar-jerarquia');
     });
@@ -299,9 +282,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/niveles/nivel2/{nivel1Id}', [NivelesController::class, 'obtenerNivel2'])->name('api.niveles.nivel2');
         Route::get('/niveles/nivel3/{nivel2Id}', [NivelesController::class, 'obtenerNivel3'])->name('api.niveles.nivel3');
         Route::get('/niveles/nivel4/{nivel3Id}', [NivelesController::class, 'obtenerNivel4'])->name('api.niveles.nivel4');
-        
-        // Áreas
-        Route::get('/areas', [AreasController::class, 'obtenerAreas'])->name('api.areas');
     });
     
 });

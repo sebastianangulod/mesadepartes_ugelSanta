@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use App\Models\Tramite;
 use App\Models\Procedimiento;
 use App\Models\Usuario;
-use App\Repositories\TramiteRepository;
 use App\Services\Tramites\TramiteBandejaInternaService;
 
 /**
@@ -21,18 +20,11 @@ use App\Services\Tramites\TramiteBandejaInternaService;
  */
 class MesaPartesController extends Controller
 {
-    /**
-     * @var TramiteRepository
-     */
-    protected TramiteRepository $tramiteRepository;
-
     protected TramiteBandejaInternaService $bandejaInterna;
 
     public function __construct(
-        TramiteRepository $tramiteRepository,
         TramiteBandejaInternaService $bandejaInterna
     ) {
-        $this->tramiteRepository = $tramiteRepository;
         $this->bandejaInterna = $bandejaInterna;
     }
 

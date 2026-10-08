@@ -56,7 +56,7 @@ class UsuariosController extends Controller
     public function index(Request $request)
     {
         $usuarios = Usuario::where('tipo_user', 2)
-            ->with('usuariosNiveles')
+            ->with(['usuariosNiveles', 'administrador'])
             ->orderBy('nombres')
             ->get();
 
@@ -179,18 +179,6 @@ class UsuariosController extends Controller
     }
 
     /**
-     * Mostrar formulario de creación de usuario
-     * 
-     * @return \Illuminate\View\View
-     */
-    public function create()
-    {
-        // Implementar: retornar vista admin.usuarios.create
-        // Incluir: formulario con campos de usuario
-        // Cargar: niveles disponibles, áreas, procedimientos
-    }
-
-    /**
      * Crear nuevo usuario interno
      * Equivalente a action=create en adminUsuarios.php del PHP puro
      * 
@@ -267,19 +255,6 @@ class UsuariosController extends Controller
                 'message' => 'Error al crear el usuario: ' . $e->getMessage()
             ], 500);
         }
-    }
-
-    /**
-     * Mostrar formulario de edición de usuario
-     * 
-     * @param int $id
-     * @return \Illuminate\View\View
-     */
-    public function edit($id)
-    {
-        // Implementar: retornar vista admin.usuarios.edit
-        // Cargar: datos del usuario, niveles asignados
-        // Incluir: formulario de edición con datos actuales
     }
 
     /**
@@ -686,7 +661,7 @@ class UsuariosController extends Controller
                 ], 422);
             }
 
-            $nuevaContrasena = Str::random(12);
+            $nuevaContrasena = Str::random(11) . collect(['@', '$', '!', '%', '*', '?', '&', '_'])->random();
 
             DB::beginTransaction();
 
@@ -712,81 +687,6 @@ class UsuariosController extends Controller
                 'message' => 'Error al resetear contraseña: ' . $e->getMessage()
             ], 500);
         }
-    }
-
-    /**
-     * Activar usuario desactivado
-     * 
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function activar($id)
-    {
-        try {
-            $usuario = Usuario::findOrFail($id);
-
-            // Verificar si email o DNI ya están en uso por otro usuario activo
-            $emailExiste = Usuario::where('email', $usuario->email)
-                ->where('id', '!=', $id)
-                ->exists();
-            $dniExiste = Usuario::where('dni', $usuario->dni)
-                ->where('id', '!=', $id)
-                ->exists();
-
-            if ($emailExiste || $dniExiste) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No se puede activar: email o DNI ya en uso por otro usuario'
-                ], 422);
-            }
-
-            DB::beginTransaction();
-
-            // No hay campo estado en usuarios, asumimos que "activar" = no hacer nada especial
-            // Si hubiera un campo estado, se actualizaría aquí
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Usuario activado correctamente'
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al activar usuario: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Verificar dependencias antes de eliminar
-     * 
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function verificarDependencias($id)
-    {
-        // Implementar: contar dependencias del usuario
-        // Contar: trámites creados, trámites asignados
-        // Contar: procedimientos asignados
-        // Verificar: si es administrador
-        // Retornar: JSON con conteo de dependencias
-    }
-
-    /**
-     * Exportar lista de usuarios
-     * 
-     * @param string $formato (excel|pdf)
-     * @return \Illuminate\Http\Response
-     */
-    public function exportar($formato = 'excel')
-    {
-        // Implementar: exportar lista de usuarios
-        // Excel: usar Laravel Excel o similar
-        // PDF: usar DomPDF o similar
-        // Incluir: filtros aplicados si los hay
     }
 
     /**

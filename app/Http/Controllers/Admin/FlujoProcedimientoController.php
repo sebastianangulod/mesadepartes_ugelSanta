@@ -102,59 +102,6 @@ class FlujoProcedimientoController extends Controller
         ]);
     }
 
-    public function storeNodo(Request $request, Procedimiento $procedimiento): JsonResponse
-    {
-        $data = $request->validate([
-            'nombre' => 'required|string|max:150',
-            'puede_finalizar' => 'boolean',
-            'puede_rechazar_definitivo' => 'boolean',
-        ]);
-
-        // Auto-assign orden: max existing + 1
-        $maxOrden = FlujoNodo::where('id_procedimiento', $procedimiento->id)->max('orden') ?? 0;
-        $orden = $maxOrden + 1;
-
-        $nodo = FlujoNodo::create([
-            'id_procedimiento' => $procedimiento->id,
-            'nombre' => $data['nombre'],
-            'orden' => $orden,
-            'puede_finalizar' => $data['puede_finalizar'] ?? false,
-            'puede_rechazar_definitivo' => $data['puede_rechazar_definitivo'] ?? false,
-        ]);
-
-        return response()->json(['success' => true, 'nodo' => $nodo]);
-    }
-
-    public function updateNodo(Request $request, Procedimiento $procedimiento, FlujoNodo $nodo): JsonResponse
-    {
-        $this->assertNodoDeProcedimiento($procedimiento, $nodo);
-
-        $data = $request->validate([
-            'nombre' => 'sometimes|string|max:150',
-            'puede_finalizar' => 'boolean',
-            'puede_rechazar_definitivo' => 'boolean',
-        ]);
-
-        $nodo->fill($data);
-        $nodo->save();
-
-        return response()->json(['success' => true, 'nodo' => $nodo->fresh()]);
-    }
-
-    public function destroyNodo(Procedimiento $procedimiento, FlujoNodo $nodo): JsonResponse
-    {
-        $this->assertNodoDeProcedimiento($procedimiento, $nodo);
-
-        if ((int) $procedimiento->id_nodo_entrada === (int) $nodo->id) {
-            $procedimiento->id_nodo_entrada = null;
-            $procedimiento->save();
-        }
-
-        $nodo->delete();
-
-        return response()->json(['success' => true]);
-    }
-
     public function setNodoEntrada(Request $request, Procedimiento $procedimiento): JsonResponse
     {
         $data = $request->validate([
@@ -172,13 +119,6 @@ class FlujoProcedimientoController extends Controller
         $procedimiento->save();
 
         return response()->json(['success' => true, 'id_nodo_entrada' => $procedimiento->id_nodo_entrada]);
-    }
-
-    private function assertNodoDeProcedimiento(Procedimiento $procedimiento, FlujoNodo $nodo): void
-    {
-        if ((int) $nodo->id_procedimiento !== (int) $procedimiento->id) {
-            abort(404);
-        }
     }
 
     public function regenerarDesdeJerarquia(Procedimiento $procedimiento): JsonResponse

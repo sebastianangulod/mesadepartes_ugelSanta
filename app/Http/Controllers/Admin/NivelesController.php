@@ -250,6 +250,21 @@ class NivelesController extends Controller
             $idParent = $request->id_parent;
             $orden = 0; // Auto-asignado, no se usa para ordenar (se usa nombre)
 
+            // Validar duplicados antes de crear (uniques en BD)
+            $duplicado = match ($nivel) {
+                'nivel_1' => Nivel1::where('nombre', $nombre)->exists(),
+                'nivel_2' => $idParent ? Nivel2::where('id_nivel1', $idParent)->where('nombre', $nombre)->exists() : false,
+                'nivel_3' => $idParent ? Nivel3::where('id_nivel2', $idParent)->where('nombre', $nombre)->exists() : false,
+                'nivel_4' => $idParent ? Nivel4::where('id_nivel3', $idParent)->where('nombre', $nombre)->exists() : false,
+                default => false,
+            };
+            if ($duplicado) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ya existe un nivel con ese nombre en el mismo padre'
+                ], 422);
+            }
+
             // Crear el nivel según el tipo
             switch ($nivel) {
                 case 'nivel_1':
@@ -371,6 +386,21 @@ class NivelesController extends Controller
                 case 'nivel_4':
                     $nivelModel = Nivel4::findOrFail($id);
                     break;
+            }
+
+            // Validar duplicados antes de actualizar (uniques en BD, excluyendo el actual)
+            $duplicado = match ($nivel) {
+                'nivel_1' => Nivel1::where('nombre', $nombre)->where('id', '!=', $id)->exists(),
+                'nivel_2' => Nivel2::where('id_nivel1', $nivelModel->id_nivel1)->where('nombre', $nombre)->where('id', '!=', $id)->exists(),
+                'nivel_3' => Nivel3::where('id_nivel2', $nivelModel->id_nivel2)->where('nombre', $nombre)->where('id', '!=', $id)->exists(),
+                'nivel_4' => Nivel4::where('id_nivel3', $nivelModel->id_nivel3)->where('nombre', $nombre)->where('id', '!=', $id)->exists(),
+                default => false,
+            };
+            if ($duplicado) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ya existe un nivel con ese nombre en el mismo padre'
+                ], 422);
             }
 
             $nivelModel->update([

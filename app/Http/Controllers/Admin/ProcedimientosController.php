@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Procedimiento;
-use App\Models\ProcedimientoVersion;
 use App\Models\Nivel1;
 use App\Models\Nivel2;
 use App\Models\Nivel3;
@@ -109,9 +108,6 @@ class ProcedimientosController extends Controller
 
             DB::commit();
 
-            // Crear versión inicial
-            $this->crearVersion($procedimiento, 'Creación inicial');
-
             return response()->json([
                 'success' => true,
                 'message' => 'Procedimiento creado correctamente',
@@ -142,7 +138,7 @@ class ProcedimientosController extends Controller
             'nombre' => 'required|string|max:255',
             'id_area' => 'required|exists:nivel_1,id',
             'id_subarea' => 'required|exists:nivel_2,id',
-            'nivel_final' => 'required|in:3,4', // Solo nivel 3 o 4
+            'nivel_final' => 'required|in:2,3,4',
             'id_nivel_final' => 'required|integer',
         ]);
 
@@ -171,14 +167,6 @@ class ProcedimientosController extends Controller
 
             DB::beginTransaction();
 
-            // Guardar cambios para versión
-            $cambios = [];
-            if ($procedimiento->nombre != $request->nombre) $cambios[] = "Nombre: {$procedimiento->nombre} → {$request->nombre}";
-            if ($procedimiento->id_area != $request->id_area) $cambios[] = "Área cambiada";
-            if ($procedimiento->id_subarea != $request->id_subarea) $cambios[] = "Subárea cambiada";
-            if ($procedimiento->nivel_final != $request->nivel_final) $cambios[] = "Nivel final: {$procedimiento->nivel_final} → {$request->nivel_final}";
-            if ($procedimiento->id_nivel_final != $request->id_nivel_final) $cambios[] = "Nivel final ID: {$procedimiento->id_nivel_final} → {$request->id_nivel_final}";
-
             $procedimiento->update([
                 'nombre' => trim($request->nombre),
                 'id_area' => $request->id_area,
@@ -187,11 +175,6 @@ class ProcedimientosController extends Controller
                 'id_nivel_final' => $idNivelFinal,
                 'updated_by' => auth()->id(),
             ]);
-
-            // Crear versión con los cambios
-            if (!empty($cambios)) {
-                $this->crearVersion($procedimiento, implode('; ', $cambios));
-            }
 
             DB::commit();
 
@@ -513,211 +496,6 @@ class ProcedimientosController extends Controller
                 'message' => 'Error al asignar especialistas: ' . $e->getMessage()
             ], 500);
         }
-    }
-
-    /**
-     * Clonar procedimiento (copiar estructura + flujo)
-     * 
-     * @param Request $request
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function clonar(Request $request, $id)
-    {
-        $validator = Validator::make($request->all(), [
-            'nombre' => 'required|string|max:255',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => $validator->errors()->first()
-            ], 422);
-        }
-
-        try {
-            DB::beginTransaction();
-
-            $original = Procedimiento::with([
-                'flujoNodos',
-            ])->findOrFail($id);
-
-            // Crear nuevo procedimiento con los mismos datos pero nuevo nombre
-            $nuevoProcedimiento = Procedimiento::create([
-                'nombre' => $request->nombre,
-                'descripcion' => $original->descripcion,
-                'id_area' => $original->id_area,
-                'id_subarea' => $original->id_subarea,
-                'nivel_final' => $original->nivel_final,
-                'id_nivel_final' => $original->id_nivel_final,
-                'created_by' => auth()->id(),
-            ]);
-
-            // Mapear nodos originales a nuevos
-            $mapaNodos = [];
-            foreach ($original->flujoNodos as $nodoOriginal) {
-                $nuevoNodo = FlujoNodo::create([
-                    'id_procedimiento' => $nuevoProcedimiento->id,
-                    'nombre' => $nodoOriginal->nombre,
-                    'orden' => $nodoOriginal->orden,
-                    'nivel' => $nodoOriginal->nivel,
-                    'id_nivel' => $nodoOriginal->id_nivel,
-                    'puede_finalizar' => $nodoOriginal->puede_finalizar,
-                    'puede_rechazar_definitivo' => $nodoOriginal->puede_rechazar_definitivo,
-                ]);
-                $mapaNodos[$nodoOriginal->id] = $nuevoNodo->id;
-            }
-
-            // Actualizar nodo de entrada si existe
-            if ($original->id_nodo_entrada && isset($mapaNodos[$original->id_nodo_entrada])) {
-                $nuevoProcedimiento->update(['id_nodo_entrada' => $mapaNodos[$original->id_nodo_entrada]]);
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Procedimiento clonado exitosamente',
-                'data' => $nuevoProcedimiento->load('flujoNodos')
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al clonar procedimiento: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Obtener historial de versiones de un procedimiento
-     * 
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function historialVersiones($id)
-    {
-        try {
-            $versiones = ProcedimientoVersion::where('id_procedimiento', $id)
-                ->with('creador:id,nombres,apellido_paterno,apellido_materno')
-                ->orderByDesc('version')
-                ->get(['id', 'id_procedimiento', 'version', 'nombre', 'cambios', 'created_by', 'created_at']);
-
-            return response()->json([
-                'success' => true,
-                'data' => $versiones->map(function ($v) {
-                    return [
-                        'id' => $v->id,
-                        'version' => $v->version,
-                        'nombre' => $v->nombre,
-                        'cambios' => $v->cambios,
-                        'creador' => $v->creador ? $v->creador->nombres . ' ' . $v->creador->apellido_paterno : 'Sistema',
-                        'fecha' => $v->created_at->format('d/m/Y H:i:s'),
-                    ];
-                })
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al obtener historial: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Restaurar una versión anterior del procedimiento
-     * 
-     * @param Request $request
-     * @param int $id
-     * @param int $versionId
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function restaurarVersion(Request $request, $id, $versionId)
-    {
-        try {
-            DB::beginTransaction();
-
-            $version = ProcedimientoVersion::where('id_procedimiento', $id)
-                ->where('id', $versionId)
-                ->firstOrFail();
-
-            $procedimiento = Procedimiento::findOrFail($id);
-
-            // Crear versión actual antes de restaurar
-            $this->crearVersion($procedimiento, 'Restauración automática antes de revertir a v' . $version->version);
-
-            // Restaurar datos
-            $procedimiento->update([
-                'nombre' => $version->nombre,
-                'descripcion' => $version->descripcion,
-                'id_area' => $version->id_area,
-                'id_subarea' => $version->id_subarea,
-                'nivel_final' => $version->nivel_final,
-                'id_nivel_final' => $version->id_nivel_final,
-                'updated_by' => auth()->id(),
-            ]);
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Versión restaurada exitosamente',
-                'data' => $procedimiento->fresh()
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al restaurar versión: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Crear versión del procedimiento (interno)
-     * 
-     * @param Procedimiento $procedimiento
-     * @param string $cambios
-     * @return ProcedimientoVersion
-     */
-    private function crearVersion(Procedimiento $procedimiento, string $cambios = ''): ProcedimientoVersion
-    {
-        $ultimaVersion = ProcedimientoVersion::where('id_procedimiento', $procedimiento->id)
-            ->max('version') ?? 0;
-
-        // Obtener configuración del flujo
-        $flujoConfig = null;
-        $nodos = $procedimiento->flujoNodos()->get();
-        if ($nodos->isNotEmpty()) {
-            $flujoConfig = [
-                'nodos' => $nodos->map(function ($n) {
-                    return [
-                        'id' => $n->id,
-                        'nombre' => $n->nombre,
-                        'orden' => $n->orden,
-                        'nivel' => $n->nivel,
-                        'id_nivel' => $n->id_nivel,
-                        'puede_finalizar' => $n->puede_finalizar,
-                        'puede_rechazar_definitivo' => $n->puede_rechazar_definitivo,
-                    ];
-                }),
-                'id_nodo_entrada' => $procedimiento->id_nodo_entrada,
-            ];
-        }
-
-return ProcedimientoVersion::create([
-            'id_procedimiento' => $procedimiento->id,
-            'version' => $ultimaVersion + 1,
-            'nombre' => $procedimiento->nombre,
-            'descripcion' => $procedimiento->descripcion,
-            'id_area' => $procedimiento->id_area,
-            'id_subarea' => $procedimiento->id_subarea,
-            'nivel_final' => $procedimiento->nivel_final,
-            'id_nivel_final' => $procedimiento->id_nivel_final,
-            'flujo_config' => $flujoConfig,
-            'created_by' => auth()->id(),
-            'cambios' => $cambios,
-        ]);
     }
 
     /**

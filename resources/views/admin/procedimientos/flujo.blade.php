@@ -112,37 +112,6 @@
         </div>
     </section>
 
-    {{-- NUEVO NODO --}}
-    <section class="section-card overflow-hidden mb-6">
-        <div class="section-header bg-gray-50 px-5 py-3">
-            <h2 class="font-semibold text-gray-800 flex items-center gap-2">
-                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                Crear nodo manual
-            </h2>
-        </div>
-        <div class="p-5">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-sm mb-4">
-                <div>
-                    <label class="label-xs">Nombre *</label>
-                    <input id="nnNombre" type="text" class="input-sm" placeholder="Ej. Mesa de partes" required>
-                </div>
-                <div class="flex items-center gap-2 pt-5">
-                    <input id="nnFin" type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded">
-                    <label for="nnFin" class="cursor-pointer text-sm font-medium text-gray-700 tooltipped" data-tip="Permite procesar y finalizar trámites (genera voucher). Solo en nodo final.">Finalizar</label>
-                </div>
-                <div class="flex items-center gap-2 pt-5">
-                    <input id="nnRech" type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded">
-                    <label for="nnRech" class="cursor-pointer text-sm font-medium text-gray-700 tooltipped" data-tip="Permite rechazar definitivamente trámites (estado RECHAZADO). Solo en nodo final.">Rechazo def.</label>
-                </div>
-            </div>
-            <p class="text-xs text-gray-500 mb-2">El orden se asigna automáticamente según la jerarquía (Nivel 1=1, 2=2, 3=3, 4=4).</p>
-            <button type="button" id="btnAddNodo" class="btn-secondary-sm">
-                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                Agregar nodo
-            </button>
-        </div>
-    </section>
-
     {{-- ACCIONES MASIVAS --}}
     <section class="section-card overflow-hidden mb-6">
         <div class="section-header bg-gray-50 px-5 py-3">
@@ -218,19 +187,6 @@
         } catch (e) { alertBox(e.message, false); }
     };
 
-    document.getElementById('btnAddNodo').onclick = async () => {
-        try {
-            await api('POST', base + '/nodos', {
-                nombre: document.getElementById('nnNombre').value.trim(),
-                puede_finalizar: document.getElementById('nnFin').checked,
-                puede_rechazar_definitivo: document.getElementById('nnRech').checked,
-            });
-            document.getElementById('nnNombre').value = '';
-            alertBox('Nodo creado.', true);
-            await load();
-        } catch (e) { alertBox(e.message, false); }
-    };
-
     document.getElementById('btnRegenerarJerarquia').onclick = async () => {
         if (!confirm('¿Regenerar el flujo completo desde la jerarquía del procedimiento? Se perderán cambios manuales en nodos.')) return;
         try {
@@ -259,18 +215,9 @@
                         <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">orden ${n.orden}</span>
                         ${isEntry ? '<span class="text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded font-medium">NODO ENTRADA</span>' : ''}
                     </div>
-                    <button type="button" class="text-red-600 hover:text-red-800 text-sm font-medium btn-del-nodo" data-id="${n.id}">Eliminar</button>
                 </div>
                 <div class="p-5 space-y-5">
                     <div class="flex flex-wrap gap-3">
-                        <div class="checkbox-wrap tooltipped" data-tip="Permite procesar y finalizar trámites (genera voucher). Solo en nodo final del flujo.">
-                            <input type="checkbox" class="chk-fin" data-id="${n.id}" ${n.puede_finalizar ? 'checked' : ''}>
-                            <label for="" class="text-sm font-medium text-gray-700 cursor-pointer">Finalizar</label>
-                        </div>
-                        <div class="checkbox-wrap tooltipped" data-tip="Permite rechazar definitivamente trámites (estado RECHAZADO). Solo en nodo final.">
-                            <input type="checkbox" class="chk-rech" data-id="${n.id}" ${n.puede_rechazar_definitivo ? 'checked' : ''}>
-                            <label for="" class="text-sm font-medium text-gray-700 cursor-pointer">Rechazo def.</label>
-                        </div>
                         ${badgeFlag('FINALIZAR', n.puede_finalizar, 'Nodo puede finalizar trámites')}
                         ${badgeFlag('RECHAZO DEF.', n.puede_rechazar_definitivo, 'Nodo puede rechazar definitivamente')}
                     </div>
@@ -285,29 +232,6 @@
                 </div>`;
             c.appendChild(card);
         });
-
-        document.querySelectorAll('.btn-del-nodo').forEach(b => b.onclick = async () => {
-            if (!confirm('¿Eliminar este nodo?')) return;
-            try {
-                await api('DELETE', base + '/nodos/' + b.dataset.id);
-                alertBox('Nodo eliminado.', true);
-                await load();
-            } catch (e) { alertBox(e.message, false); }
-        });
-
-        document.querySelectorAll('.chk-fin, .chk-rech').forEach(chk => {
-            chk.onchange = async () => {
-                const id = chk.dataset.id;
-                const card = chk.closest('.node-card');
-                try {
-                    await api('PUT', base + '/nodos/' + id, {
-                        puede_finalizar: card.querySelector('.chk-fin[data-id="' + id + '"]').checked,
-                        puede_rechazar_definitivo: card.querySelector('.chk-rech[data-id="' + id + '"]').checked,
-                    });
-                } catch (e) { alertBox(e.message, false); await load(); }
-            };
-        });
-
     }
 
     load().catch(e => alertBox(e.message, false));
