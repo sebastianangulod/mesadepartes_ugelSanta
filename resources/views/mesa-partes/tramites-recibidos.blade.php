@@ -655,15 +655,13 @@
                 modo_derivacion: tramite.modo_derivacion,
                 id_nodo_actual: tramite.id_nodo_actual,
                 nodo_puede_finalizar: tramite.nodo_puede_finalizar,
-                nodo_es_terminal: tramite.nodo_es_terminal,
                 accionesPermitidas: tramite.accionesPermitidas
             });
             
             // En modo manual O en nodos finales (puede_finalizar), cargar opciones de derivación para DERIVAR
             const esManual = tramite.id_nodo_actual && (tramite.modo_derivacion === 'MANUAL_FORZADO' || tramite.modo_derivacion === true);
             // También cargar opciones si el nodo actual tiene puede_finalizar (para permitir elegir destino en AUTO)
-            // Verificar tanto el campo nuevo como el fallback nodo_es_terminal
-            const nodoPuedeFinalizar = tramite.nodo_puede_finalizar === true || tramite.nodo_puede_finalizar === 'true' || tramite.nodo_es_terminal === true || tramite.nodo_es_terminal === 'true';
+            const nodoPuedeFinalizar = tramite.nodo_puede_finalizar === true || tramite.nodo_puede_finalizar === 'true';
             const esNodoFinal = tramite.id_nodo_actual && nodoPuedeFinalizar;
             const debeCargarOpciones = (esManual || esNodoFinal) && tramite.accionesPermitidas.includes('DERIVAR');
             
@@ -671,7 +669,6 @@
                 id_nodo_actual: tramite.id_nodo_actual,
                 modo_derivacion: tramite.modo_derivacion,
                 nodo_puede_finalizar: tramite.nodo_puede_finalizar,
-                nodo_es_terminal: tramite.nodo_es_terminal,
                 nodoPuedeFinalizar: nodoPuedeFinalizar,
                 esManual: esManual,
                 esNodoFinal: esNodoFinal,
@@ -776,7 +773,6 @@
                                     opt.value = n.id;
                                     const badges = [];
                                     if (n.puede_finalizar) badges.push('🎯');
-                                    if (n.es_terminal) badges.push('🏁');
                                     opt.textContent = `${n.nombre} (${n.procedimiento}) ${badges.join(' ')}`.trim();
                                     select.appendChild(opt);
                                 });
@@ -978,7 +974,7 @@
 
     window.derivarTramite = async function(id) {
         const tInfo = tramitesCache[id];
-        const reiniciaFlujo = tInfo && tInfo.id_nodo_actual && tInfo.nodo_es_terminal && tInfo.modo_derivacion !== 'MANUAL_FORZADO';
+        const reiniciaFlujo = tInfo && tInfo.id_nodo_actual && tInfo.nodo_puede_finalizar && tInfo.modo_derivacion !== 'MANUAL_FORZADO';
         const mensajeConfirm = reiniciaFlujo
             ? '¿Derivar este trámite? Al estar en el nivel final, la derivación automática lo enviará al inicio del flujo.'
             : '¿Está seguro de derivar este trámite al siguiente nivel?';

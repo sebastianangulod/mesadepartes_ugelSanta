@@ -5,10 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use App\Models\FlujoNodo;
-use App\Models\FlujoEquipo;
-use App\Models\FlujoTransicion;
 use App\Models\Nivel1;
 use App\Models\Nivel2;
 use App\Models\Nivel3;
@@ -346,16 +343,13 @@ public function crearFlujoConfigurativo(): void
     }
 
     DB::transaction(function () use ($niveles) {
-        $nodoAnteriorId = null;
         $nodoEntradaId = null;
 
         foreach ($niveles as $index => $nivelData) {
             [$nivelNumero, $idNivel, $nombreNivel, $esFinal] = $nivelData;
 
-            // Nombre técnico: "Nivel X - NombreNivel"
+            // Nombre del nodo: "Nivel X - NombreNivel"
             $nombreTecnico = "Nivel {$nivelNumero} - {$nombreNivel}";
-            // Nombre visible: usa el nombre del nivel (admin puede cambiarlo después)
-            $nombreVisible = $nombreNivel;
 
             // Crear o actualizar nodo
             $nodo = FlujoNodo::updateOrCreate(
@@ -365,20 +359,10 @@ public function crearFlujoConfigurativo(): void
                 ],
                 [
                     'nombre' => $nombreTecnico,
-                    'slug' => 'nivel-' . $nivelNumero . '-' . Str::slug($nombreNivel),
+                    'nivel' => $nivelNumero,
+                    'id_nivel' => $idNivel,
                     'puede_finalizar' => $esFinal,
                     'puede_rechazar_definitivo' => $esFinal,
-                    'es_terminal' => $esFinal,
-                ]
-            );
-
-            // Crear o actualizar equipo para este nodo
-            $equipo = FlujoEquipo::updateOrCreate(
-                ['nodo_id' => $nodo->id],
-                [
-                    'nombre' => $nombreTecnico,
-                    'nombre_tecnico' => $nombreTecnico,
-                    'nombre_visible' => $nombreVisible,
                 ]
             );
 
@@ -386,30 +370,12 @@ public function crearFlujoConfigurativo(): void
             if ($index === 0) {
                 $nodoEntradaId = $nodo->id;
             }
-
-            // Crear transición desde nodo anterior
-            if ($nodoAnteriorId) {
-                FlujoTransicion::updateOrCreate(
-                    [
-                        'desde_nodo_id' => $nodoAnteriorId,
-                        'hacia_nodo_id' => $nodo->id,
-                    ],
-                    [
-                        'es_default_auto' => true,
-                    ]
-                );
-            }
-
-            $nodoAnteriorId = $nodo->id;
         }
 
 // Actualizar nodo de entrada del procedimiento
             if ($nodoEntradaId) {
                 $this->updateQuietly(['id_nodo_entrada' => $nodoEntradaId]);
             }
-
-            // Sincronizar usuarios_niveles existentes a los nuevos equipos
-            $this->syncUsuariosNivelesToEquipos();
         });
 }
 
@@ -468,59 +434,5 @@ private function obtenerNivelesDelProcedimiento(): array
     }
 
     return $niveles;
-}
-
-/**
- * Sincronizar usuarios_niveles existentes a los equipos del flujo configurativo
- */
-private function syncUsuariosNivelesToEquipos(): void
-{
-    // Para cada nivel del procedimiento, buscar usuarios en usuarios_niveles
-    // y agregarlos a los equipos correspondientes
-    $equipos = FlujoEquipo::whereHas('nodo', function ($q) {
-        $q->where('id_procedimiento', $this->id);
-    })->get();
-
-    foreach ($equipos as $equipo) {
-        // Extraer nivel y nombre del nombre_tecnico: "Nivel X - NombreNivel"
-        if (!preg_match('/^Nivel (\d+) - (.+)$/', $equipo->nombre_tecnico, $matches)) {
-            continue;
-        }
-        $nivelNumero = (int) $matches[1];
-        $nivelNombre = $matches[2];
-
-        // Determinar tabla del nivel según el número
-        $tablaNivel = match ($nivelNumero) {
-            1 => 'nivel_1',
-            2 => 'nivel_2',
-            3 => 'nivel_3',
-            4 => 'nivel_4',
-            default => null,
-        };
-
-        if (!$tablaNivel) {
-            continue;
-        }
-
-        // Buscar usuarios en usuarios_niveles para este nivel y nombre
-        $usuariosNiveles = UsuariosNiveles::where('nivel', $nivelNumero)
-            ->where('id_nivel', function ($q) use ($tablaNivel, $nivelNombre) {
-                $q->select('id')->from($tablaNivel)->where('nombre', $nivelNombre)->limit(1);
-            })
-            ->whereHas('usuario', function ($q) {
-                $q->where('tipo_user', 2); // Solo internos
-            })
-            ->get();
-
-        foreach ($usuariosNiveles as $un) {
-            FlujoEquipoUsuario::updateOrCreate(
-                [
-                    'equipo_id' => $equipo->id,
-                    'usuario_id' => $un->id_usuario,
-                ],
-                []
-            );
-        }
-    }
 }
 }

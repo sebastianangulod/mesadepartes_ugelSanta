@@ -1860,7 +1860,6 @@ class TramiteController extends Controller
             'nodo_nombre' => $tramite->nodoActual->nombre,
             'nodo_orden' => $tramite->nodoActual->orden,
             'puede_finalizar' => (bool) $tramite->nodoActual->puede_finalizar,
-            'es_terminal' => (bool) $tramite->nodoActual->es_terminal,
             'estado' => $tramite->estado,
             'modo_derivacion' => $tramite->modo_derivacion,
         ];

@@ -5,7 +5,10 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Flujo configurable por procedimiento: nodos, transiciones, equipos e historial de trámite.
+ * Flujo por procedimiento: nodos (con su nivel jerárquico) e historial de trámite.
+ * Los permisos y el responsable salen directo de usuarios_niveles según el
+ * (nivel, id_nivel) de cada nodo. Sin transiciones (AUTO = siguiente por orden)
+ * ni equipos (eran espejo 1:1 de usuarios_niveles).
  * Columnas nuevas en tramites/procedimientos (nullable) para convivir con el código existente.
  */
 return new class extends Migration
@@ -16,66 +19,15 @@ return new class extends Migration
             $table->id();
             $table->foreignId('id_procedimiento')->constrained('procedimientos')->cascadeOnDelete();
             $table->string('nombre', 150);
-            $table->string('slug', 80)->nullable()->comment('Identificador estable opcional para reglas');
             $table->unsignedSmallInteger('orden')->default(0);
+            $table->unsignedTinyInteger('nivel')->nullable()->comment('Nivel jerárquico 1-4 del nodo (para permisos vía usuarios_niveles)');
+            $table->unsignedBigInteger('id_nivel')->nullable()->comment('ID en nivel_1..4 según nivel (para permisos vía usuarios_niveles)');
             $table->boolean('puede_finalizar')->default(false);
             $table->boolean('puede_rechazar_definitivo')->default(false);
-            $table->boolean('es_terminal')->default(false)->comment('Nodo de cierre del flujo (referencia UX)');
             $table->timestamps();
 
             $table->index(['id_procedimiento', 'orden']);
-        });
-
-        Schema::create('flujo_transiciones', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('desde_nodo_id');
-            $table->unsignedBigInteger('hacia_nodo_id');
-            $table->boolean('es_default_auto')->default(false)->comment('Arista preferida si modo_derivacion = AUTO');
-            $table->timestamps();
-
-            $table->foreign('desde_nodo_id')
-                ->references('id')
-                ->on('flujo_nodos')
-                ->cascadeOnDelete();
-
-            $table->foreign('hacia_nodo_id')
-                ->references('id')
-                ->on('flujo_nodos')
-                ->cascadeOnDelete();
-
-            $table->unique(['desde_nodo_id', 'hacia_nodo_id'], 'flujo_transiciones_desde_hacia_unique');
-            $table->index('desde_nodo_id');
-        });
-
-        Schema::create('flujo_equipos', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('nodo_id');
-            $table->string('nombre', 120);
-            $table->string('nombre_tecnico', 150)->nullable()->comment('Nombre técnico para lógica del sistema (ej: Nivel 1 - AGI)');
-            $table->string('nombre_visible', 200)->nullable()->comment('Nombre visible para UI (ej: Secretaría de AGI)');
-            $table->timestamps();
-
-            $table->foreign('nodo_id')
-                ->references('id')
-                ->on('flujo_nodos')
-                ->cascadeOnDelete();
-
-            $table->index('nodo_id');
-        });
-
-        Schema::create('flujo_equipo_usuario', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('equipo_id');
-            $table->foreignId('usuario_id')->constrained('usuarios')->cascadeOnDelete();
-            $table->timestamps();
-
-            $table->foreign('equipo_id')
-                ->references('id')
-                ->on('flujo_equipos')
-                ->cascadeOnDelete();
-
-            $table->unique(['equipo_id', 'usuario_id'], 'flujo_equipo_usuario_equipo_usuario_unique');
-            $table->index('usuario_id');
+            $table->index(['nivel', 'id_nivel']);
         });
 
         Schema::create('tramite_movimientos', function (Blueprint $table) {
@@ -130,9 +82,6 @@ return new class extends Migration
         });
 
         Schema::dropIfExists('tramite_movimientos');
-        Schema::dropIfExists('flujo_equipo_usuario');
-        Schema::dropIfExists('flujo_equipos');
-        Schema::dropIfExists('flujo_transiciones');
         Schema::dropIfExists('flujo_nodos');
     }
 };

@@ -13,9 +13,6 @@ use App\Models\Tramite;
 use App\Models\Usuario;
 use App\Models\UsuariosNiveles;
 use App\Models\FlujoNodo;
-use App\Models\FlujoEquipo;
-use App\Models\FlujoTransicion;
-use App\Models\FlujoEquipoUsuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -542,8 +539,7 @@ class ProcedimientosController extends Controller
             DB::beginTransaction();
 
             $original = Procedimiento::with([
-                'flujoNodos.equipos',
-                'flujoNodos.transicionesDesde',
+                'flujoNodos',
             ])->findOrFail($id);
 
             // Crear nuevo procedimiento con los mismos datos pero nuevo nombre
@@ -563,44 +559,13 @@ class ProcedimientosController extends Controller
                 $nuevoNodo = FlujoNodo::create([
                     'id_procedimiento' => $nuevoProcedimiento->id,
                     'nombre' => $nodoOriginal->nombre,
-                    'slug' => $nodoOriginal->slug,
                     'orden' => $nodoOriginal->orden,
+                    'nivel' => $nodoOriginal->nivel,
+                    'id_nivel' => $nodoOriginal->id_nivel,
                     'puede_finalizar' => $nodoOriginal->puede_finalizar,
                     'puede_rechazar_definitivo' => $nodoOriginal->puede_rechazar_definitivo,
-                    'es_terminal' => $nodoOriginal->es_terminal,
                 ]);
                 $mapaNodos[$nodoOriginal->id] = $nuevoNodo->id;
-
-                // Clonar equipos
-                foreach ($nodoOriginal->equipos as $equipoOriginal) {
-                    $nuevoEquipo = FlujoEquipo::create([
-                        'nodo_id' => $nuevoNodo->id,
-                        'nombre' => $equipoOriginal->nombre,
-                        'nombre_tecnico' => $equipoOriginal->nombre_tecnico,
-                        'nombre_visible' => $equipoOriginal->nombre_visible,
-                    ]);
-
-                    // Clonar miembros
-                    foreach ($equipoOriginal->miembros as $miembro) {
-                        FlujoEquipoUsuario::create([
-                            'equipo_id' => $nuevoEquipo->id,
-                            'usuario_id' => $miembro->pivot->usuario_id,
-                        ]);
-                    }
-                }
-            }
-
-            // Clonar transiciones
-            foreach ($original->flujoNodos as $nodoOriginal) {
-                foreach ($nodoOriginal->transicionesDesde as $transicion) {
-                    if (isset($mapaNodos[$transicion->hacia_nodo_id])) {
-                        FlujoTransicion::create([
-                            'desde_nodo_id' => $mapaNodos[$transicion->desde_nodo_id],
-                            'hacia_nodo_id' => $mapaNodos[$transicion->hacia_nodo_id],
-                            'es_default_auto' => $transicion->es_default_auto,
-                        ]);
-                    }
-                }
             }
 
             // Actualizar nodo de entrada si existe
@@ -613,7 +578,7 @@ class ProcedimientosController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Procedimiento clonado exitosamente',
-                'data' => $nuevoProcedimiento->load('flujoNodos.equipos')
+                'data' => $nuevoProcedimiento->load('flujoNodos')
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -722,33 +687,18 @@ class ProcedimientosController extends Controller
 
         // Obtener configuración del flujo
         $flujoConfig = null;
-        $nodos = $procedimiento->flujoNodos()->with(['equipos.miembros', 'transicionesDesde'])->get();
+        $nodos = $procedimiento->flujoNodos()->get();
         if ($nodos->isNotEmpty()) {
             $flujoConfig = [
                 'nodos' => $nodos->map(function ($n) {
                     return [
                         'id' => $n->id,
                         'nombre' => $n->nombre,
-                        'slug' => $n->slug,
                         'orden' => $n->orden,
+                        'nivel' => $n->nivel,
+                        'id_nivel' => $n->id_nivel,
                         'puede_finalizar' => $n->puede_finalizar,
                         'puede_rechazar_definitivo' => $n->puede_rechazar_definitivo,
-                        'es_terminal' => $n->es_terminal,
-                        'equipos' => $n->equipos->map(function ($e) {
-                            return [
-                                'id' => $e->id,
-                                'nombre' => $e->nombre,
-                                'nombre_tecnico' => $e->nombre_tecnico,
-                                'nombre_visible' => $e->nombre_visible,
-                                'miembros' => $e->miembros->pluck('id')->toArray(),
-                            ];
-                        }),
-                        'transiciones' => $n->transicionesDesde->map(function ($t) {
-                            return [
-                                'hacia_nodo_id' => $t->hacia_nodo_id,
-                                'es_default_auto' => $t->es_default_auto,
-                            ];
-                        }),
                     ];
                 }),
                 'id_nodo_entrada' => $procedimiento->id_nodo_entrada,

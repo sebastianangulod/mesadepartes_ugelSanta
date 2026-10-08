@@ -172,8 +172,8 @@ class MesaPartesController extends Controller
         $query = Tramite::with([
             'procedimiento',
             'usuario',
-            'procedimiento.nodoEntrada.equipos.miembros',
-            'nodoActual.equipos.miembros',
+            'procedimiento.nodoEntrada',
+            'nodoActual',
         ]);
 
         if ($usuario->tipo_user == 2) {
@@ -395,7 +395,7 @@ class MesaPartesController extends Controller
             $query = Tramite::with([
                 'procedimiento',
                 'usuario',
-                'procedimiento.nodoEntrada.equipos.miembros',
+                'procedimiento.nodoEntrada',
                 'nodoActual', // Load full nodoActual with all columns including puede_finalizar
             ]);
 
@@ -462,7 +462,6 @@ class MesaPartesController extends Controller
                         'id' => $sample->nodoActual->id,
                         'nombre' => $sample->nodoActual->nombre,
                         'puede_finalizar' => $sample->nodoActual->puede_finalizar,
-                        'es_terminal' => $sample->nodoActual->es_terminal,
                     ] : null,
                     'accionesPermitidas' => $sample->accionesPermitidas ?? [],
                 ]);
@@ -500,7 +499,6 @@ class MesaPartesController extends Controller
                         'dias_transcurridos' => $diasTranscurridos,
                         'id_nodo_actual' => $t->id_nodo_actual,
                         'modo_derivacion' => $t->modo_derivacion,
-                        'nodo_es_terminal' => (bool) ($t->nodoActual?->es_terminal ?? false),
                         'nodo_puede_finalizar' => (bool) ($t->nodoActual?->puede_finalizar ?? false),
                     ];
                 }),

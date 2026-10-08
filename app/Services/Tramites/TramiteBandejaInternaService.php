@@ -7,10 +7,11 @@ use App\Domain\Tramites\ModoDerivacion;
 use App\Models\FlujoNodo;
 use App\Models\Tramite;
 use App\Models\Usuario;
+use App\Models\UsuariosNiveles;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Visibilidad y acciones de bandeja interna por equipos de nodo (flujo configurable).
+ * Visibilidad y acciones de bandeja interna por nivel asignado (usuarios_niveles).
  */
 class TramiteBandejaInternaService
 {
@@ -20,7 +21,8 @@ class TramiteBandejaInternaService
     }
 
     /**
-     * Restringe la consulta a trámites que el interno puede ver (equipo del nodo de entrada o del nodo actual).
+     * Restringe la consulta a trámites que el interno puede ver (nivel del nodo
+     * de entrada o del nodo actual según su asignación en usuarios_niveles).
      * No aplica a administradores ni a usuarios externos.
      */
     public function aplicarFiltroInternoNoAdmin(Builder $query, Usuario $usuario): void
@@ -29,20 +31,35 @@ class TramiteBandejaInternaService
             return;
         }
 
-        $uid = $usuario->id;
+        $pares = UsuariosNiveles::query()
+            ->where('id_usuario', $usuario->id)
+            ->whereNotNull('nivel')
+            ->whereNotNull('id_nivel')
+            ->get(['nivel', 'id_nivel']);
 
-        $query->where(function (Builder $q) use ($uid) {
-            $q->where(function (Builder $q2) use ($uid) {
+        if ($pares->isEmpty()) {
+            $query->whereRaw('1 = 0');
+            return;
+        }
+
+        $coincideNivel = function (Builder $n) use ($pares) {
+            $n->where(function (Builder $w) use ($pares) {
+                foreach ($pares as $p) {
+                    $w->orWhere(function (Builder $x) use ($p) {
+                        $x->where('nivel', $p->nivel)->where('id_nivel', $p->id_nivel);
+                    });
+                }
+            });
+        };
+
+        $query->where(function (Builder $q) use ($coincideNivel) {
+            $q->where(function (Builder $q2) use ($coincideNivel) {
                 $q2->where('estado', EstadoTramite::PENDIENTE)
                     ->whereNull('id_nodo_actual')
-                    ->whereHas('procedimiento.nodoEntrada.equipos.miembros', function (Builder $m) use ($uid) {
-                        $m->where('usuarios.id', $uid);
-                    });
-            })->orWhere(function (Builder $q2) use ($uid) {
+                    ->whereHas('procedimiento.nodoEntrada', $coincideNivel);
+            })->orWhere(function (Builder $q2) use ($coincideNivel) {
                 $q2->whereNotNull('id_nodo_actual')
-                    ->whereHas('nodoActual.equipos.miembros', function (Builder $m) use ($uid) {
-                        $m->where('usuarios.id', $uid);
-                    });
+                    ->whereHas('nodoActual', $coincideNivel);
             });
         });
     }
@@ -139,7 +156,7 @@ class TramiteBandejaInternaService
                 if ($esNodoEntrada) {
                     // En nodo de entrada (Level 1): solo DERIVAR hacia adelante
                     if ($tramite->id_nodo_actual && $nodo
-                        && $this->tramiteFlujoService->nodoTieneTransicionesSalientes($nodo)) {
+                        && $this->tramiteFlujoService->nodoTieneSiguiente($nodo)) {
                         $acciones[] = 'DERIVAR';
                     }
                 } else {
@@ -150,18 +167,12 @@ class TramiteBandejaInternaService
                     } else {
                         $acciones[] = 'MODO_MANUAL';
                     }
-                    // Derivar: con transiciones salientes (flujo normal) o desde el nodo
-                    // terminal (nivel final). Desde el nodo terminal, en modo AUTO la
-                    // derivación reinicia el flujo hacia el nodo de entrada.
-                    // Excepción: los nodos autorizados a finalizar (puede_finalizar), al
-                    // desactivar la derivación automática (modo manual), no pueden derivar;
-                    // solo pueden reactivar la derivación automática (MODO_AUTO).
+                    // Derivar: si hay siguiente nodo en la cadena (flujo normal)
+                    // o desde el nodo final (puede_finalizar). Desde el nodo final,
+                    // en modo AUTO la derivación reinicia el flujo hacia el nodo de
+                    // entrada; en modo MANUAL se elige cualquier destino.
                     $puedeDerivar = $tramite->id_nodo_actual && $nodo
-                        && ($this->tramiteFlujoService->nodoTieneTransicionesSalientes($nodo) || $nodo->es_terminal);
-
-                    if ($nodo && $nodo->puede_finalizar && $tramite->esModoManual()) {
-                        $puedeDerivar = false;
-                    }
+                        && ($this->tramiteFlujoService->nodoTieneSiguiente($nodo) || $nodo->puede_finalizar);
 
                     if ($puedeDerivar) {
                         $acciones[] = 'DERIVAR';

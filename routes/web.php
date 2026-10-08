@@ -245,22 +245,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/procedimientos/{id}/versiones', [ProcedimientosController::class, 'historialVersiones'])->name('admin.procedimientos.versiones');
         Route::post('/procedimientos/{id}/versiones/{versionId}/restaurar', [ProcedimientosController::class, 'restaurarVersion'])->name('admin.procedimientos.versiones.restaurar');
 
-        Route::get('/flujo/usuarios-internos', [FlujoProcedimientoController::class, 'usuariosInternos'])->name('admin.flujo.usuarios-internos');
         Route::get('/procedimientos/{procedimiento}/flujo', [FlujoProcedimientoController::class, 'edit'])->name('admin.procedimientos.flujo');
         Route::get('/procedimientos/{procedimiento}/flujo/api', [FlujoProcedimientoController::class, 'estructura'])->name('admin.procedimientos.flujo.api');
         Route::post('/procedimientos/{procedimiento}/flujo/nodos', [FlujoProcedimientoController::class, 'storeNodo'])->name('admin.procedimientos.flujo.nodos.store');
         Route::put('/procedimientos/{procedimiento}/flujo/nodos/{nodo}', [FlujoProcedimientoController::class, 'updateNodo'])->name('admin.procedimientos.flujo.nodos.update');
         Route::delete('/procedimientos/{procedimiento}/flujo/nodos/{nodo}', [FlujoProcedimientoController::class, 'destroyNodo'])->name('admin.procedimientos.flujo.nodos.destroy');
         Route::post('/procedimientos/{procedimiento}/flujo/nodo-entrada', [FlujoProcedimientoController::class, 'setNodoEntrada'])->name('admin.procedimientos.flujo.nodo-entrada');
-        Route::post('/procedimientos/{procedimiento}/flujo/transiciones', [FlujoProcedimientoController::class, 'storeTransicion'])->name('admin.procedimientos.flujo.transiciones.store');
-        Route::put('/procedimientos/{procedimiento}/flujo/transiciones/{transicion}', [FlujoProcedimientoController::class, 'updateTransicion'])->name('admin.procedimientos.flujo.transiciones.update');
-        Route::delete('/procedimientos/{procedimiento}/flujo/transiciones/{transicion}', [FlujoProcedimientoController::class, 'destroyTransicion'])->name('admin.procedimientos.flujo.transiciones.destroy');
-        Route::post('/procedimientos/{procedimiento}/flujo/equipos', [FlujoProcedimientoController::class, 'storeEquipo'])->name('admin.procedimientos.flujo.equipos.store');
-        Route::delete('/procedimientos/{procedimiento}/flujo/equipos/{equipo}', [FlujoProcedimientoController::class, 'destroyEquipo'])->name('admin.procedimientos.flujo.equipos.destroy');
-        Route::post('/procedimientos/{procedimiento}/flujo/equipos/{equipo}/miembros', [FlujoProcedimientoController::class, 'attachMiembro'])->name('admin.procedimientos.flujo.equipos.miembros.attach');
-        Route::delete('/procedimientos/{procedimiento}/flujo/equipos/{equipo}/miembros/{usuario}', [FlujoProcedimientoController::class, 'detachMiembro'])->name('admin.procedimientos.flujo.equipos.miembros.detach');
         Route::post('/procedimientos/{procedimiento}/flujo/regenerar-jerarquia', [FlujoProcedimientoController::class, 'regenerarDesdeJerarquia'])->name('admin.procedimientos.flujo.regenerar-jerarquia');
-        Route::post('/procedimientos/{procedimiento}/flujo/sincronizar-usuarios', [FlujoProcedimientoController::class, 'sincronizarUsuariosNiveles'])->name('admin.procedimientos.flujo.sincronizar-usuarios');
     });
 
     // API pública para nodos globales (accesible para usuarios autenticados en mesa-partes)

@@ -5,20 +5,20 @@ namespace App\Services\Tramites;
 use App\Domain\Tramites\EstadoTramite;
 use App\Domain\Tramites\ModoDerivacion;
 use App\Models\FlujoNodo;
-use App\Models\FlujoTransicion;
 use App\Models\Procedimiento;
 use App\Models\Tramite;
 use App\Models\TramiteMovimiento;
 use App\Models\Usuario;
+use App\Models\UsuariosNiveles;
 use Exception;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Motor de flujo configurable por nodos, equipos y modo auto/manual.
- * Las acciones complejas (derivar, retroceder, observar, finalizar) se irán cableando aquí.
+ * Motor de flujo por nodos y modo auto/manual.
+ * Cada nodo pertenece a un (nivel, id_nivel) de la jerarquía; los permisos y
+ * el responsable se resuelven directo desde usuarios_niveles.
  */
 class TramiteFlujoService
 {
@@ -167,7 +167,7 @@ class TramiteFlujoService
      * Solo permite si:
      * - El trámite está en modo manual
      * - El nodo actual pertenece al procedimiento original del trámite
-     * - El nodo actual tiene al menos una transición AUTO (es_default_auto) definida
+     * - El nodo actual tiene un siguiente nodo en la cadena (no es final)
      */
     public function puedeReactivarAuto(Tramite $tramite): bool
     {
@@ -184,8 +184,8 @@ class TramiteFlujoService
             return false;
         }
 
-        // El nodo debe tener al menos una transición AUTO definida
-        return $tramite->nodoActual->transicionesDesde()->where('es_default_auto', true)->exists();
+        // El nodo debe tener un siguiente nodo en la cadena automática
+        return $this->nodoTieneSiguiente($tramite->nodoActual);
     }
 
     public function usuarioInternoPuedeActuarEnNodo(Usuario $usuario, FlujoNodo $nodo): bool
@@ -198,10 +198,16 @@ class TramiteFlujoService
             return true;
         }
 
-        return $nodo->equipos()
-            ->whereHas('miembros', static function ($q) use ($usuario) {
-                $q->where('usuarios.id', $usuario->id);
-            })
+        // Sin equipos: el permiso sale directo de usuarios_niveles.
+        // El nodo guarda su (nivel, id_nivel) de la jerarquía.
+        if (!$nodo->nivel || !$nodo->id_nivel) {
+            return false;
+        }
+
+        return UsuariosNiveles::query()
+            ->where('id_usuario', $usuario->id)
+            ->where('nivel', $nodo->nivel)
+            ->where('id_nivel', $nodo->id_nivel)
             ->exists();
     }
 
@@ -226,28 +232,49 @@ class TramiteFlujoService
         ]);
     }
 
-    public function nodoTieneTransicionesSalientes(FlujoNodo $nodo): bool
+    /**
+     * Siguiente nodo de la cadena automática del mismo procedimiento
+     * (el de menor orden mayor al actual). La derivación AUTO siempre
+     * avanza al siguiente por orden; no hay aristas configurables.
+     */
+    public function siguienteNodo(FlujoNodo $nodo): ?FlujoNodo
     {
-        return FlujoTransicion::query()->where('desde_nodo_id', $nodo->id)->exists();
+        return FlujoNodo::query()
+            ->where('id_procedimiento', $nodo->id_procedimiento)
+            ->where('orden', '>', $nodo->orden)
+            ->orderBy('orden')
+            ->orderBy('id')
+            ->first();
+    }
+
+    public function nodoTieneSiguiente(FlujoNodo $nodo): bool
+    {
+        return $this->siguienteNodo($nodo) !== null;
     }
 
     /**
+     * IDs de usuarios internos asignados al nivel del nodo (fuente: usuarios_niveles).
+     *
      * @return list<int>
      */
     public function idsMiembrosDistintosEnNodo(FlujoNodo $nodo): array
     {
-        $nodo->loadMissing('equipos.miembros');
-        $map = [];
-        foreach ($nodo->equipos->sortBy('id') as $equipo) {
-            foreach ($equipo->miembros->sortBy('id') as $u) {
-                $map[(int) $u->id] = true;
-            }
+        if (!$nodo->nivel || !$nodo->id_nivel) {
+            return [];
         }
 
-        $ids = array_map('intval', array_keys($map));
-        sort($ids, SORT_NUMERIC);
-
-        return $ids;
+        return UsuariosNiveles::query()
+            ->where('nivel', $nodo->nivel)
+            ->where('id_nivel', $nodo->id_nivel)
+            ->whereHas('usuario', static function ($q) {
+                $q->where('tipo_user', 2);
+            })
+            ->orderBy('id_usuario')
+            ->pluck('id_usuario')
+            ->map(static fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     public function contarMiembrosDistintosEnNodo(FlujoNodo $nodo): int
@@ -256,7 +283,8 @@ class TramiteFlujoService
     }
 
     /**
-     * Avanza el trámite al siguiente nodo según modo AUTO (arista predeterminada o única) o MANUAL (hacia_nodo_id).
+     * Avanza el trámite al siguiente nodo de la cadena en modo AUTO,
+     * o a cualquier nodo indicado en modo MANUAL (hacia_nodo_id).
      *
      * @throws Exception
      */
@@ -469,9 +497,7 @@ class TramiteFlujoService
     {
         // En modo manual con destino explícito: permitir derivar a CUALQUIER nodo del
         // sistema (derivación global Nivel → Nodo), incluso de otro procedimiento
-        // o desde un nodo terminal (nivel final) sin transiciones.
-        // En modo AUTO con destino explícito desde nodo final (puede_finalizar):
-        // solo dentro del mismo procedimiento (comportamiento original).
+        // o desde un nodo final sin siguiente.
         if ($modoDerivacion === ModoDerivacion::MANUAL_FORZADO && $haciaNodoId !== null) {
             $nodoHasta = FlujoNodo::query()
                 ->where('id', $haciaNodoId)
@@ -482,16 +508,11 @@ class TramiteFlujoService
                 throw new Exception('El nodo destino no existe');
             }
 
-            // Crear una transición virtual para mantener compatibilidad
-            return (object) [
-                'id' => 0,
-                'desde_nodo_id' => $desde->id,
-                'hacia_nodo_id' => $nodoHasta->id,
-                'es_default_auto' => false,
-                'nodoHacia' => $nodoHasta,
-            ];
+            return $this->transicionVirtual($desde, $nodoHasta, false);
         }
 
+        // En modo AUTO con destino explícito desde nodo final (puede_finalizar):
+        // respetar el destino elegido dentro del mismo procedimiento.
         if ($modoDerivacion === ModoDerivacion::AUTO && (bool) $desde->puede_finalizar && $haciaNodoId !== null) {
             $nodoHasta = FlujoNodo::query()
                 ->where('id', $haciaNodoId)
@@ -503,51 +524,7 @@ class TramiteFlujoService
                 throw new Exception('El nodo destino no existe o no pertenece a este procedimiento');
             }
 
-            // Crear una transición virtual para mantener compatibilidad
-            return (object) [
-                'id' => 0,
-                'desde_nodo_id' => $desde->id,
-                'hacia_nodo_id' => $nodoHasta->id,
-                'es_default_auto' => false,
-                'nodoHacia' => $nodoHasta,
-            ];
-        }
-
-        /** @var Collection<int, FlujoTransicion> $transiciones */
-        $transiciones = FlujoTransicion::query()
-            ->where('desde_nodo_id', $desde->id)
-            ->with('nodoHacia')
-            ->get();
-
-        if ($transiciones->isEmpty()) {
-            // Nodo terminal (nivel final) sin transiciones: en modo AUTO la derivación
-            // reinicia el flujo enviando el trámite al nodo de entrada del procedimiento.
-            // Así, cualquier usuario asignado al nivel final puede volver a derivar el
-            // trámite cuando la derivación automática está activada.
-            if ($modoDerivacion === ModoDerivacion::AUTO && (bool) $desde->es_terminal) {
-                $nodoEntrada = $this->nodoEntradaDelProcedimiento((int) $desde->id_procedimiento);
-
-                if ($nodoEntrada && (int) $nodoEntrada->id !== (int) $desde->id) {
-                    return (object) [
-                        'id' => 0,
-                        'desde_nodo_id' => $desde->id,
-                        'hacia_nodo_id' => $nodoEntrada->id,
-                        'es_default_auto' => true,
-                        'nodoHacia' => $nodoEntrada,
-                    ];
-                }
-
-                throw new Exception('El trámite está en el nivel final y el procedimiento no tiene un nodo de entrada para reiniciar el flujo');
-            }
-
-            throw new Exception('No hay transiciones configuradas desde el nodo actual');
-        }
-
-        foreach ($transiciones as $t) {
-            $hacia = $t->nodoHacia;
-            if (!$hacia || (int) $hacia->id_procedimiento !== (int) $desde->id_procedimiento) {
-                throw new Exception('Transición inconsistente con el procedimiento del nodo');
-            }
+            return $this->transicionVirtual($desde, $nodoHasta, false);
         }
 
         if ($modoDerivacion === ModoDerivacion::MANUAL_FORZADO) {
@@ -555,30 +532,39 @@ class TramiteFlujoService
             throw new Exception('En modo manual debe especificar el nodo destino');
         }
 
-        $defaultes = $transiciones->where('es_default_auto', true)->values();
-        if ($defaultes->count() === 1) {
-            return $defaultes->first();
+        // Modo AUTO: avanzar al siguiente nodo de la cadena por orden.
+        $siguiente = $this->siguienteNodo($desde);
+        if ($siguiente) {
+            return $this->transicionVirtual($desde, $siguiente, true);
         }
 
-        if ($defaultes->count() > 1) {
-            return $defaultes->sort(function (FlujoTransicion $a, FlujoTransicion $b) {
-                $oa = $a->nodoHacia->orden;
-                $ob = $b->nodoHacia->orden;
-                if ($oa !== $ob) {
-                    return $oa <=> $ob;
-                }
+        // Nodo final sin siguiente: en modo AUTO la derivación reinicia el flujo
+        // enviando el trámite al nodo de entrada del procedimiento.
+        if ((bool) $desde->puede_finalizar) {
+            $nodoEntrada = $this->nodoEntradaDelProcedimiento((int) $desde->id_procedimiento);
 
-                return $a->nodoHacia->id <=> $b->nodoHacia->id;
-            })->first();
+            if ($nodoEntrada && (int) $nodoEntrada->id !== (int) $desde->id) {
+                return $this->transicionVirtual($desde, $nodoEntrada, true);
+            }
+
+            throw new Exception('El trámite está en el nivel final y el procedimiento no tiene un nodo de entrada para reiniciar el flujo');
         }
 
-        if ($transiciones->count() === 1) {
-            return $transiciones->first();
-        }
+        throw new Exception('No hay siguiente nodo configurado desde el nodo actual');
+    }
 
-        throw new Exception(
-            'Hay varias transiciones desde este nodo: marque una como predeterminada para modo AUTO o active modo manual e indique hacia_nodo_id'
-        );
+    /**
+     * Transición virtual para mantener compatibilidad con el registro de movimientos.
+     */
+    private function transicionVirtual(FlujoNodo $desde, FlujoNodo $hasta, bool $esAuto): object
+    {
+        return (object) [
+            'id' => 0,
+            'desde_nodo_id' => $desde->id,
+            'hacia_nodo_id' => $hasta->id,
+            'es_default_auto' => $esAuto,
+            'nodoHacia' => $hasta,
+        ];
     }
 
     /**
@@ -627,7 +613,8 @@ class TramiteFlujoService
 
     /**
      * Obtiene las opciones de derivación para un trámite.
-     * En modo AUTO: solo transiciones desde el nodo actual (excepto nodos con puede_finalizar, que pueden derivar a cualquier nodo).
+     * En modo AUTO: el siguiente nodo de la cadena por orden (excepto nodos con
+     * puede_finalizar, que pueden derivar a cualquier nodo del procedimiento).
      * En modo MANUAL_FORZADO: TODOS los nodos del procedimiento (excepto el actual).
      *
      * @return list<array{id:int, hacia_nodo_id:int, nombre_destino:string, es_default_auto:bool}>
@@ -679,26 +666,22 @@ class TramiteFlujoService
                 ->all();
         }
 
-        // Modo AUTO (nodo no final): solo transiciones definidas desde el nodo actual
-        return FlujoTransicion::query()
-            ->where('desde_nodo_id', $tramite->nodoActual->id)
-            ->with('nodoHacia')
-            ->orderByDesc('es_default_auto')
-            ->orderBy('hacia_nodo_id')
-            ->get()
-            ->map(static function (FlujoTransicion $t) {
-                return [
-                    'id' => (int) $t->id,
-                    'hacia_nodo_id' => (int) $t->hacia_nodo_id,
-                    'nombre_destino' => $t->nodoHacia?->nombre ?? ('#'.$t->hacia_nodo_id),
-                    'es_default_auto' => (bool) $t->es_default_auto,
-                ];
-            })
-            ->all();
+        // Modo AUTO (nodo no final): el siguiente nodo de la cadena por orden
+        $siguiente = $this->siguienteNodo($tramite->nodoActual);
+        if (!$siguiente) {
+            return [];
+        }
+
+        return [[
+            'id' => 0,
+            'hacia_nodo_id' => (int) $siguiente->id,
+            'nombre_destino' => $siguiente->nombre,
+            'es_default_auto' => true,
+        ]];
     }
 
     /**
-     * Observación simple (sin oficio): miembros del nodo en contexto.
+     * Observación simple (sin oficio): usuarios del nivel en contexto.
      *
      * @throws Exception
      */
