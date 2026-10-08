@@ -95,6 +95,35 @@ class FlujoProcedimientoController extends Controller
         ]);
     }
 
+    public function nodosGlobales(): JsonResponse
+    {
+        $nodos = FlujoNodo::query()
+            ->with(['procedimiento:id,nombre'])
+            ->orderBy('orden')
+            ->orderBy('id')
+            ->get(['id', 'nombre', 'orden', 'puede_finalizar', 'es_terminal', 'id_procedimiento']);
+
+        $agrupados = [];
+        for ($nivel = 1; $nivel <= 4; $nivel++) {
+            $agrupados[$nivel] = $nodos
+                ->filter(fn ($n) => $n->orden === $nivel)
+                ->map(fn ($n) => [
+                    'id' => $n->id,
+                    'nombre' => $n->nombre,
+                    'orden' => $n->orden,
+                    'puede_finalizar' => (bool) $n->puede_finalizar,
+                    'es_terminal' => (bool) $n->es_terminal,
+                    'procedimiento' => $n->procedimiento?->nombre ?? '—',
+                ])
+                ->values()
+                ->toArray();
+        }
+
+        return response()->json([
+            'niveles' => $agrupados,
+        ]);
+    }
+
     public function storeNodo(Request $request, Procedimiento $procedimiento): JsonResponse
     {
         $data = $request->validate([

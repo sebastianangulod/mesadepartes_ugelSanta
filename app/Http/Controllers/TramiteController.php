@@ -380,6 +380,20 @@ class TramiteController extends Controller
     }
 
     /**
+     * Verifica si se puede reactivar la derivación automática.
+     */
+    public function puedeReactivarAuto(Tramite $tramite): JsonResponse
+    {
+        $puede = $this->tramiteFlujoService->puedeReactivarAuto($tramite);
+
+        return response()->json([
+            'success' => true,
+            'puede' => $puede,
+            'message' => $puede ? null : 'No se puede reactivar: el trámite está fuera de su ruta original o el nodo no tiene derivación automática configurada.',
+        ]);
+    }
+
+    /**
      * Aceptar trámite (cambiar a EN_PROCESO)
      * 
      * @param int $tramite

@@ -505,7 +505,7 @@ private function syncUsuariosNivelesToEquipos(): void
         // Buscar usuarios en usuarios_niveles para este nivel y nombre
         $usuariosNiveles = UsuariosNiveles::where('nivel', $nivelNumero)
             ->where('id_nivel', function ($q) use ($tablaNivel, $nivelNombre) {
-                $q->select('id')->from($tablaNivel)->where('nombre', $nivelNombre);
+                $q->select('id')->from($tablaNivel)->where('nombre', $nivelNombre)->limit(1);
             })
             ->whereHas('usuario', function ($q) {
                 $q->where('tipo_user', 2); // Solo internos

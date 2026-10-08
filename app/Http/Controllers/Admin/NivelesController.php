@@ -483,52 +483,56 @@ class NivelesController extends Controller
         try {
             $nivel = $request->nivel;
 
-            // Obtener el nivel según el tipo
+            // Obtener el modelo según el tipo
             switch ($nivel) {
                 case 'nivel_1':
                     $nivelModel = Nivel1::findOrFail($id);
-                    // Verificar hijos (nivel 2)
-                    $hijosCount = Nivel2::where('id_nivel1', $id)->count();
                     break;
                 case 'nivel_2':
                     $nivelModel = Nivel2::findOrFail($id);
-                    // Verificar hijos (nivel 3)
-                    $hijosCount = Nivel3::where('id_nivel2', $id)->count();
                     break;
                 case 'nivel_3':
                     $nivelModel = Nivel3::findOrFail($id);
-                    // Verificar hijos (nivel 4)
-                    $hijosCount = Nivel4::where('id_nivel3', $id)->count();
                     break;
                 case 'nivel_4':
                     $nivelModel = Nivel4::findOrFail($id);
-                    $hijosCount = 0; // Nivel 4 no tiene hijos
                     break;
             }
 
-            // Verificar usuarios asignados
-            $usuariosCount = UsuariosNiveles::where('nivel', substr($nivel, -1))
-                ->where('id_nivel', $id)
-                ->count();
-
-            // Verificar procedimientos (solo para niveles que se usan en procedimientos)
-            $procedimientosCount = 0;
-            if ($nivel === 'nivel_2') {
-                $procedimientosCount = Procedimiento::where('id_subarea', $id)->count();
-            }
-
-            if ($hijosCount > 0 || $usuariosCount > 0 || $procedimientosCount > 0) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "No se puede eliminar el nivel porque tiene registros dependientes (Hijos: {$hijosCount}, Usuarios: {$usuariosCount}, Procedimientos: {$procedimientosCount})"
-                ], 422);
-            }
-
-            $nivelModel->delete();
+            DB::transaction(function () use ($nivel, $id, $nivelModel) {
+                // Eliminar en cascada según el nivel (de hijos a padres)
+                switch ($nivel) {
+                    case 'nivel_1':
+                        $nivel2Ids = Nivel2::where('id_nivel1', $id)->pluck('id');
+                        $nivel3Ids = Nivel3::whereIn('id_nivel2', $nivel2Ids)->pluck('id');
+                        Nivel4::whereIn('id_nivel3', $nivel3Ids)->delete();
+                        Nivel3::whereIn('id_nivel2', $nivel2Ids)->delete();
+                        Nivel2::where('id_nivel1', $id)->delete();
+                        break;
+                    case 'nivel_2':
+                        $nivel3Ids = Nivel3::where('id_nivel2', $id)->pluck('id');
+                        Nivel4::whereIn('id_nivel3', $nivel3Ids)->delete();
+                        Nivel3::where('id_nivel2', $id)->delete();
+                        break;
+                    case 'nivel_3':
+                        Nivel4::where('id_nivel3', $id)->delete();
+                        break;
+                }
+                // Eliminar usuarios_niveles asociados
+                UsuariosNiveles::where('nivel', substr($nivel, -1))
+                    ->where('id_nivel', $id)
+                    ->delete();
+                // Desreferenciar procedimientos (nivel_2)
+                if ($nivel === 'nivel_2') {
+                    Procedimiento::where('id_subarea', $id)->update(['id_subarea' => null]);
+                }
+                // Eliminar el nivel principal
+                $nivelModel->delete();
+            });
 
             return response()->json([
                 'success' => true,
-                'message' => 'Nivel eliminado exitosamente'
+                'message' => 'Nivel y dependencias eliminados en cascada'
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -587,10 +591,58 @@ class NivelesController extends Controller
      */
     public function verificarDependencias($id, $nivel)
     {
-        // Implementar: contar dependencias según nivel
-        // Nivel 1: verificar niveles 2, usuarios, procedimientos
-        // Nivel 2: verificar niveles 3, usuarios, procedimientos
-        // Nivel 3: verificar niveles 4, usuarios, procedimientos
-        // Nivel 4: verificar usuarios, procedimientos
+        if (!in_array($nivel, ["nivel_1", "nivel_2", "nivel_3", "nivel_4"])) {
+            return response()->json([
+                "success" => false,
+                "message" => "Nivel inválido"
+            ], 422);
+        }
+
+        try {
+            $hijosCount = 0;
+            switch ($nivel) {
+                case "nivel_1":
+                    $hijosCount = Nivel2::where("id_nivel1", $id)->count();
+                    break;
+                case "nivel_2":
+                    $hijosCount = Nivel3::where("id_nivel2", $id)->count();
+                    break;
+                case "nivel_3":
+                    $hijosCount = Nivel4::where("id_nivel3", $id)->count();
+                    break;
+                case "nivel_4":
+                    $hijosCount = 0;
+                    break;
+            }
+
+            $usuariosCount = UsuariosNiveles::where("nivel", substr($nivel, -1))
+                ->where("id_nivel", $id)
+                ->count();
+
+            $procedimientosCount = 0;
+            if ($nivel === "nivel_2") {
+                $procedimientosCount = Procedimiento::where("id_subarea", $id)->count();
+            }
+
+            $total = $hijosCount + $usuariosCount + $procedimientosCount;
+
+            return response()->json([
+                "success" => true,
+                "data" => [
+                    "dependencias" => [
+                        "hijos" => $hijosCount,
+                        "usuarios" => $usuariosCount,
+                        "procedimientos" => $procedimientosCount,
+                    ],
+                    "total" => $total,
+                    "tiene_dependencias" => $total > 0,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                "success" => false,
+                "message" => "Error al verificar dependencias: " . $e->getMessage()
+            ], 500);
+        }
     }
 }

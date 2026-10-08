@@ -199,11 +199,18 @@
 
     let data = { nodos: [], procedimiento: {} };
     let usuariosInternos = [];
+    let nodosGlobalesPorNivel = { 1: [], 2: [], 3: [], 4: [] };
 
     async function loadUsuarios() {
         const j = await fetch('{{ route('admin.flujo.usuarios-internos') }}', { headers: { 'Accept': 'application/json' } });
         const x = await j.json();
         usuariosInternos = x.usuarios || [];
+    }
+
+    async function loadNodosGlobales() {
+        const j = await fetch('{{ route('flujo.nodos-globales') }}', { headers: { 'Accept': 'application/json' } });
+        const x = await j.json();
+        nodosGlobalesPorNivel = x.niveles || { 1: [], 2: [], 3: [], 4: [] };
     }
 
     async function load() {
@@ -313,9 +320,21 @@
                             Transiciones (derivar)
                         </p>
                         <div class="flex flex-wrap gap-2 items-end mb-3">
-                            <div class="flex-1 min-w-[180px]">
+                            <div class="flex-1 min-w-[140px]">
+                                <label class="label-xs">Nivel</label>
+                                <select class="select-sm tr-nivel-${n.id} w-full" onchange="actualizarNodosDestino(${n.id})">
+                                    <option value="">— Seleccione nivel —</option>
+                                    <option value="1">Nivel 1</option>
+                                    <option value="2">Nivel 2</option>
+                                    <option value="3">Nivel 3</option>
+                                    <option value="4">Nivel 4</option>
+                                </select>
+                            </div>
+                            <div class="flex-1 min-w-[200px]">
                                 <label class="label-xs">Nodo destino</label>
-                                <select class="select-sm tr-hacia-${n.id} w-full"></select>
+                                <select class="select-sm tr-hacia-${n.id} w-full" disabled>
+                                    <option value="">— Primero seleccione nivel —</option>
+                                </select>
                             </div>
                             <div class="checkbox-wrap">
                                 <input type="checkbox" class="tr-def-${n.id}">
@@ -343,14 +362,35 @@
                 </div>`;
             c.appendChild(card);
 
+            // NUEVO: Dropdown cascada para nodos destino (nodos globales por nivel)
+            const selNivel = card.querySelector('.tr-nivel-' + n.id);
             const selHacia = card.querySelector('.tr-hacia-' + n.id);
-            (data.nodos || []).forEach(x => {
-                if (x.id === n.id) return;
-                const o = document.createElement('option');
-                o.value = x.id;
-                o.textContent = x.nombre;
-                selHacia.appendChild(o);
-            });
+
+            // Función para actualizar nodos destino según nivel seleccionado
+            window.actualizarNodosDestino = function (nodoId) {
+                const selNivel = document.querySelector('.tr-nivel-' + nodoId);
+                const selHacia = document.querySelector('.tr-hacia-' + nodoId);
+                const nivel = parseInt(selNivel.value);
+                selHacia.innerHTML = '<option value="">— Seleccione nodo —</option>';
+                if (!nivel || !nodosGlobalesPorNivel[nivel]?.length) {
+                    selHacia.disabled = true;
+                    return;
+                }
+                selHacia.disabled = false;
+                nodosGlobalesPorNivel[nivel].forEach(nd => {
+                    const o = document.createElement('option');
+                    o.value = nd.id;
+                    const badge = nd.puede_finalizar ? ' 🎯' : '';
+                    const badgeTerm = nd.es_terminal ? ' 🏁' : '';
+                    o.textContent = `${nd.nombre} (${nd.procedimiento})${badge}${badgeTerm}`;
+                    selHacia.appendChild(o);
+                });
+            };
+
+            // Inicializar si ya hay nivel seleccionado (para transiciones existentes)
+            if (selNivel.value) {
+                actualizarNodosDestino(n.id);
+            }
 
             const ul = card.querySelector('.tr-list-' + n.id);
             (n.transiciones || []).forEach(t => {
@@ -492,7 +532,7 @@
         });
     }
 
-    loadUsuarios().then(load).catch(e => alertBox(e.message, false));
+    loadUsuarios().then(loadNodosGlobales).then(load).catch(e => alertBox(e.message, false));
 })();
 </script>
 @endsection

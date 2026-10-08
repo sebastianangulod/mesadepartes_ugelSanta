@@ -107,6 +107,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{tramite}/flujo/aceptar-ingreso', [TramiteController::class, 'aceptarIngresoFlujo'])->name('tramites.flujo.aceptar-ingreso');
         Route::post('/{tramite}/flujo/modo-manual', [TramiteController::class, 'forzarModoDerivacionManualFlujo'])->name('tramites.flujo.modo-manual');
         Route::post('/{tramite}/flujo/modo-auto', [TramiteController::class, 'desactivarModoDerivacionManualFlujo'])->name('tramites.flujo.modo-auto');
+        Route::get('/{tramite}/puede-reactivar-auto', [TramiteController::class, 'puedeReactivarAuto'])->name('tramites.puede-reactivar-auto');
         Route::get('/{tramite}/flujo/derivacion-opciones', [TramiteController::class, 'opcionesDerivacionFlujo'])->name('tramites.flujo.derivacion-opciones');
         Route::post('/{tramite}/flujo/retroceder', [TramiteController::class, 'retrocederFlujo'])->name('tramites.flujo.retroceder');
         
@@ -260,6 +261,11 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/procedimientos/{procedimiento}/flujo/equipos/{equipo}/miembros/{usuario}', [FlujoProcedimientoController::class, 'detachMiembro'])->name('admin.procedimientos.flujo.equipos.miembros.detach');
         Route::post('/procedimientos/{procedimiento}/flujo/regenerar-jerarquia', [FlujoProcedimientoController::class, 'regenerarDesdeJerarquia'])->name('admin.procedimientos.flujo.regenerar-jerarquia');
         Route::post('/procedimientos/{procedimiento}/flujo/sincronizar-usuarios', [FlujoProcedimientoController::class, 'sincronizarUsuariosNiveles'])->name('admin.procedimientos.flujo.sincronizar-usuarios');
+    });
+
+    // API pública para nodos globales (accesible para usuarios autenticados en mesa-partes)
+    Route::middleware(['auth'])->group(function () {
+        Route::get('/flujo/nodos-globales', [FlujoProcedimientoController::class, 'nodosGlobales'])->name('flujo.nodos-globales');
     });
     
     // Rutas adicionales del sistema

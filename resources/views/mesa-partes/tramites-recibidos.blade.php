@@ -713,32 +713,125 @@
                     label.textContent = 'Derivar a:';
                     wrapper.appendChild(label);
                     
-                    const select = document.createElement('select');
-                    select.className = 'w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-2';
-                    select.id = 'derivarDestinoSelect';
+                    // En modo manual: dropdown cascada Nivel → Nodo
+                    const esManual = tramite.modo_derivacion === 'MANUAL_FORZADO';
                     
-                    if (opcionesDerivacion.length === 1) {
-                        const opt = document.createElement('option');
-                        opt.value = opcionesDerivacion[0].hacia_nodo_id;
-                        opt.textContent = opcionesDerivacion[0].nombre_destino + ' (auto)';
-                        opt.selected = true;
-                        select.appendChild(opt);
+                    if (esManual && opcionesDerivacion.length > 1) {
+                        // Modo manual: dropdown cascada Nivel → Nodo
+                        const nivelWrapper = document.createElement('div');
+                        nivelWrapper.className = 'mb-2';
+                        
+                        const nivelLabel = document.createElement('label');
+                        nivelLabel.className = 'block text-sm font-medium text-gray-700 mb-1';
+                        nivelLabel.textContent = 'Nivel de destino:';
+                        nivelWrapper.appendChild(nivelLabel);
+                        
+                        const nivelSelect = document.createElement('select');
+                        nivelSelect.className = 'w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-2';
+                        nivelSelect.id = 'derivarNivelSelect';
+                        nivelSelect.innerHTML = `
+                            <option value="" disabled selected>Seleccionar nivel...</option>
+                            <option value="1">Nivel 1</option>
+                            <option value="2">Nivel 2</option>
+                            <option value="3">Nivel 3</option>
+                            <option value="4">Nivel 4</option>
+                        `;
+                        nivelWrapper.appendChild(nivelSelect);
+                        wrapper.appendChild(nivelWrapper);
+                        
+                        // Dropdown de nodos (se llena según nivel seleccionado)
+                        const nodoLabel = document.createElement('label');
+                        nodoLabel.className = 'block text-sm font-medium text-gray-700 mb-1';
+                        nodoLabel.textContent = 'Nodo de destino:';
+                        wrapper.appendChild(nodoLabel);
+                        
+                        const select = document.createElement('select');
+                        select.className = 'w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-2';
+                        select.id = 'derivarDestinoSelect';
                         select.disabled = true;
+                        select.innerHTML = '<option value="" disabled selected>Primero seleccione un nivel...</option>';
+                        wrapper.appendChild(select);
+                        
+                        // Función para actualizar nodos según nivel
+                        const actualizarNodosPorNivel = async (nivel) => {
+                            select.innerHTML = '<option value="">Cargando nodos...</option>';
+                            select.disabled = true;
+                            
+                            try {
+                                const resp = await fetch('{{ route("flujo.nodos-globales") }}', { 
+                                    headers: { 'Accept': 'application/json' } 
+                                });
+                                const data = await resp.json();
+                                const nodos = data.niveles?.[parseInt(nivel)] || [];
+                                
+                                select.innerHTML = '<option value="" disabled selected>Seleccionar nodo...</option>';
+                                if (nodos.length === 0) {
+                                    select.innerHTML += '<option value="" disabled>No hay nodos en este nivel</option>';
+                                    select.disabled = true;
+                                    return;
+                                }
+                                
+                                nodos.forEach(n => {
+                                    const opt = document.createElement('option');
+                                    opt.value = n.id;
+                                    const badges = [];
+                                    if (n.puede_finalizar) badges.push('🎯');
+                                    if (n.es_terminal) badges.push('🏁');
+                                    opt.textContent = `${n.nombre} (${n.procedimiento}) ${badges.join(' ')}`.trim();
+                                    select.appendChild(opt);
+                                });
+                                select.disabled = false;
+                            } catch (e) {
+                                select.innerHTML = '<option value="" disabled>Error al cargar nodos</option>';
+                                select.disabled = true;
+                                console.error(e);
+                            }
+                        };
+                        
+                        nivelSelect.onchange = function() {
+                            const nivel = this.value;
+                            if (nivel) {
+                                actualizarNodosPorNivel(nivel);
+                            } else {
+                                select.innerHTML = '<option value="" disabled selected>Primero seleccione un nivel...</option>';
+                                select.disabled = true;
+                            }
+                        };
+                        
                     } else {
-                        const opt0 = document.createElement('option');
-                        opt0.value = '';
-                        opt0.textContent = 'Seleccionar destino...';
-                        opt0.disabled = true;
-                        opt0.selected = true;
-                        select.appendChild(opt0);
-                        opcionesDerivacion.forEach(op => {
+                        // Modo AUTO o nodo final: dropdown simple (comportamiento original)
+                        const label = document.createElement('label');
+                        label.className = 'block text-sm font-medium text-gray-700 mb-1';
+                        label.textContent = 'Derivar a:';
+                        wrapper.appendChild(label);
+                        
+                        const select = document.createElement('select');
+                        select.className = 'w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-2';
+                        select.id = 'derivarDestinoSelect';
+                        
+                        if (opcionesDerivacion.length === 1) {
                             const opt = document.createElement('option');
-                            opt.value = op.hacia_nodo_id;
-                            opt.textContent = op.nombre_destino + (op.es_default_auto ? ' (predeterminado)' : '');
+                            opt.value = opcionesDerivacion[0].hacia_nodo_id;
+                            opt.textContent = opcionesDerivacion[0].nombre_destino + ' (auto)';
+                            opt.selected = true;
                             select.appendChild(opt);
-                        });
+                            select.disabled = true;
+                        } else {
+                            const opt0 = document.createElement('option');
+                            opt0.value = '';
+                            opt0.textContent = 'Seleccionar destino...';
+                            opt0.disabled = true;
+                            opt0.selected = true;
+                            select.appendChild(opt0);
+                            opcionesDerivacion.forEach(op => {
+                                const opt = document.createElement('option');
+                                opt.value = op.hacia_nodo_id;
+                                opt.textContent = op.nombre_destino + (op.es_default_auto ? ' (predeterminado)' : '');
+                                select.appendChild(opt);
+                            });
+                        }
+                        wrapper.appendChild(select);
                     }
-                    wrapper.appendChild(select);
                     
                     const btn = document.createElement('button');
                     btn.className = 'w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded';
@@ -753,15 +846,52 @@
                     cont.appendChild(wrapper);
                 } else {
                     const btn = document.createElement('button');
-                    btn.className = 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded w-full mb-2';
-                    btn.textContent = etiquetasAccion[acc] || acc;
-                    btn.onclick = function() {
-                        modal.classList.add('hidden');
-                        ejecutarAccion(acc, idTramite);
-                    };
-                    cont.appendChild(btn);
+                    
+                    // Para MODO_AUTO, verificar si se puede reactivar
+                    if (acc === 'MODO_AUTO') {
+                        const checkUrl = `/tramites/${idTramite}/puede-reactivar-auto`;
+                        fetch(checkUrl, { headers: { 'Accept': 'application/json' } })
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.success && data.puede) {
+                                    // Puede reactivar: botón normal
+                                    btn.className = 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded w-full mb-2';
+                                    btn.textContent = etiquetasAccion[acc] || acc;
+                                    btn.onclick = function() {
+                                        modal.classList.add('hidden');
+                                        ejecutarAccion(acc, idTramite);
+                                    };
+                                } else {
+                                    // No puede reactivar: botón deshabilitado con tooltip
+                                    btn.className = 'bg-gray-200 text-gray-400 font-bold py-2 px-4 rounded w-full mb-2 cursor-not-allowed';
+                                    btn.textContent = etiquetasAccion[acc] || acc;
+                                    btn.disabled = true;
+                                    btn.title = data.message || 'No se puede reactivar: el trámite está fuera de su ruta original o el nodo no tiene derivación automática configurada.';
+                                }
+                                cont.appendChild(btn);
+                            })
+                            .catch(() => {
+                                // En caso de error de red, mostrar botón normal pero con advertencia
+                                btn.className = 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded w-full mb-2';
+                                btn.textContent = etiquetasAccion[acc] || acc;
+                                btn.onclick = function() {
+                                    modal.classList.add('hidden');
+                                    ejecutarAccion(acc, idTramite);
+                                };
+                                cont.appendChild(btn);
+                            });
+                    } else {
+                        // Otras acciones: botón normal
+                        btn.className = 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded w-full mb-2';
+                        btn.textContent = etiquetasAccion[acc] || acc;
+                        btn.onclick = function() {
+                            modal.classList.add('hidden');
+                            ejecutarAccion(acc, idTramite);
+                        };
+                        cont.appendChild(btn);
+                    }
                 }
-            });
+            }); 
         } else {
             cont.innerHTML = '<p class="text-gray-500">No hay acciones disponibles</p>';
         }
@@ -819,11 +949,6 @@
     window.mostrarModalCorregir = function(idTramite) {
         document.getElementById('corregir_id_tramite').value = idTramite;
         document.getElementById('modalCorregir').classList.remove('hidden');
-    }
-
-    window.mostrarModalOficio = function(idTramite) {
-        document.getElementById('id_tramite_oficio').value = idTramite;
-        document.getElementById('modalOficio').classList.remove('hidden');
     }
 
     window.observarTramite = function(id) {
