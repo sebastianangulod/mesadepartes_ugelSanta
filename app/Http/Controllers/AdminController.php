@@ -5,8 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Usuario;
-use App\Models\Area;
-use App\Models\Nivel;
 use App\Models\Procedimiento;
 use App\Models\Tramite;
 use App\Domain\Tramites\EstadoTramite;
@@ -142,39 +140,6 @@ class AdminController extends Controller
      */
 
     /**
-     * Muestra la gestión de áreas
-     */
-    public function areas()
-    {
-        // Retorna vista: resources/views/admin/areas/index.blade.php
-        // Muestra áreas jerárquicas (nivel 1-4)
-    }
-
-    /**
-     * Obtiene áreas por tipo de grupo
-     */
-    public function obtenerAreasTipoGrupo($tipoGrupoId)
-    {
-        // Retorna JSON con áreas del tipo de grupo
-    }
-
-    /**
-     * Obtiene grupos por área
-     */
-    public function obtenerGrupos($areaId)
-    {
-        // Retorna JSON con grupos del área
-    }
-
-    /**
-     * Obtiene subgrupos por grupo
-     */
-    public function obtenerSubgrupos($grupoId)
-    {
-        // Retorna JSON con subgrupos del grupo
-    }
-
-    /**
      * Gestión de Niveles
      */
 
@@ -271,22 +236,5 @@ class AdminController extends Controller
         // Valida que no tenga trámites asociados
         // Elimina procedimiento
         // Retorna respuesta JSON
-    }
-
-    /**
-     * Obtiene tipos de grupos por nivel 1
-     */
-    public function obtenerTipogrupos($nivel1Id)
-    {
-        // Retorna JSON con tipos de grupos
-    }
-
-    /**
-     * Funciones auxiliares para debugging
-     */
-    public function debugNiveles()
-    {
-        // Retorna información de debugging para niveles
-        // Útil para troubleshooting
     }
 }

@@ -48,14 +48,6 @@ class Nivel1 extends Model
     }
 
     /**
-     * Relación con tipos de grupos
-     */
-    public function tipogrupos()
-    {
-        return $this->hasMany(Tipogrupo::class, 'id_nivel1');
-    }
-
-    /**
      * Relación con procedimientos
      */
     public function procedimientos()

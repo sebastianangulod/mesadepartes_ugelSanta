@@ -64,18 +64,6 @@ class AreasController extends Controller
     }
 
     /**
-     * Obtener áreas por tipo de grupo
-     * 
-     * @param int $tipoGrupoId
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function obtenerPorTipoGrupo($tipoGrupoId)
-    {
-        // Implementar: retornar áreas filtradas por tipo_grupo_id
-        // Usar en: select dinámicos de procedimientos
-    }
-
-    /**
      * Crear nueva área (Nivel 1)
      * Equivalente a action=create_nivel1 en adminAreas.php del PHP puro
      * 
@@ -221,67 +209,6 @@ class AreasController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al eliminar el área: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Obtener tipos de grupos
-     * 
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function obtenerTiposGrupos()
-    {
-        // Implementar: retornar todos los tipos de grupos
-        // Usar en: select de formularios
-    }
-
-    /**
-     * Obtener grupos por tipo
-     * 
-     * @param int $tipoGrupoId
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function obtenerGrupos($tipoGrupoId)
-    {
-        // Implementar: retornar grupos filtrados por tipo_grupo_id
-    }
-
-    /**
-     * Obtener subgrupos por grupo
-     * 
-     * @param int $grupoId
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function obtenerSubgrupos($grupoId)
-    {
-        // Implementar: retornar subgrupos filtrados por grupo_id
-    }
-
-    /**
-     * Verificar dependencias antes de eliminar
-     * 
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function verificarDependencias($id)
-    {
-        try {
-            $nivel2Count = Nivel2::where('id_nivel1', $id)->count();
-            $procedimientosCount = Procedimiento::where('id_area', $id)->count();
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'nivel2_count' => $nivel2Count,
-                    'procedimientos_count' => $procedimientosCount,
-                    'total' => $nivel2Count + $procedimientosCount
-                ]
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al verificar dependencias: ' . $e->getMessage()
             ], 500);
         }
     }
