@@ -892,39 +892,6 @@ $tramite->modo_manual_por_usuario = null;
     }
 
     /**
-     * Listar trámites con filtros
-     * 
-     * @param array $filtros
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
-     */
-    public function listarTramites(array $filtros = [])
-    {
-        $query = Tramite::with(['usuario', 'procedimiento']);
-
-        if (!empty($filtros['estado'])) {
-            $query->where('estado', $filtros['estado']);
-        }
-
-        if (!empty($filtros['usuario_id'])) {
-            $query->where('id_usuario', $filtros['usuario_id']);
-        }
-
-        if (!empty($filtros['procedimiento_id'])) {
-            $query->where('id_procedimiento', $filtros['procedimiento_id']);
-        }
-
-        if (!empty($filtros['fecha_desde'])) {
-            $query->whereDate('fecha_creacion', '>=', $filtros['fecha_desde']);
-        }
-
-        if (!empty($filtros['fecha_hasta'])) {
-            $query->whereDate('fecha_creacion', '<=', $filtros['fecha_hasta']);
-        }
-
-        return $query->orderByDesc('fecha_creacion')->paginate(15);
-    }
-
-    /**
      * Obtener trámite completo con relaciones
      * 
      * @param int $id
@@ -986,28 +953,6 @@ $tramite->modo_manual_por_usuario = null;
             ->groupBy('estado')
             ->pluck('total', 'estado')
             ->toArray();
-    }
-
-    /**
-     * Eliminar trámite
-     * 
-     * @param int $id
-     * @return bool
-     * @throws Exception
-     */
-    public function eliminar(int $id): bool
-    {
-        $tramite = Tramite::findOrFail($id);
-
-        if (!$tramite->puedeSerEliminado()) {
-            throw new Exception('No se puede eliminar un trámite en este estado');
-        }
-
-        // Eliminar archivos asociados
-        \App\Support\DocumentStorage::eliminar($tramite->archivo_adjunto, ['tramites']);
-        \App\Support\DocumentStorage::eliminar($tramite->voucher, ['vouchers']);
-
-        return $tramite->delete();
     }
 }
 

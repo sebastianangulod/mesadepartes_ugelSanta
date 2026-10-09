@@ -449,7 +449,8 @@
                         </tr>
                     `;
                     data.niveles_estaticos.forEach(nivel => {
-                        const esActual = data.posicion_actual && data.posicion_actual.nodo_orden === nivel.orden;
+                        const esActual = data.posicion_actual && data.posicion_actual.nodo_id
+                            && nivel.id_nodo && data.posicion_actual.nodo_id === nivel.id_nodo;
                         tbody.innerHTML += `
                             <tr class="${esActual ? 'bg-blue-50 font-semibold' : ''}">
                                 <td class="py-2 px-4 border text-center font-bold">${nivel.nivel}</td>

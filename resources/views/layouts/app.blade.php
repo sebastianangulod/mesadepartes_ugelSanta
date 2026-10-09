@@ -79,14 +79,6 @@
                                 Dashboard
                             </a>
                         @endif
-                        <a href="{{ route('tramites.index') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
-                            Trámites
-                        </a>
-                        @if(auth()->user() && auth()->user()->esPersonalMesaPartes())
-                            <a href="#" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
-                                Reportes
-                            </a>
-                        @endif
                     </nav>
                     
                     <!-- Menú de usuario -->

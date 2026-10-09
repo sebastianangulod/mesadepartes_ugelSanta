@@ -4,7 +4,6 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TramiteController;
-use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\Configuracion\ConfiguracionController;
 use App\Http\Controllers\Admin\NivelesController;
 use App\Http\Controllers\Admin\ProcedimientosController;
@@ -92,16 +91,9 @@ Route::prefix('mesa-partes')->group(function () {
 
 // Grupo de rutas protegidas
 Route::middleware(['auth'])->group(function () {
-    
-    // Rutas resource para trámites
-    Route::resource('tramites', TramiteController::class);
-    
+
     // Rutas personalizadas para acciones de trámites
     Route::prefix('tramites')->group(function () {
-        
-        // Búsqueda de trámites
-        Route::get('/buscar', [TramiteController::class, 'buscar'])->name('tramites.buscar');
-        Route::post('/buscar/resultados', [TramiteController::class, 'resultadosBusqueda'])->name('tramites.buscar.resultados');
 
         Route::post('/{tramite}/flujo/aceptar-ingreso', [TramiteController::class, 'aceptarIngresoFlujo'])->name('tramites.flujo.aceptar-ingreso');
         Route::post('/{tramite}/flujo/modo-manual', [TramiteController::class, 'forzarModoDerivacionManualFlujo'])->name('tramites.flujo.modo-manual');
@@ -116,9 +108,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/{tramite}/observar', [TramiteController::class, 'observar'])->name('tramites.observar');
             Route::post('/{tramite}/observar-con-oficio', [TramiteController::class, 'observarConOficio'])->name('tramites.observar-con-oficio');
             Route::post('/{tramite}/verificar', [TramiteController::class, 'verificar'])->name('tramites.verificar');
-            Route::post('/{tramite}/finalizar', [TramiteController::class, 'finalizar'])->name('tramites.finalizar');
             Route::post('/{tramite}/procesar', [TramiteController::class, 'procesar'])->name('tramites.procesar');
-            Route::post('/{tramite}/anular', [TramiteController::class, 'anular'])->name('tramites.anular');
             
             // Acciones de derivación
             Route::post('/{tramite}/derivar', [TramiteController::class, 'derivar'])->name('tramites.derivar');
@@ -128,24 +118,7 @@ Route::middleware(['auth'])->group(function () {
             // Acciones de corrección (usuario externo)
             Route::post('/{tramite}/corregir', [TramiteController::class, 'corregir'])->name('tramites.corregir');
             Route::post('/{tramite}/subir-oficio', [TramiteController::class, 'subirOficioUsuario'])->name('tramites.subir-oficio');
-        
-        // Gestión de documentos
-        Route::post('/{tramite}/documentos/agregar', [TramiteController::class, 'agregarDocumento'])->name('tramites.documentos.agregar');
-        Route::delete('/{tramite}/documentos/{documento}/eliminar', [TramiteController::class, 'eliminarDocumento'])->name('tramites.documentos.eliminar');
-        
-        // Comentarios y observaciones
-        Route::post('/{tramite}/comentarios/agregar', [TramiteController::class, 'agregarComentario'])->name('tramites.comentarios.agregar');
-        
-        // Estadísticas
-        Route::get('/estadisticas', [TramiteController::class, 'estadisticas'])->name('tramites.estadisticas');
-        
-        // Trámites pendientes
-        Route::get('/pendientes', [TramiteController::class, 'pendientes'])->name('tramites.pendientes');
-        Route::get('/vencidos', [TramiteController::class, 'vencidos'])->name('tramites.vencidos');
-        
-        // Exportar trámites
-        Route::get('/exportar', [TramiteController::class, 'exportar'])->name('tramites.exportar');
-        
+
         // Descargar archivo de trámite (protegido)
         Route::get('/{tramite}/archivo/{nombreArchivo}', [TramiteController::class, 'descargarArchivo'])->name('tramites.archivo.descargar');
 
@@ -156,20 +129,6 @@ Route::middleware(['auth'])->group(function () {
         
     });
     
-    // Rutas de reportes
-    Route::prefix('reportes')->group(function () {
-        Route::get('/', [ReporteController::class, 'index'])->name('reportes.index');
-        Route::get('/tramites-por-estado', [ReporteController::class, 'tramitesPorEstado'])->name('reportes.tramites-por-estado');
-        Route::get('/tramites-por-periodo', [ReporteController::class, 'tramitesPorPeriodo'])->name('reportes.tramites-por-periodo');
-        Route::get('/tramites-por-usuario', [ReporteController::class, 'tramitesPorUsuario'])->name('reportes.tramites-por-usuario');
-        Route::get('/tramites-por-procedimiento', [ReporteController::class, 'tramitesPorProcedimiento'])->name('reportes.tramites-por-procedimiento');
-        Route::get('/tramites-pendientes', [ReporteController::class, 'tramitesPendientes'])->name('reportes.tramites-pendientes');
-        Route::get('/tramites-finalizados', [ReporteController::class, 'tramitesFinalizados'])->name('reportes.tramites-finalizados');
-        Route::get('/tramites-anulados', [ReporteController::class, 'tramitesAnulados'])->name('reportes.tramites-anulados');
-        Route::get('/exportar-excel', [ReporteController::class, 'exportarExcel'])->name('reportes.exportar-excel');
-        Route::get('/exportar-pdf', [ReporteController::class, 'exportarPDF'])->name('reportes.exportar-pdf');
-    });
-
     // Rutas de configuración
     Route::prefix('configuracion')->group(function () {
         Route::get('/', [ConfiguracionController::class, 'index'])->name('configuracion.index');
