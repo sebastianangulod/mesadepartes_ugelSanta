@@ -224,33 +224,6 @@ class Tramite extends Model
     }
 
     /**
-     * Verificar si el trámite puede ser editado
-     * 
-     * @return bool
-     */
-    public function puedeSerEditado(): bool
-    {
-        return in_array($this->estado, [
-            EstadoTramite::PENDIENTE,
-            EstadoTramite::OBSERVADO,
-        ]);
-    }
-
-    /**
-     * Verificar si el trámite puede ser eliminado
-     * 
-     * @return bool
-     */
-    public function puedeSerEliminado(): bool
-    {
-        return !in_array($this->estado, [
-            EstadoTramite::EN_PROCESO,
-            EstadoTramite::VERIFICADO,
-            EstadoTramite::FINALIZADO,
-        ]);
-    }
-
-    /**
      * Obtener etiqueta del estado
      * 
      * @return string

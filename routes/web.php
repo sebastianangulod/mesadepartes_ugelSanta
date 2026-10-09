@@ -4,7 +4,6 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TramiteController;
-use App\Http\Controllers\Configuracion\ConfiguracionController;
 use App\Http\Controllers\Admin\NivelesController;
 use App\Http\Controllers\Admin\ProcedimientosController;
 use App\Http\Controllers\Admin\FlujoProcedimientoController;
@@ -134,27 +133,6 @@ Route::middleware(['auth'])->group(function () {
         
     });
     
-    // Rutas de configuración
-    Route::prefix('configuracion')->group(function () {
-        Route::get('/', [ConfiguracionController::class, 'index'])->name('configuracion.index');
-        Route::post('/actualizar', [ConfiguracionController::class, 'actualizarConfiguracion'])->name('configuracion.actualizar');
-        Route::get('/correo', [ConfiguracionController::class, 'correo'])->name('configuracion.correo');
-        Route::post('/correo/actualizar', [ConfiguracionController::class, 'actualizarCorreo'])->name('configuracion.correo.actualizar');
-        Route::get('/notificaciones', [ConfiguracionController::class, 'notificaciones'])->name('configuracion.notificaciones');
-        Route::post('/notificaciones/actualizar', [ConfiguracionController::class, 'actualizarNotificaciones'])->name('configuracion.notificaciones.actualizar');
-        Route::get('/institucion', [ConfiguracionController::class, 'institucion'])->name('configuracion.institucion');
-        Route::post('/institucion/actualizar', [ConfiguracionController::class, 'actualizarInstitucion'])->name('configuracion.institucion.actualizar');
-        Route::get('/seguridad', [ConfiguracionController::class, 'seguridad'])->name('configuracion.seguridad');
-        Route::post('/seguridad/actualizar', [ConfiguracionController::class, 'actualizarSeguridad'])->name('configuracion.seguridad.actualizar');
-        Route::get('/respaldo', [ConfiguracionController::class, 'respaldo'])->name('configuracion.respaldo');
-        Route::post('/respaldo/generar', [ConfiguracionController::class, 'generarRespaldo'])->name('configuracion.respaldo.generar');
-        Route::post('/respaldo/restaurar', [ConfiguracionController::class, 'restaurarRespaldo'])->name('configuracion.respaldo.restaurar');
-        Route::get('/logs', [ConfiguracionController::class, 'logs'])->name('configuracion.logs');
-        Route::post('/logs/limpiar', [ConfiguracionController::class, 'limpiarLogs'])->name('configuracion.logs.limpiar');
-        Route::get('/informacion', [ConfiguracionController::class, 'informacionSistema'])->name('configuracion.informacion');
-        Route::post('/cache/limpiar', [ConfiguracionController::class, 'limpiarCache'])->name('configuracion.cache.limpiar');
-    });
-
     // Rutas de administración (solo para administradores)
     Route::prefix('admin')->middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])->group(function () {
         // Dashboard de administración
