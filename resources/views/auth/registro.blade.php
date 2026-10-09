@@ -211,16 +211,63 @@
                         <input type="checkbox" name="terminos" id="terminos" required
                                class="mt-1 focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
                         <span class="ml-2 block text-sm text-gray-900">
-                            Acepto los Términos y Condiciones:
+                            Acepto los
+                            <button type="button" id="btnVerTerminos"
+                                    class="text-indigo-600 hover:text-indigo-500 underline font-medium">
+                                Términos y Condiciones
+                            </button>
                         </span>
                     </label>
-                    <textarea readonly 
-                              class="mt-2 w-full px-3 py-2 text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 bg-gray-50"
-                              rows="5">TÉRMINOS Y CONDICIONES DE USO DEL SISTEMA DE MESA DE PARTES DIGITAL DE LA UGEL SANTA
+                </div>
 
-El Sistema de Mesa de Partes Digital es un canal que la Unidad de Gestión Educativa Local (UGEL) Santa pone a disposición de la comunidad educativa y usuarios interesados, para presentar documentos e iniciar trámites desde cualquier lugar a través de internet.
-
-Los trámites y procedimientos iniciados mediante el Sistema de Mesa de Partes Digital de la UGEL Santa tienen la misma validez y eficacia jurídica que los realizados a través de medios convencionales.</textarea>
+                {{-- Modal de Términos y Condiciones --}}
+                <div id="modalTerminos" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="tituloTerminos">
+                    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl relative my-auto" style="max-height: 90vh; display: flex; flex-direction: column;">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h3 id="tituloTerminos" class="text-xl font-bold text-gray-900">Términos y Condiciones de Uso</h3>
+                            <p class="text-sm text-gray-500">Mesa de Partes Digital · UGEL Santa</p>
+                        </div>
+                        <div class="p-6 overflow-y-auto text-sm text-gray-700 space-y-4">
+                            <div>
+                                <h4 class="font-semibold text-gray-900 mb-1">1. Objeto del servicio</h4>
+                                <p>La Mesa de Partes Digital es el canal virtual que la Unidad de Gestión Educativa Local Santa pone a disposición de la ciudadanía para presentar documentos e iniciar trámites desde cualquier lugar a través de internet, en el horario de Lun a Vie de 9:00 a.m. a 4:30 p.m.</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-900 mb-1">2. Validez de los trámites</h4>
+                                <p>Los trámites iniciados por este medio tienen la misma validez y eficacia jurídica que los realizados de forma presencial. El número de voucher generado al finalizar es su comprobante oficial: consérvelo para seguimiento y consultas.</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-900 mb-1">3. Veracidad de la información</h4>
+                                <p>Usted declara que los datos ingresados y los documentos adjuntos son auténticos. La presentación de información falsa puede invalidar el trámite y acarrear las responsabilidades de ley.</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-900 mb-1">4. Documentos adjuntos</h4>
+                                <p>Los archivos deben ser legibles y en los formatos y tamaños indicados en cada formulario. Un trámite observado por documentación incorrecta deberá subsanarse dentro del plazo señalado; vencido el plazo, podrá ser rechazado.</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-900 mb-1">5. Datos personales</h4>
+                                <p>Sus datos se utilizan únicamente para la atención de sus trámites, conforme a la Ley N.° 29733 de Protección de Datos Personales. Puede solicitar su actualización en su perfil o en mesa de partes.</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-900 mb-1">6. Seguimiento</h4>
+                                <p>Puede consultar el estado de sus trámites en cualquier momento desde la opción Rastrear, con su número de trámite o voucher.</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-900 mb-1">7. Contacto</h4>
+                                <p>Av. los Alcatraces S/N – Nuevo Chimbote · <span class="font-medium">mesadepartes@ugelsanta.gob.pe</span> · Lun a Vie de 9:00 a.m. a 4:30 p.m.</p>
+                            </div>
+                        </div>
+                        <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+                            <button type="button" id="btnCerrarTerminos"
+                                    class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                Cerrar
+                            </button>
+                            <button type="button" id="btnAceptarTerminos"
+                                    class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                                He leído y acepto
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 @php
@@ -746,6 +793,40 @@ document.addEventListener('DOMContentLoaded', function() {
             timeoutId = setTimeout(() => validateEmail(email), debounceTime);
         });
     }
+
+    // Modal de términos y condiciones
+    (function() {
+        const modal = document.getElementById('modalTerminos');
+        const btnVer = document.getElementById('btnVerTerminos');
+        const btnCerrar = document.getElementById('btnCerrarTerminos');
+        const btnAceptar = document.getElementById('btnAceptarTerminos');
+        const chk = document.getElementById('terminos');
+        if (!modal || !btnVer) return;
+
+        function abrir() {
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            btnCerrar.focus();
+        }
+        function cerrar() {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+            btnVer.focus();
+        }
+        btnVer.addEventListener('click', abrir);
+        btnCerrar.addEventListener('click', cerrar);
+        btnAceptar.addEventListener('click', function() {
+            chk.checked = true;
+            chk.dispatchEvent(new Event('change'));
+            cerrar();
+        });
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) cerrar();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && !modal.classList.contains('hidden')) cerrar();
+        });
+    })();
 });
 </script>
 @php
