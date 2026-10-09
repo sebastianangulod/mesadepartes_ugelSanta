@@ -113,12 +113,15 @@
             <p><span>Tipo de Documento:</span> Expediente</p>
             <p><span>N°:</span> {{ $tramite->id }}-{{ $tramite->periodo ?? date('Y') }}</p>
             <p><span>Clave:</span> {{ $tramite->id }}</p>
-            @php $solicitante = $tramite->creador ?? $tramite->usuario; @endphp
+            @php $sol = $tramite->datosSolicitante(); @endphp
             <p><span>Razón Social & Apellidos y Nombres:</span> 
-                {{ $solicitante->razon_social ?? ($solicitante->nombres . ' ' . $solicitante->apellido_paterno . ' ' . $solicitante->apellido_materno) }}
+                {{ $sol['razon_social'] && in_array($tramite->titular_tipo_persona, [2, 3]) ? $sol['razon_social'] : trim($sol['nombres'] . ' ' . $sol['apellido_paterno'] . ' ' . $sol['apellido_materno']) }}
             </p>
-            <p><span>DNI:</span> {{ $solicitante->dni }}</p>
-            <p><span>Registrado por:</span> {{ $solicitante->nombres }} {{ $solicitante->apellido_paterno }}</p>
+            <p><span>DNI:</span> {{ $sol['dni'] }}</p>
+            @if(!empty($sol['ruc']))
+            <p><span>RUC:</span> {{ $sol['ruc'] }}</p>
+            @endif
+            <p><span>Registrado por (usuario interno):</span> {{ $tramite->creador->nombres ?? '' }} {{ $tramite->creador->apellido_paterno ?? '' }}</p>
             <p><span>Folios:</span> {{ $tramite->tramitescol ?? 1 }} FOLIOS</p>
             <p><span>Asunto:</span> {{ $tramite->procedimiento->nombre ?? 'N/A' }}</p>
             <p><span>Número de Voucher:</span> {{ $tramite->numero_voucher ?? ($tramite->id . '-' . ($tramite->periodo ?? date('Y'))) }}</p>

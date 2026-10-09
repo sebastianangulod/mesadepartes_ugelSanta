@@ -87,7 +87,7 @@
                         </label>
                         <div class="relative">
                             <input type="password" id="password_actual" name="password_actual" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600" 
                                    placeholder="Ingrese su contraseña actual" required autocomplete="current-password">
                             <button type="button" onclick="togglePasswordVisibility('password_actual', 'togglePasswordActual')" 
                                     class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
@@ -109,7 +109,7 @@
                         </label>
                         <div class="relative">
                             <input type="password" id="password" name="password" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600" 
                                    placeholder="Ingrese su nueva contraseña" required autocomplete="new-password">
                             <button type="button" onclick="togglePasswordVisibility('password', 'togglePassword')" 
                                     class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
@@ -135,7 +135,7 @@
                         </label>
                         <div class="relative">
                             <input type="password" id="password_confirmation" name="password_confirmation" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600" 
                                    placeholder="Confirme su nueva contraseña" required autocomplete="new-password">
                             <button type="button" onclick="togglePasswordVisibility('password_confirmation', 'togglePasswordConfirmation')" 
                                     class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
@@ -175,11 +175,11 @@
                 <!-- Botones -->
                 <div class="mt-8 flex justify-end gap-4">
                     <a href="{{ Auth::user()->esAdmin() ? route('admin.index') : route('mesa-partes.index') }}" 
-                       class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                       class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600 transition-colors">
                         Cancelar
                     </a>
                     <button type="submit" id="submitBtn"
-                            class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+                            class="px-6 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
                         Actualizar Contraseña
                     </button>
                 </div>
@@ -212,7 +212,7 @@
                                 DNI <span class="text-red-500">*</span>
                             </label>
                             <input type="text" id="dni_recuperacion" name="dni" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600" 
                                    placeholder="Ingrese su DNI (8 dígitos)" 
                                    maxlength="8" pattern="[0-9]{8}" required>
                             <p class="mt-1 text-xs text-gray-500">

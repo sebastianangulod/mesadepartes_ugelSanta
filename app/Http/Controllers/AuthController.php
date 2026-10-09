@@ -818,6 +818,50 @@ class AuthController extends Controller
     }
 
     /**
+     * Busca ciudadano registrado por DNI (solo usuarios internos).
+     * Usado en el formulario presencial para autocompletar al titular
+     * sin crear usuario cuando no existe (se usa snapshot RENIEC/SUNAT).
+     */
+    public function buscarCiudadanoPorDni(Request $request, string $dni)
+    {
+        $usuario = Auth::user();
+        if (!$usuario || (int) $usuario->tipo_user !== 2) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado.',
+            ], 403);
+        }
+
+        if (!preg_match('/^\d{8}$/', $dni)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El DNI debe tener 8 dígitos.',
+            ], 422);
+        }
+
+        $ciudadano = Usuario::where('dni', $dni)->first();
+        if (!$ciudadano) {
+            return response()->json([
+                'success' => true,
+                'registrado' => false,
+                'message' => 'Ciudadano no registrado. Valide el DNI por RENIEC.',
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'registrado' => true,
+            'tipo_persona' => (int) $ciudadano->tipo_persona,
+            'nombres' => $ciudadano->nombres ?? '',
+            'apellido_paterno' => $ciudadano->apellido_paterno ?? '',
+            'apellido_materno' => $ciudadano->apellido_materno ?? '',
+            'ruc' => $ciudadano->ruc,
+            'razon_social' => $ciudadano->razon_social,
+            'message' => 'Ciudadano encontrado en el sistema.',
+        ]);
+    }
+
+    /**
      * Valida reCAPTCHA v2 o v3
      */
     protected function validarRecaptcha($recaptchaResponse)

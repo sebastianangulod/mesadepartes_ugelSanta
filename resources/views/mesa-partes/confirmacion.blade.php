@@ -67,8 +67,8 @@
                     </dl>
                 </div>
 
-                <!-- Información del Solicitante (quien creó el trámite) -->
-                @php $solicitante = $tramite->creador ?? $tramite->usuario; @endphp
+                <!-- Información del Solicitante (titular del trámite) -->
+                @php $sol = $tramite->datosSolicitante(); @endphp
                 <div class="bg-gray-50 rounded-lg p-5">
                     <h3 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-300">
                         Información del Solicitante
@@ -77,17 +77,35 @@
                         <div>
                             <dt class="text-sm font-medium text-gray-500">Nombre:</dt>
                             <dd class="mt-1 text-sm text-gray-900">
-                                {{ $solicitante->nombres }} {{ $solicitante->apellido_paterno }} {{ $solicitante->apellido_materno }}
+                                @if(!empty($sol['razon_social']) && in_array($tramite->titular_tipo_persona, [2, 3]))
+                                    {{ $sol['razon_social'] }}
+                                @else
+                                    {{ trim($sol['nombres'] . ' ' . $sol['apellido_paterno'] . ' ' . $sol['apellido_materno']) }}
+                                @endif
                             </dd>
                         </div>
                         <div>
                             <dt class="text-sm font-medium text-gray-500">DNI:</dt>
-                            <dd class="mt-1 text-sm text-gray-900">{{ $solicitante->dni }}</dd>
+                            <dd class="mt-1 text-sm text-gray-900">{{ $sol['dni'] }}</dd>
                         </div>
+                        @if(!empty($sol['ruc']))
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">RUC:</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ $sol['ruc'] }}</dd>
+                        </div>
+                        @endif
+                        @if(!empty($sol['email']))
                         <div>
                             <dt class="text-sm font-medium text-gray-500">Email:</dt>
-                            <dd class="mt-1 text-sm text-gray-900">{{ $solicitante->email }}</dd>
+                            <dd class="mt-1 text-sm text-gray-900">{{ $sol['email'] }}</dd>
                         </div>
+                        @endif
+                        @if($tramite->tipo_tramite === 'PRESENCIAL' && $tramite->creador)
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Registrado por (interno):</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ $tramite->creador->nombres }} {{ $tramite->creador->apellido_paterno }}</dd>
+                        </div>
+                        @endif
                     </dl>
                 </div>
             </div>

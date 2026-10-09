@@ -11,9 +11,9 @@
 <div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-4xl mx-auto">
         <div class="bg-white shadow-lg rounded-lg overflow-hidden">
-            <div class="px-6 py-4 bg-indigo-600">
+            <div class="px-6 py-4 bg-primary-700">
                 <h2 class="text-xl font-semibold text-white">Registro de Usuario</h2>
-                <p class="text-indigo-200">Complete todos los campos para crear su cuenta</p>
+                <p class="text-primary-100">Complete todos los campos para crear su cuenta</p>
             </div>
 
             <form id="registroForm" action="{{ route('register') }}" method="POST" class="p-6 space-y-6" enctype="multipart/form-data">
@@ -41,19 +41,19 @@
                     <div class="flex space-x-6">
                         <label class="inline-flex items-center">
                             <input type="radio" name="tipo_persona" value="1" 
-                                   class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300"
+                                   class="focus:ring-primary-600 h-4 w-4 text-primary-700 border-gray-300"
                                    {{ old('tipo_persona', '1') == '1' ? 'checked' : '' }}>
                             <span class="ml-2">Persona Natural</span>
                         </label>
                         <label class="inline-flex items-center">
                             <input type="radio" name="tipo_persona" value="2" 
-                                   class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300"
+                                   class="focus:ring-primary-600 h-4 w-4 text-primary-700 border-gray-300"
                                    {{ old('tipo_persona') == '2' ? 'checked' : '' }}>
                             <span class="ml-2">Persona Jurídica</span>
                         </label>
                         <label class="inline-flex items-center">
                             <input type="radio" name="tipo_persona" value="3" 
-                                   class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300"
+                                   class="focus:ring-primary-600 h-4 w-4 text-primary-700 border-gray-300"
                                    {{ old('tipo_persona') == '3' ? 'checked' : '' }}>
                             <span class="ml-2">Entidad Pública</span>
                         </label>
@@ -65,7 +65,7 @@
                     <label for="dni" class="block text-sm font-medium text-gray-700 mb-1">DNI</label>
                     <div class="flex gap-2">
                         <input type="text" name="dni" id="dni" required maxlength="8" pattern="[0-9]{8}"
-                               class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                               class="flex-1 border-gray-300 rounded-md shadow-sm px-4 py-2.5 focus:ring-primary-600 focus:border-primary-600"
                                value="{{ old('dni') }}" placeholder="Ingrese su DNI (8 dígitos)">
                         <button type="button" id="validarDni" 
                                 class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition duration-200">
@@ -79,21 +79,21 @@
                     <div>
                         <label for="nombres" class="block text-sm font-medium text-gray-700">Nombres</label>
                         <input type="text" name="nombres" id="nombres" required maxlength="20"
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm px-4 py-2.5 focus:ring-primary-600 focus:border-primary-600"
                                value="{{ old('nombres') }}" readonly>
                     </div>
 
                     <div>
                         <label for="apellido_paterno" class="block text-sm font-medium text-gray-700">Apellido Paterno</label>
                         <input type="text" name="apellido_paterno" id="apellido_paterno" required maxlength="20"
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-gray-100"
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm px-4 py-2.5 focus:ring-primary-600 focus:border-primary-600 bg-gray-100"
                                value="{{ old('apellido_paterno') }}" readonly>
                     </div>
 
                     <div>
                         <label for="apellido_materno" class="block text-sm font-medium text-gray-700">Apellido Materno</label>
                         <input type="text" name="apellido_materno" id="apellido_materno" required maxlength="20"
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-gray-100"
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm px-4 py-2.5 focus:ring-primary-600 focus:border-primary-600 bg-gray-100"
                                value="{{ old('apellido_materno') }}" readonly>
                     </div>
                 </div>
@@ -105,7 +105,7 @@
                             <label for="ruc" class="block text-sm font-medium text-gray-700 mb-1">RUC</label>
                             <div class="flex gap-2">
                                 <input type="text" name="ruc" id="ruc" maxlength="11" pattern="[0-9]{11}"
-                                       class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                       class="flex-1 border-gray-300 rounded-md shadow-sm px-4 py-2.5 focus:ring-primary-600 focus:border-primary-600"
                                        value="{{ old('ruc') }}" placeholder="Ingrese su RUC (11 dígitos)">
                                 <button type="button" id="validarRuc" 
                                         class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition duration-200">
@@ -117,7 +117,7 @@
                         <div>
                             <label for="razon_social" class="block text-sm font-medium text-gray-700">Razón Social</label>
                             <input type="text" name="razon_social" id="razon_social" maxlength="45"
-                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-gray-100"
+                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm px-4 py-2.5 focus:ring-primary-600 focus:border-primary-600 bg-gray-100"
                                    value="{{ old('razon_social') }}" readonly>
                         </div>
                     </div>
@@ -128,7 +128,7 @@
                     <div>
                         <label for="nombre_entidad" class="block text-sm font-medium text-gray-700">Nombre de Entidad</label>
                         <input type="text" name="nombre_entidad" id="nombre_entidad" maxlength="45"
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm px-4 py-2.5 focus:ring-primary-600 focus:border-primary-600"
                                value="{{ old('nombre_entidad') }}"
                                onInput="this.value = this.value.toUpperCase()">
                     </div>
@@ -139,7 +139,7 @@
                     <div>
                         <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
                         <input type="email" name="email" id="email" required maxlength="45"
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm px-4 py-2.5 focus:ring-primary-600 focus:border-primary-600"
                                value="{{ old('email') }}">
                         <div id="email-feedback" class="mt-1 text-sm"></div>
                         <div id="emailRequirements" class="mt-2 space-y-1"></div>
@@ -148,7 +148,7 @@
                     <div>
                         <label for="telefono" class="block text-sm font-medium text-gray-700">Teléfono</label>
                         <input type="tel" name="telefono" id="telefono" required maxlength="9"
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm px-4 py-2.5 focus:ring-primary-600 focus:border-primary-600"
                                value="{{ old('telefono') }}" placeholder="9 dígitos">
                     </div>
                 </div>
@@ -158,7 +158,7 @@
                     <div>
                         <label for="departamento" class="block text-sm font-medium text-gray-700">Departamento</label>
                         <select name="departamento_id" id="departamento" required
-                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm px-4 py-2.5 focus:ring-primary-600 focus:border-primary-600">
                             <option value="">Seleccione Departamento</option>
                         </select>
                     </div>
@@ -166,7 +166,7 @@
                     <div>
                         <label for="provincia" class="block text-sm font-medium text-gray-700">Provincia</label>
                         <select name="provincia_id" id="provincia" required
-                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm px-4 py-2.5 focus:ring-primary-600 focus:border-primary-600"
                                 disabled>
                             <option value="">Seleccione Provincia</option>
                         </select>
@@ -175,7 +175,7 @@
                     <div>
                         <label for="distrito" class="block text-sm font-medium text-gray-700">Distrito</label>
                         <select name="distrito_id" id="distrito" required
-                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm px-4 py-2.5 focus:ring-primary-600 focus:border-primary-600"
                                 disabled>
                             <option value="">Seleccione Distrito</option>
                         </select>
@@ -185,7 +185,7 @@
                 <div>
                     <label for="direccion" class="block text-sm font-medium text-gray-700">Dirección</label>
                     <input type="text" name="direccion" id="direccion" required maxlength="35"
-                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm px-4 py-2.5 focus:ring-primary-600 focus:border-primary-600"
                            value="{{ old('direccion') }}">
                 </div>
 
@@ -194,14 +194,14 @@
                     <div>
                         <label for="password" class="block text-sm font-medium text-gray-700">Contraseña</label>
                         <input type="password" name="password" id="password" required maxlength="25"
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm px-4 py-2.5 focus:ring-primary-600 focus:border-primary-600">
                         <div id="passwordRequirements" class="mt-2 space-y-1"></div>
                     </div>
 
                     <div>
                         <label for="password_confirmation" class="block text-sm font-medium text-gray-700">Confirmar Contraseña</label>
                         <input type="password" name="password_confirmation" id="password_confirmation" required
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm px-4 py-2.5 focus:ring-primary-600 focus:border-primary-600">
                     </div>
                 </div>
 
@@ -209,11 +209,11 @@
                 <div>
                     <label class="flex items-start">
                         <input type="checkbox" name="terminos" id="terminos" required
-                               class="mt-1 focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                               class="mt-1 focus:ring-primary-600 h-4 w-4 text-primary-700 border-gray-300 rounded">
                         <span class="ml-2 block text-sm text-gray-900">
                             Acepto los
                             <button type="button" id="btnVerTerminos"
-                                    class="text-indigo-600 hover:text-indigo-500 underline font-medium">
+                                    class="text-primary-700 hover:text-primary-500 underline font-medium">
                                 Términos y Condiciones
                             </button>
                         </span>
@@ -291,15 +291,15 @@
                         Cancelar
                     </button>
                     <button type="submit" id="submit" 
-                            class="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            class="bg-primary-600 text-white px-6 py-2 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600"
                             style="display: none;">
                         Registrarse
                     </button>
                 </div>
             </form>
 
-            <div class="px-6 py-4 bg-gray-50 text-center">
-                <a href="{{ route('login') }}" class="text-indigo-600 hover:text-indigo-500">
+            <div class="px-6 py-4 bg-primary-50 text-center rounded-b-lg">
+                <a href="{{ route('login') }}" class="text-primary-500 hover:text-primary-600">
                     ¿Ya tienes cuenta? Inicia sesión
                 </a>
             </div>

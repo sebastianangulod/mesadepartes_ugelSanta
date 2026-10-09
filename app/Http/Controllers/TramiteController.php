@@ -421,11 +421,13 @@ class TramiteController extends Controller
         // Determinar tipo de trámite según el tipo de usuario
         // Usuarios internos (tipo_user = 2) crean trámites PRESENCIALES
         // Usuarios externos (tipo_user = 1) crean trámites VIRTUALES
-        $tipoTramite = Auth::check() && Auth::user()->tipo_user == 2 ? 'PRESENCIAL' : 'VIRTUAL';
+        $esInterno = Auth::check() && (int) Auth::user()->tipo_user === 2;
+        $tipoTramite = $esInterno ? 'PRESENCIAL' : 'VIRTUAL';
 
         return view('mesa-partes.tramite-nuevo', [
             'procedimientos' => $procedimientos,
             'tipoTramite' => $tipoTramite,
+            'esInterno' => $esInterno,
         ]);
     }
 
@@ -514,25 +516,84 @@ class TramiteController extends Controller
                 ], 422);
             }
 
-            // Validar el archivo
-            $validated = $request->validate([
+            // Validar el archivo + titular presencial si es interno.
+            // El tipo_tramite se fuerza en el servicio; el input del cliente se ignora.
+            $esInterno = Auth::check() && (int) Auth::user()->tipo_user === 2;
+
+            $reglas = [
                 'archivo' => 'required|file|mimes:pdf|max:25600', // 25MB maximo
-            ], [
+            ];
+            $mensajes = [
                 'archivo.required' => 'Debe adjuntar un archivo PDF',
                 'archivo.file' => 'El archivo adjunto no es válido',
                 'archivo.mimes' => 'El archivo debe ser un PDF',
                 'archivo.max' => 'El archivo no debe exceder los 25MB',
-            ]);
+            ];
+
+            if ($esInterno) {
+                $reglas = array_merge($reglas, [
+                    'titular_tipo_persona' => 'required|in:1,2,3',
+                    'titular_dni' => 'required|string|size:8|regex:/^\d{8}$/',
+                    'titular_nombres' => 'required|string|max:100',
+                    'titular_apellido_paterno' => 'required|string|max:100',
+                    'titular_apellido_materno' => 'required|string|max:100',
+                    'titular_ruc' => 'nullable|string|size:11|regex:/^\d{11}$/',
+                    'titular_razon_social' => 'nullable|string|max:200',
+                ]);
+                $mensajes = array_merge($mensajes, [
+                    'titular_tipo_persona.required' => 'Debe seleccionar el tipo de persona del ciudadano.',
+                    'titular_dni.required' => 'Debe ingresar el DNI del ciudadano.',
+                    'titular_nombres.required' => 'Debe validar el DNI del ciudadano.',
+                    'titular_apellido_paterno.required' => 'Debe validar el DNI del ciudadano.',
+                    'titular_apellido_materno.required' => 'Debe validar el DNI del ciudadano.',
+                ]);
+            }
+
+            $validated = $request->validate($reglas, $mensajes);
             
             // Agregar id_procedimiento al array validado
             $validated['id_procedimiento'] = $request->input('id_procedimiento');
 
+            if ($esInterno) {
+                foreach (['titular_tipo_persona', 'titular_dni', 'titular_nombres', 'titular_apellido_paterno', 'titular_apellido_materno', 'titular_ruc', 'titular_razon_social'] as $campo) {
+                    $validated[$campo] = $request->input($campo);
+                }
+                if ((int) $request->input('titular_tipo_persona') === 2) {
+                    $request->validate([
+                        'titular_ruc' => 'required|string|size:11|regex:/^\d{11}$/',
+                        'titular_razon_social' => 'required|string|max:200',
+                    ], [
+                        'titular_ruc.required' => 'Debe validar el RUC de la empresa.',
+                        'titular_razon_social.required' => 'Debe validar el RUC de la empresa.',
+                    ]);
+                    $validated['titular_ruc'] = $request->input('titular_ruc');
+                    $validated['titular_razon_social'] = $request->input('titular_razon_social');
+                }
+                if ((int) $request->input('titular_tipo_persona') === 3) {
+                    $request->validate([
+                        'titular_razon_social' => 'required|string|max:200',
+                    ], [
+                        'titular_razon_social.required' => 'Debe ingresar el nombre de la entidad pública.',
+                    ]);
+                    $validated['titular_razon_social'] = $request->input('titular_razon_social');
+                }
+            }
+
             \Log::info('Validación exitosa, creando trámite', [
                 'id_procedimiento' => $validated['id_procedimiento'],
+                'es_interno' => $esInterno,
+                'titular_dni' => $validated['titular_dni'] ?? null,
             ]);
 
             $resultado = $this->tramiteCreacionService->crearTramite([
                 'id_procedimiento' => $validated['id_procedimiento'],
+                'titular_tipo_persona' => $validated['titular_tipo_persona'] ?? null,
+                'titular_dni' => $validated['titular_dni'] ?? null,
+                'titular_nombres' => $validated['titular_nombres'] ?? null,
+                'titular_apellido_paterno' => $validated['titular_apellido_paterno'] ?? null,
+                'titular_apellido_materno' => $validated['titular_apellido_materno'] ?? null,
+                'titular_ruc' => $validated['titular_ruc'] ?? null,
+                'titular_razon_social' => $validated['titular_razon_social'] ?? null,
             ], $request->file('archivo'));
 
             if ($resultado['success']) {
@@ -590,7 +651,7 @@ class TramiteController extends Controller
      */
     public function confirmacion(int $id): View
     {
-        $tramite = Tramite::with(['procedimiento', 'usuario', 'creador'])->findOrFail($id);
+        $tramite = Tramite::with(['procedimiento', 'usuario', 'creador', 'titular'])->findOrFail($id);
 
         // Cualquier usuario autenticado puede ver la confirmación
         // (la autenticación se valida en el middleware 'auth')
@@ -615,7 +676,7 @@ class TramiteController extends Controller
      */
     public function voucher(int $id): View
     {
-        $tramite = Tramite::with(['procedimiento', 'usuario', 'creador'])->findOrFail($id);
+        $tramite = Tramite::with(['procedimiento', 'usuario', 'creador', 'titular'])->findOrFail($id);
 
         // Cualquier usuario autenticado puede ver el voucher
         // (la autenticación se valida en el middleware 'auth')
@@ -1061,7 +1122,9 @@ class TramiteController extends Controller
         try {
             $tramite = Tramite::with([
                 'procedimiento', 
-                'usuario', 
+                'usuario',
+                'creador',
+                'titular',
                 'nodoActual',
                 'movimientosFlujo.usuario',
                 'movimientosFlujo.nodoDesde',
@@ -1077,6 +1140,8 @@ class TramiteController extends Controller
             // 3. Posición actual
             $posicionActual = $this->obtenerPosicionActual($tramite);
             
+            $sol = $tramite->datosSolicitante();
+
             return response()->json([
                 'success' => true,
                 'niveles_estaticos' => $nivelesEstaticos,
@@ -1085,9 +1150,9 @@ class TramiteController extends Controller
                 'tramite' => [
                     'id' => $tramite->id,
                     'fecha_creacion' => $tramite->fecha_creacion ? $tramite->fecha_creacion->format('d/m/Y H:i:s') : 'N/A',
-                    'nombres' => $tramite->usuario->nombres ?? '',
-                    'apellido_paterno' => $tramite->usuario->apellido_paterno ?? '',
-                    'apellido_materno' => $tramite->usuario->apellido_materno ?? '',
+                    'nombres' => $sol['nombres'],
+                    'apellido_paterno' => $sol['apellido_paterno'],
+                    'apellido_materno' => $sol['apellido_materno'],
                     'procedimiento_nombre' => $tramite->procedimiento->nombre ?? 'N/A',
                     'estado' => $tramite->estado,
                     'id_nodo_actual' => $tramite->id_nodo_actual,

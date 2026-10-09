@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('ruc', 20)->nullable()->unique();
             $table->string('razon_social', 200)->nullable();
             $table->string('passw', 255);
+            $table->rememberToken();
             $table->string('email', 100)->unique();
             $table->string('nombres', 100);
             $table->string('apellido_paterno', 100);

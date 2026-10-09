@@ -229,6 +229,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/niveles/nivel2/{nivel1Id}', [NivelesController::class, 'obtenerNivel2'])->name('api.niveles.nivel2');
         Route::get('/niveles/nivel3/{nivel2Id}', [NivelesController::class, 'obtenerNivel3'])->name('api.niveles.nivel3');
         Route::get('/niveles/nivel4/{nivel3Id}', [NivelesController::class, 'obtenerNivel4'])->name('api.niveles.nivel4');
+        // Buscar ciudadano por DNI (solo internos, para trámite presencial)
+        Route::get('/ciudadano/{dni}', [AuthController::class, 'buscarCiudadanoPorDni'])->name('api.ciudadano-buscar');
     });
     
 });

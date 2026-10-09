@@ -9,26 +9,29 @@
 
 @section('content')
 <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8">
+    <div class="max-w-md w-full space-y-6">
         <div class="text-center space-y-4">
-            <div class="inline-flex items-center justify-center rounded-2xl border border-indigo-100 bg-white shadow-sm px-6 py-4">
-                <img src="{{ asset('img/logo-ugel.png') }}" alt="UGEL" class="mx-auto">
+            <div class="inline-flex items-center justify-center rounded-2xl border border-gray-200 bg-white shadow-sm px-8 py-4">
+                <img src="{{ asset('img/logo-ugel.png') }}" alt="UGEL Santa" class="mx-auto h-24 w-auto">
             </div>
             <div>
-                <h2 class="text-2xl font-extrabold text-gray-900 tracking-tight">
-                    Sistema de Mesa de Partes
-                </h2>
-                <p class="mt-1 text-sm text-gray-600">
+                <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">
+                    Mesa de Partes Digital
+                </h1>
+                <p class="mt-2 text-sm font-semibold text-primary-800 uppercase tracking-wide">
+                    Unidad de Gestión Educativa Local · Santa
+                </p>
+                <p class="mt-2 text-sm text-gray-600">
                     Ingrese con su DNI y contraseña
                 </p>
             </div>
         </div>
-        
-        <form class="mt-8 space-y-6" action="{{ route('login') }}" method="POST">
+
+        <form class="space-y-5" action="{{ route('login') }}" method="POST">
             @csrf
-            
+
             @if($errors->any())
-                <div class="mb-4 rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
+                <div class="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800" role="alert">
                     <span class="font-semibold">Se encontraron los siguientes errores:</span>
                     <ul class="list-disc list-inside mt-1">
                         @foreach ($errors->all() as $msg)
@@ -41,50 +44,50 @@
             <div class="bg-white rounded-xl shadow-md border border-gray-200 px-6 py-5 space-y-4">
                 <div>
                     <label for="tipo_persona" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Persona</label>
-                    <select id="tipo_persona" name="tipo_persona" required 
-                            class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm">
+                    <select id="tipo_persona" name="tipo_persona" required autocomplete="off"
+                            class="block w-full px-3 py-2 border border-gray-300 text-gray-900 rounded-md focus:outline-none focus:ring-primary-600 focus:border-primary-600 sm:text-sm">
                         <option value="">Seleccione...</option>
                         <option value="1" {{ old('tipo_persona') == '1' ? 'selected' : '' }}>Persona Natural</option>
                         <option value="2" {{ old('tipo_persona') == '2' ? 'selected' : '' }}>Persona Jurídica</option>
                         <option value="3" {{ old('tipo_persona') == '3' ? 'selected' : '' }}>Entidad Pública</option>
                     </select>
                 </div>
-                
+
                 <div>
                     <label for="dni" class="block text-sm font-medium text-gray-700 mb-1">DNI</label>
-                    <input id="dni" name="dni" type="text" required maxlength="8" pattern="[0-9]{8}"
-                           class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" 
-                           placeholder="Ingrese su DNI (8 dígitos)" 
+                    <input id="dni" name="dni" type="text" required maxlength="8" pattern="[0-9]{8}" autocomplete="username"
+                           class="block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-600 focus:border-primary-600 sm:text-sm"
+                           placeholder="Ingrese su DNI (8 dígitos)"
                            value="{{ old('dni') }}">
                 </div>
 
                 {{-- Campos adicionales según tipo de persona --}}
                 <div id="campo_ruc" class="{{ old('tipo_persona') == '2' ? '' : 'hidden' }}">
                     <label for="ruc" class="block text-sm font-medium text-gray-700 mb-1">RUC (solo Persona Jurídica)</label>
-                    <input id="ruc" name="ruc" type="text"
-                           class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" 
+                    <input id="ruc" name="ruc" type="text" autocomplete="off"
+                           class="block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-600 focus:border-primary-600 sm:text-sm"
                            placeholder="Ingrese su RUC"
                            value="{{ old('ruc') }}">
                 </div>
 
                 <div id="campo_nombre_entidad" class="{{ old('tipo_persona') == '3' ? '' : 'hidden' }}">
                     <label for="nombre_entidad" class="block text-sm font-medium text-gray-700 mb-1">Nombre de Entidad (solo Entidad Pública)</label>
-                    <input id="nombre_entidad" name="nombre_entidad" type="text"
-                           class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" 
+                    <input id="nombre_entidad" name="nombre_entidad" type="text" autocomplete="off"
+                           class="block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-600 focus:border-primary-600 sm:text-sm"
                            placeholder="Ingrese el nombre de la entidad"
                            value="{{ old('nombre_entidad') }}">
                 </div>
-                
+
                 <div>
                     <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-                    <input id="password" name="password" type="password" required 
-                           class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" 
+                    <input id="password" name="password" type="password" required autocomplete="current-password"
+                           class="block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-600 focus:border-primary-600 sm:text-sm"
                            placeholder="Ingrese su contraseña">
                 </div>
-                
+
                 <div class="flex items-center">
-                    <input id="remember" name="remember" type="checkbox" 
-                           class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                    <input id="remember" name="remember" type="checkbox"
+                            class="h-4 w-4 text-primary-700 focus:ring-primary-600 border-gray-300 rounded">
                     <label for="remember" class="ml-2 block text-sm text-gray-900">
                         Recordarme
                     </label>
@@ -92,32 +95,28 @@
             </div>
 
             <div>
-                <button type="submit" 
-                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <button type="submit"
+                        class="w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-semibold rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600 shadow-sm">
                     Iniciar Sesión
                 </button>
             </div>
 
-            <div class="mt-6 flex flex-wrap items-center justify-between gap-y-2 text-sm font-medium text-indigo-600">
-                <div>
-                    <a href="{{ route('register') }}" class="inline-flex items-center hover:text-indigo-500 hover:underline">
-                        ¿No tienes cuenta? Regístrate
-                    </a>
-                </div>
-                <div>
-                    <a href="{{ route('password.request') }}" class="inline-flex items-center hover:text-indigo-500 hover:underline">
-                        ¿Olvidaste tu contraseña?
-                    </a>
-                </div>
+            <div class="flex flex-wrap items-center justify-between gap-y-2 text-sm font-medium text-primary-700">
+                <a href="{{ route('register') }}" class="inline-flex items-center hover:text-primary-500 hover:underline">
+                    ¿No tienes cuenta? Regístrate
+                </a>
+                <a href="{{ route('password.request') }}" class="inline-flex items-center hover:text-primary-500 hover:underline">
+                    ¿Olvidaste tu contraseña?
+                </a>
             </div>
-            
+
             @php
                 $recaptchaEnabled = config('services.recaptcha.enabled', false);
                 $recaptchaSiteKey = config('services.recaptcha.site_key', '');
             @endphp
-            
+
             @if($recaptchaEnabled && !empty($recaptchaSiteKey))
-            <div class="flex justify-center mt-4">
+            <div class="flex justify-center">
                 <div class="g-recaptcha" data-sitekey="{{ $recaptchaSiteKey }}" data-callback="onRecaptchaSuccess" data-expired-callback="onRecaptchaExpired"></div>
             </div>
             <div id="recaptcha-error" class="hidden mt-2 text-center text-sm text-red-600">
@@ -125,12 +124,16 @@
             </div>
             @endif
 
-            <div class="mt-6 text-center border-t border-gray-200 pt-5">
-                <a href="{{ route('login.interno') }}" class="inline-flex items-center justify-center px-5 py-2 rounded-md border border-indigo-500 bg-white text-sm font-semibold text-indigo-600 hover:bg-indigo-50 shadow-sm tracking-wide">
+            <div class="text-center border-t border-gray-200 pt-5">
+                <a href="{{ route('login.interno') }}" class="inline-flex items-center justify-center px-5 py-2 rounded-md text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 shadow-sm tracking-wide">
                     Soy personal interno
                 </a>
             </div>
         </form>
+
+        <p class="text-center text-xs text-gray-500">
+            Mesa de Partes · mesadepartes@ugelsanta.gob.pe · Lun a Vie 9:00 a.m. – 4:30 p.m.
+        </p>
     </div>
 </div>
 
@@ -178,7 +181,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
             }, 100);
-            
+
             // Timeout después de 5 segundos
             setTimeout(function() {
                 clearInterval(checkRecaptcha);

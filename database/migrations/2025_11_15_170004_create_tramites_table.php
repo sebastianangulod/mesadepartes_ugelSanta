@@ -34,6 +34,20 @@ return new class extends Migration
             $table->foreign('modo_manual_por_usuario')->references('id')->on('usuarios')->onDelete('set null');
             $table->unsignedBigInteger('id_usuario');
             $table->unsignedBigInteger('creado_por')->nullable();
+            // Titular ciudadano del trámite presencial (interno registra a su nombre).
+            // Si el ciudadano está registrado, id_titular apunta a usuarios.id;
+            // si no, se guarda snapshot (DNI/RUC + nombres validados vía RENIEC/SUNAT).
+            $table->unsignedBigInteger('id_titular')->nullable()
+                ->comment('Ciudadano titular del trámite (null = snapshot sin registro)');
+            $table->unsignedTinyInteger('titular_tipo_persona')->nullable()
+                ->comment('1: natural, 2: juridica, 3: entidad publica');
+            $table->string('titular_dni', 15)->nullable();
+            $table->string('titular_nombres', 100)->nullable();
+            $table->string('titular_apellido_paterno', 100)->nullable();
+            $table->string('titular_apellido_materno', 100)->nullable();
+            $table->string('titular_ruc', 20)->nullable();
+            $table->string('titular_razon_social', 200)->nullable()
+                ->comment('Razon social (juridica) o nombre de entidad (entidad publica)');
             $table->unsignedBigInteger('id_procedimiento')->nullable();
             $table->string('archivo_adjunto', 500)->nullable()->comment('PDF principal del trámite');
             $table->string('archivo_expediente', 500)->nullable();
@@ -65,12 +79,15 @@ return new class extends Migration
             $table->index('limite_observacion');
             $table->index('id_usuario');
             $table->index('creado_por');
+            $table->index('id_titular');
+            $table->index('titular_dni');
             $table->index('id_procedimiento');
             $table->index('fecha_presentacion');
             $table->index('fecha_creacion');
 
             $table->foreign('id_usuario')->references('id')->on('usuarios')->onDelete('cascade');
             $table->foreign('creado_por')->references('id')->on('usuarios')->onDelete('set null');
+            $table->foreign('id_titular')->references('id')->on('usuarios')->onDelete('set null');
             $table->foreign('id_procedimiento')->references('id')->on('procedimientos')->onDelete('set null');
             $table->foreign('revisado_por')->references('id')->on('usuarios')->onDelete('set null');
             $table->foreign('rechazado_por')->references('id')->on('usuarios')->onDelete('set null');

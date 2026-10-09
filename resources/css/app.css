@@ -8,4 +8,19 @@
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* Paleta institucional UGEL Santa (ugelsanta.gob.pe) */
+    --color-primary-50: #eef5fc;
+    --color-primary-100: #d9e8f8;
+    --color-primary-200: #b6d2f0;
+    --color-primary-300: #86b4e6;
+    --color-primary-400: #4f8ed6;
+    --color-primary-500: #2b6dc0;
+    --color-primary-600: #1e4d8b;
+    --color-primary-700: #1a4078;
+    --color-primary-800: #173763;
+    --color-primary-900: #112a4d;
+    --color-primary-950: #0b1c34;
+    --color-accent-600: #d52b1e;
+    --color-accent-700: #b3231a;
 }

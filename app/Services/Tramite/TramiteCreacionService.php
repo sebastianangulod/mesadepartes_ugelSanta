@@ -62,11 +62,37 @@ class TramiteCreacionService
                 'usuario_id' => $usuario->id,
                 'tipo_user' => $usuario->tipo_user,
             ]);
+
+            $esInterno = ((int) $usuario->tipo_user === 2);
             
-            // Determinar tipo de trámite según el tipo de usuario
-            $tipoTramite = ($usuario->tipo_user == 2) ? 'PRESENCIAL' : 'VIRTUAL';
+            // Tipo forzado por servidor (ignora input del cliente):
+            // interno siempre PRESENCIAL, externo siempre VIRTUAL.
+            $tipoTramite = $esInterno ? 'PRESENCIAL' : 'VIRTUAL';
             Log::info('Tipo de trámite determinado', ['tipo' => $tipoTramite]);
             
+            // Resolver titular del trámite.
+            // - Externo (VIRTUAL): el titular es el propio usuario autenticado.
+            // - Interno (PRESENCIAL): el titular es el ciudadano del DNI/RUC
+            //   enviado; si está registrado se vincula id_titular, si no se
+            //   guarda snapshot validado (sin crear usuario).
+            $idTitular = null;
+            $titularSnapshot = [];
+            if ($esInterno) {
+                $titularSnapshot = $this->resolverTitularPresencial($datos, $usuario);
+                $idTitular = $titularSnapshot['id_titular'];
+                unset($titularSnapshot['id_titular']);
+            } else {
+                $idTitular = $usuario->id;
+                $titularSnapshot = [
+                    'titular_tipo_persona' => $usuario->tipo_persona,
+                    'titular_dni' => $usuario->dni,
+                    'titular_nombres' => $usuario->nombres,
+                    'titular_apellido_paterno' => $usuario->apellido_paterno,
+                    'titular_apellido_materno' => $usuario->apellido_materno,
+                    'titular_ruc' => $usuario->ruc,
+                    'titular_razon_social' => $usuario->razon_social,
+                ];
+            }
             // Validar que se proporcione un procedimiento
             if (empty($datos['id_procedimiento'])) {
                 Log::error('No se proporcionó id_procedimiento');
@@ -122,20 +148,21 @@ class TramiteCreacionService
             // PENDIENTE en Nivel 1 (legacy): asignado al usuario del área correspondiente
             // id_nodo_actual = null → modo legacy (niveles 1-4)
             // Al aceptar, si el procedimiento tiene id_nodo_entrada, se activará modo configurable
-            $tramite = Tramite::create([
+            $tramite = Tramite::create(array_merge([
                 'archivo_adjunto' => $nombreArchivo,
                 'id_procedimiento' => $datos['id_procedimiento'],
                 'id_usuario' => $usuarioNivel1 ?? $usuario->id,  // Responsable Nivel 1 o fallback
-                'creado_por' => $usuario->id,
+                'creado_por' => $usuario->id, // Quien registra (interno en presencial)
+                'id_titular' => $idTitular, // Ciudadano titular (o propio usuario en virtual)
                 'estado' => 'PENDIENTE',
                 'nivel_actual' => 1,
                 'id_nodo_actual' => null,
                 'modo_derivacion' => ModoDerivacion::AUTO,
-                'tipo_tramite' => $tipoTramite,
+                'tipo_tramite' => $tipoTramite, // Forzado por servidor
                 'tramitescol' => $numeroPaginas,
                 'periodo' => $periodo,
                 'fecha_creacion' => now(),
-            ]);
+            ], $titularSnapshot));
 
             $this->tramiteFlujoService->registrarMovimiento(
                 $tramite,
@@ -143,7 +170,12 @@ class TramiteCreacionService
                 'CREAR',
                 null,
                 null,
-                ['id_procedimiento' => $procedimiento->id]
+                [
+                    'id_procedimiento' => $procedimiento->id,
+                    'tipo_tramite' => $tipoTramite,
+                    'id_titular' => $idTitular,
+                    'titular_dni' => $titularSnapshot['titular_dni'] ?? null,
+                ]
             );
 
             DB::commit();
@@ -176,6 +208,77 @@ class TramiteCreacionService
                 'message' => $e->getMessage()
             ];
         }
+    }
+
+    /**
+     * Resuelve y valida el titular ciudadano de un trámite PRESENCIAL.
+     *
+     * @param array $datos titular_tipo_persona, titular_dni, titular_nombres,
+     *  titular_apellido_paterno, titular_apellido_materno, titular_ruc,
+     *  titular_razon_social
+     * @return array Snapshot + id_titular (null si no registrado)
+     * @throws Exception
+     */
+    protected function resolverTitularPresencial(array $datos, $usuarioInterno): array
+    {
+        $tipo = (int) ($datos['titular_tipo_persona'] ?? 0);
+        if (!in_array($tipo, [1, 2, 3], true)) {
+            throw new Exception('Debe seleccionar el tipo de persona del ciudadano.');
+        }
+
+        $dni = preg_replace('/[^0-9]/', '', (string) ($datos['titular_dni'] ?? ''));
+        if (!preg_match('/^\d{8}$/', $dni)) {
+            throw new Exception('El DNI del ciudadano debe tener 8 dígitos.');
+        }
+
+        $nombres = mb_strtoupper(trim((string) ($datos['titular_nombres'] ?? '')), 'UTF-8');
+        $apPaterno = mb_strtoupper(trim((string) ($datos['titular_apellido_paterno'] ?? '')), 'UTF-8');
+        $apMaterno = mb_strtoupper(trim((string) ($datos['titular_apellido_materno'] ?? '')), 'UTF-8');
+        if ($nombres === '' || $apPaterno === '' || $apMaterno === '') {
+            throw new Exception('Debe validar el DNI del ciudadano para obtener sus nombres.');
+        }
+
+        $ruc = null;
+        $razon = null;
+        if ($tipo === 2) {
+            $ruc = preg_replace('/[^0-9]/', '', (string) ($datos['titular_ruc'] ?? ''));
+            $razon = mb_strtoupper(trim((string) ($datos['titular_razon_social'] ?? '')), 'UTF-8');
+            if (!preg_match('/^\d{11}$/', $ruc)) {
+                throw new Exception('El RUC debe tener 11 dígitos.');
+            }
+            if ($razon === '') {
+                throw new Exception('Debe validar el RUC para obtener la razón social.');
+            }
+        } elseif ($tipo === 3) {
+            $razon = mb_strtoupper(trim((string) ($datos['titular_razon_social'] ?? '')), 'UTF-8');
+            if ($razon === '') {
+                throw new Exception('Debe ingresar el nombre de la entidad pública.');
+            }
+        }
+
+        // Vincular si el ciudadano ya existe (dni es unique en usuarios).
+        $existente = Usuario::where('dni', $dni)->first();
+        if ($existente && (int) $existente->id === (int) $usuarioInterno->id) {
+            throw new Exception('El DNI ingresado corresponde al propio usuario interno.');
+        }
+
+        Log::info('Titular presencial resuelto', [
+            'dni' => $dni,
+            'tipo_persona' => $tipo,
+            'registrado' => (bool) $existente,
+            'id_titular' => $existente?->id,
+        ]);
+
+        return [
+            'id_titular' => $existente?->id,
+            'titular_tipo_persona' => $tipo,
+            'titular_dni' => $dni,
+            'titular_nombres' => $nombres,
+            'titular_apellido_paterno' => $apPaterno,
+            'titular_apellido_materno' => $apMaterno,
+            'titular_ruc' => $ruc,
+            'titular_razon_social' => $razon,
+        ];
     }
 
     /**

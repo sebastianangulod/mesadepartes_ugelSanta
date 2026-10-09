@@ -45,6 +45,7 @@
 </head>
 <body class="bg-gray-50 font-sans">
     <div class="min-h-screen flex flex-col">
+        @unless(request()->routeIs('login') || request()->routeIs('register') || request()->routeIs('login.interno') || request()->routeIs('password.request') || request()->routeIs('perfil.actualizar-contraseña'))
         <!-- Header -->
         <header class="bg-white shadow-sm border-b border-gray-200">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -119,19 +120,12 @@
                         </form>
                     </div>
                     @else
-                    <!-- Menú para usuarios no autenticados -->
-                    <div class="flex items-center space-x-3">
-                        <a href="{{ route('login') }}" class="inline-flex items-center px-4 py-2 rounded-full border border-blue-500 text-sm font-medium text-blue-600 bg-white hover:bg-blue-50 transition duration-200">
-                            Iniciar Sesión
-                        </a>
-                        <a href="{{ route('register') }}" class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition duration-200">
-                            Registrarse
-                        </a>
-                    </div>
+                    <!-- Sin accesos en cabecera: cada vista trae sus propios enlaces -->
                     @endauth
                 </div>
             </div>
         </header>
+        @endunless
         
         <!-- Contenido principal -->
         <main class="flex-1">

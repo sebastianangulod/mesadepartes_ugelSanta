@@ -9,22 +9,29 @@
 
 @section('content')
 <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8">
-        <div class="text-center">
-            <img class="mx-auto h-16 w-auto" src="{{ asset('img/logo-ugel.png') }}" alt="UGEL" style="max-height: 80px;">
-            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                Acceso Personal Interno
-            </h2>
-            <p class="mt-2 text-center text-sm text-gray-600">
-                Ingrese sus credenciales administrativas
-            </p>
+    <div class="max-w-md w-full space-y-6">
+        <div class="text-center space-y-4">
+            <div class="inline-flex items-center justify-center rounded-2xl border border-gray-200 bg-white shadow-sm px-8 py-4">
+                <img src="{{ asset('img/logo-ugel.png') }}" alt="UGEL Santa" class="mx-auto h-24 w-auto">
+            </div>
+            <div>
+                <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">
+                    Acceso Personal Interno
+                </h1>
+                <p class="mt-2 text-sm font-semibold text-primary-800 uppercase tracking-wide">
+                    Unidad de Gestión Educativa Local · Santa
+                </p>
+                <p class="mt-2 text-sm text-gray-600">
+                    Ingrese sus credenciales administrativas
+                </p>
+            </div>
         </div>
-        
-        <form class="mt-8 space-y-6" action="{{ route('login.interno') }}" method="POST">
+
+        <form class="space-y-5" action="{{ route('login.interno') }}" method="POST">
             @csrf
-            
+
             @if($errors->any())
-                <div class="mb-4 rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
+                <div class="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800" role="alert">
                     <span class="font-semibold">Se encontraron los siguientes errores:</span>
                     <ul class="list-disc list-inside mt-1">
                         @foreach ($errors->all() as $msg)
@@ -34,25 +41,25 @@
                 </div>
             @endif
 
-            <div class="rounded-md shadow-sm space-y-4">
+            <div class="bg-white rounded-xl shadow-md border border-gray-200 px-6 py-5 space-y-4">
                 <div>
                     <label for="dni" class="block text-sm font-medium text-gray-700 mb-1">DNI</label>
-                    <input id="dni" name="dni" type="text" required maxlength="8" pattern="[0-9]{8}"
-                           class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" 
-                           placeholder="Ingrese su DNI (8 dígitos)" 
+                    <input id="dni" name="dni" type="text" required maxlength="8" pattern="[0-9]{8}" autocomplete="username"
+                           class="block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-600 focus:border-primary-600 sm:text-sm"
+                           placeholder="Ingrese su DNI (8 dígitos)"
                            value="{{ old('dni') }}">
                 </div>
-                
+
                 <div>
                     <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-                    <input id="password" name="password" type="password" required 
-                           class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" 
+                    <input id="password" name="password" type="password" required autocomplete="current-password"
+                           class="block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-600 focus:border-primary-600 sm:text-sm"
                            placeholder="Ingrese su contraseña">
                 </div>
-                
+
                 <div class="flex items-center">
-                    <input id="remember" name="remember" type="checkbox" 
-                           class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                    <input id="remember" name="remember" type="checkbox"
+                            class="h-4 w-4 text-primary-700 focus:ring-primary-600 border-gray-300 rounded">
                     <label for="remember" class="ml-2 block text-sm text-gray-900">
                         Recordarme
                     </label>
@@ -60,29 +67,29 @@
             </div>
 
             <div>
-                <button type="submit" 
-                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <button type="submit"
+                        class="w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-semibold rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600 shadow-sm">
                     Iniciar Sesión
                 </button>
             </div>
 
-            <div class="text-center border-t pt-4">
-                <a href="{{ route('login') }}" class="font-medium text-indigo-600 hover:text-indigo-500">
+            <div class="text-center border-t border-gray-200 pt-5">
+                <a href="{{ route('login') }}" class="inline-flex items-center justify-center px-5 py-2 rounded-md text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 shadow-sm tracking-wide">
                     Soy usuario externo
                 </a>
             </div>
-            
+
             @php
                 $recaptchaEnabled = config('services.recaptcha.enabled', false);
                 $recaptchaSiteKey = config('services.recaptcha.site_key', '');
             @endphp
-            
+
             @if($recaptchaEnabled && !empty($recaptchaSiteKey))
-            <div class="flex justify-center mt-4">
-                <div id="recaptcha-widget" 
-                     class="g-recaptcha" 
-                     data-sitekey="{{ $recaptchaSiteKey }}" 
-                     data-callback="onRecaptchaSuccess" 
+            <div class="flex justify-center">
+                <div id="recaptcha-widget"
+                     class="g-recaptcha"
+                     data-sitekey="{{ $recaptchaSiteKey }}"
+                     data-callback="onRecaptchaSuccess"
                      data-expired-callback="onRecaptchaExpired"
                      data-size="normal"
                      data-theme="light"
@@ -100,6 +107,10 @@
             </div>
             @endif
         </form>
+
+        <p class="text-center text-xs text-gray-500">
+            Mesa de Partes · mesadepartes@ugelsanta.gob.pe · Lun a Vie 9:00 a.m. – 4:30 p.m.
+        </p>
     </div>
 </div>
 
@@ -109,10 +120,7 @@
 @endphp
 
 @if($recaptchaEnabled && !empty($recaptchaSiteKey))
-@once
 <script src="https://www.google.com/recaptcha/api.js?hl=es" async defer></script>
-@endonce
-
 <script>
 // Variable global para almacenar el widget ID
 let recaptchaWidgetId = null;
@@ -123,10 +131,10 @@ function onRecaptchaSuccess(token) {
     if (errorDiv) {
         errorDiv.classList.add('hidden');
     }
-    
+
     // Guardar el token en una variable global para verificación
     window.recaptchaToken = token;
-    
+
     // Verificar si Google creó el textarea automáticamente
     const form = document.querySelector('form[action="{{ route('login.interno') }}"]');
     if (form) {
@@ -158,13 +166,13 @@ function onRecaptchaExpired() {
 // Callback cuando hay un error en reCAPTCHA
 function onRecaptchaError(error) {
     window.recaptchaToken = null;
-    
+
     // Mostrar error de configuración
     const configErrorDiv = document.getElementById('recaptcha-config-error');
     if (configErrorDiv) {
         configErrorDiv.classList.remove('hidden');
     }
-    
+
     const errorDiv = document.getElementById('recaptcha-error');
     if (errorDiv) {
         errorDiv.classList.remove('hidden');
@@ -176,13 +184,13 @@ function onRecaptchaError(error) {
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form[action="{{ route('login.interno') }}"]');
     const widget = document.getElementById('recaptcha-widget');
-    
+
     if (form) {
         form.addEventListener('submit', function(e) {
             // Buscar específicamente el textarea de reCAPTCHA
             const existingTextarea = form.querySelector('textarea[name="g-recaptcha-response"]');
             let recaptchaResponse = null;
-            
+
             if (existingTextarea && existingTextarea.value) {
                 recaptchaResponse = existingTextarea.value;
             } else if (window.recaptchaToken) {
@@ -198,7 +206,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error('Error al obtener respuesta de grecaptcha:', err);
                 }
             }
-            
+
             if (!recaptchaResponse || recaptchaResponse.length === 0) {
                 e.preventDefault();
                 const errorDiv = document.getElementById('recaptcha-error');
@@ -208,7 +216,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('Por favor, complete el reCAPTCHA antes de continuar.');
                 return false;
             }
-            
+
             // Asegurar que el token esté en el formulario
             if (!existingTextarea) {
                 const hiddenInput = document.createElement('textarea');
@@ -231,9 +239,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const dniInput = document.getElementById('dni');
     if (dniInput) {
         dniInput.addEventListener('input', function(e) {
-    this.value = this.value.replace(/[^0-9]/g, '');
-    if (this.value.length > 8) {
-        this.value = this.value.slice(0, 8);
+            this.value = this.value.replace(/[^0-9]/g, '');
+            if (this.value.length > 8) {
+                this.value = this.value.slice(0, 8);
             }
         });
     }

@@ -64,6 +64,14 @@ class Tramite extends Model
         'ultimo_estado',
         'id_usuario',
         'creado_por',
+        'id_titular',
+        'titular_tipo_persona',
+        'titular_dni',
+        'titular_nombres',
+        'titular_apellido_paterno',
+        'titular_apellido_materno',
+        'titular_ruc',
+        'titular_razon_social',
         'tipo_tramite',
         'tramitescol',
         'observaciones',
@@ -115,6 +123,81 @@ class Tramite extends Model
     public function creador()
     {
         return $this->belongsTo(Usuario::class, 'creado_por');
+    }
+
+    /**
+     * Ciudadano titular del trámite presencial (puede no estar registrado).
+     */
+    public function titular()
+    {
+        return $this->belongsTo(Usuario::class, 'id_titular');
+    }
+
+    /**
+     * Datos del solicitante para voucher/confirmación/hoja de ruta.
+     *
+     * Prioridad:
+     * 1. Snapshot del titular (trámite presencial registrado por interno).
+     * 2. Usuario titular vinculado (id_titular).
+     * 3. Creador (trámite virtual de externo) o responsable legacy.
+     *
+     * @return array{nombres:string,apellido_paterno:string,apellido_materno:string,dni:string,ruc:?string,razon_social:?string,email:?string}
+     */
+    public function datosSolicitante(): array
+    {
+        if ($this->titular_dni || $this->titular_nombres || $this->id_titular) {
+            if ($this->relationLoaded('titular') && $this->titular) {
+                return [
+                    'nombres' => $this->titular_nombres ?? $this->titular->nombres ?? '',
+                    'apellido_paterno' => $this->titular_apellido_paterno ?? $this->titular->apellido_paterno ?? '',
+                    'apellido_materno' => $this->titular_apellido_materno ?? $this->titular->apellido_materno ?? '',
+                    'dni' => $this->titular_dni ?? $this->titular->dni ?? '',
+                    'ruc' => $this->titular_ruc ?? $this->titular->ruc,
+                    'razon_social' => $this->titular_razon_social ?? $this->titular->razon_social,
+                    'email' => $this->titular->email ?? null,
+                ];
+            }
+
+            return [
+                'nombres' => $this->titular_nombres ?? '',
+                'apellido_paterno' => $this->titular_apellido_paterno ?? '',
+                'apellido_materno' => $this->titular_apellido_materno ?? '',
+                'dni' => $this->titular_dni ?? '',
+                'ruc' => $this->titular_ruc,
+                'razon_social' => $this->titular_razon_social,
+                'email' => null,
+            ];
+        }
+
+        $base = $this->creador ?? $this->usuario;
+        if ($base) {
+            return [
+                'nombres' => $base->nombres ?? '',
+                'apellido_paterno' => $base->apellido_paterno ?? '',
+                'apellido_materno' => $base->apellido_materno ?? '',
+                'dni' => $base->dni ?? '',
+                'ruc' => $base->ruc ?? null,
+                'razon_social' => $base->razon_social ?? null,
+                'email' => $base->email ?? null,
+            ];
+        }
+
+        return [
+            'nombres' => '', 'apellido_paterno' => '', 'apellido_materno' => '',
+            'dni' => '', 'ruc' => null, 'razon_social' => null, 'email' => null,
+        ];
+    }
+
+    /**
+     * Nombre completo del solicitante (para vistas).
+     */
+    public function getNombreSolicitanteAttribute(): string
+    {
+        $d = $this->datosSolicitante();
+        if (!empty($d['razon_social']) && ($this->titular_tipo_persona == 2 || $this->titular_tipo_persona == 3)) {
+            return $d['razon_social'];
+        }
+        return trim("{$d['nombres']} {$d['apellido_paterno']} {$d['apellido_materno']}");
     }
 
     /**
