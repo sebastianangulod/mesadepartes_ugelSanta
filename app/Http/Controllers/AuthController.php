@@ -8,6 +8,7 @@ use App\Http\Requests\Auth\RegistroRequest;
 use App\Services\Auth\RecuperacionService;
 use App\Services\Api\ApiPeruService;
 use App\Mail\BienvenidaUsuario;
+use App\Mail\ClaveActualizada;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -520,17 +521,26 @@ class AuthController extends Controller
                 $this->validarRecaptcha($request->input('g-recaptcha-response'));
             }
 
-            // Validar datos del formulario - usar DNI como en PHP puro
+            // Validar datos del formulario (el usuario se resuelve por token, sin pedir DNI)
             $validated = $request->validate([
                 'token' => 'required|string',
-                'dni' => 'required|string|size:8|regex:/^\\d{8}$/',
                 'password' => 'required|string|min:8|confirmed|regex:/^(?=.*[A-Z])(?=.*[0-9])(?=.*[\p{P}\p{S}]).{8,}$/u',
                 'password_confirmation' => 'required|string|min:8'
             ]);
 
+            // Resolver usuario desde el token
+            $resetRequest = ResetPasswordRequest::where('token', $validated['token'])->first();
+            if (!$resetRequest) {
+                throw new \Exception("El enlace no es válido o ya fue utilizado.");
+            }
+            $usuarioToken = Usuario::find($resetRequest->user_id);
+            if (!$usuarioToken) {
+                throw new \Exception("El enlace no es válido o ya fue utilizado.");
+            }
+
             // Intentar restablecer la contraseña usando DNI
             $exitoso = $this->recuperacionService->redefinirContrasenaPorDni(
-                $validated['dni'],
+                $usuarioToken->dni,
                 $validated['token'],
                 $validated['password']
             );
@@ -539,7 +549,7 @@ class AuthController extends Controller
                 throw new \Exception("No se pudo restablecer la contraseña. El token puede ser inválido o haber expirado.");
             }
 
-            Log::info("Contraseña restablecida exitosamente para DNI: {$validated['dni']}");
+            Log::info("Contraseña restablecida exitosamente para DNI: {$usuarioToken->dni}");
 
             return redirect()->route('login')->with('success', 'Su contraseña ha sido restablecida exitosamente. Por favor, inicie sesión con su nueva contraseña.');
 
@@ -1184,6 +1194,19 @@ class AuthController extends Controller
             $usuario->update([
                 'passw' => Hash::make($validated['password']),
             ]);
+
+            // Aviso de seguridad (no bloquea si el correo falla)
+            try {
+                Log::info("Enviando aviso de cambio de clave a: {$usuario->email}");
+                Mail::to($usuario->email)->send(new ClaveActualizada([
+                    'nombres' => $usuario->nombres,
+                    'apellido_paterno' => $usuario->apellido_paterno,
+                    'email' => $usuario->email,
+                ], 'propio'));
+                Log::info("Aviso de cambio de clave enviado a: {$usuario->email}");
+            } catch (\Throwable $e) {
+                Log::warning("No se pudo enviar aviso de cambio de clave a: {$usuario->email}. Error: " . $e->getMessage());
+            }
 
             Log::info("Contraseña actualizada para usuario: {$usuario->email} (ID: {$usuario->id})");
 

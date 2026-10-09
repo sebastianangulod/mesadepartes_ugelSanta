@@ -41,13 +41,19 @@ Route::middleware('guest')->group(function () {
     Route::get('/registro', [AuthController::class, 'showRegistroForm'])->name('register');
     Route::post('/registro', [AuthController::class, 'registro']);
     
-    // Recuperación de contraseña
+    // Recuperación de contraseña (vista pública; el POST atiende a invitados
+    // y a autenticados —p. ej. el formulario embebido en actualizar-contraseña—)
     Route::get('/recuperar', [AuthController::class, 'showRecuperarForm'])->name('password.request');
-    Route::post('/recuperar', [AuthController::class, 'recuperar']);
-    Route::get('/restablecer/{token}', [AuthController::class, 'showRestablecerForm'])->name('password.reset');
-    Route::post('/restablecer', [AuthController::class, 'restablecer'])->name('password.update');
-    
+
 });
+
+// Solicitud de recuperación por DNI: fuera del grupo guest para que
+// también funcione con sesión iniciada (formulario en perfil)
+Route::post('/recuperar', [AuthController::class, 'recuperar']);
+// Restablecer con token: también fuera de guest, el link puede abrirse
+// con sesión iniciada sin redirigir dentro del sistema
+Route::get('/restablecer/{token}', [AuthController::class, 'showRestablecerForm'])->name('password.reset');
+Route::post('/restablecer', [AuthController::class, 'restablecer'])->name('password.update');
 
 // Rutas de perfil de usuario (requieren autenticación)
 Route::middleware('auth')->group(function () {

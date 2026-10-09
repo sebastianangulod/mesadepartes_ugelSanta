@@ -253,6 +253,7 @@
         <form id="formCrearUsuario" class="grid grid-cols-2 gap-4" autocomplete="off" onsubmit="crearUsuario(event)">
             @csrf
             <!-- DNI y Nombres -->
+            <input type="hidden" id="dniValidado" value="false">
             <div class="col-span-2">
                 <label for="dniUsuario" class="block text-sm font-medium text-gray-700 mb-1">DNI</label>
                 <div class="flex gap-2">
@@ -358,7 +359,7 @@
 
             <!-- Niveles en cascada -->
             <div>
-                <label for="nivel1" class="block text-sm font-medium text-gray-700 mb-1">Nivel 1</label>
+                <label for="nivel1" class="block text-sm font-medium text-gray-700 mb-1">Nivel 1 <span class="text-red-500">*</span></label>
                 <select id="nivel1" name="nivel1" 
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">Seleccione Nivel 1</option>
@@ -394,7 +395,7 @@
 
             <div class="col-span-2 flex justify-end space-x-2 mt-6 pt-4 border-t-2 border-gray-300">
                 <button type="button" onclick="closeModal('modalAddUser')" class="btn-secondary">Cancelar</button>
-                <button type="submit" id="btnGuardarUsuario" class="btn-primary">Guardar</button>
+                <button type="submit" id="btnGuardarUsuario" class="btn-primary" style="display: none;">Guardar</button>
             </div>
         </form>
         </div>
@@ -667,6 +668,12 @@
         
         // Limpiar mensajes de error
         document.getElementById('dni-error').textContent = '';
+
+        // Resetear flags de validación y ocultar Guardar
+        document.getElementById('dniValidado').value = 'false';
+        const emailFlag = document.getElementById('emailValidado');
+        if (emailFlag) emailFlag.value = 'false';
+        checkCrearValido();
         
         // Limpiar y resetear dropdowns de ubicación
         document.getElementById('provinciaUsuario').innerHTML = '<option value="">Seleccione una provincia</option>';
@@ -753,18 +760,36 @@
         if (n1Select) {
             n1Select.addEventListener('change', function() {
                 cargarNivel2(this.value);
+                checkCrearValido();
             });
         }
         if (n2Select) {
             n2Select.addEventListener('change', function() {
                 cargarNivel3(this.value);
+                checkCrearValido();
             });
         }
         if (n3Select) {
             n3Select.addEventListener('change', function() {
                 cargarNivel4(this.value);
+                checkCrearValido();
             });
         }
+        const n4Select = document.getElementById('nivel4');
+        if (n4Select) {
+            n4Select.addEventListener('change', function() {
+                checkCrearValido();
+            });
+        }
+
+        // Reevaluar Guardar ante cambios en el resto de campos del modal crear
+        ['direccionUsuario', 'telefonoUsuario', 'contrasena', 'distritoUsuario', 'departamentoUsuario', 'provinciaUsuario'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', checkCrearValido);
+                el.addEventListener('change', checkCrearValido);
+            }
+        });
         
         // Validar formato DNI (solo números)
         const dniInput = document.getElementById('dniUsuario');
@@ -774,6 +799,9 @@
                 if (this.value.length > 8) {
                     this.value = this.value.slice(0, 8);
                 }
+                // Si se edita tras validar, invalidar y ocultar Guardar
+                document.getElementById('dniValidado').value = 'false';
+                checkCrearValido();
             });
         }
         
@@ -915,7 +943,7 @@
 
     // Funciones para cargar niveles
     function cargarNivel1() {
-        fetch('/api/areas', {
+        fetch('{{ route("admin.niveles.nivel1") }}', {
             headers: { 'Accept': 'application/json' }
         })
         .then(response => response.json())
@@ -1098,7 +1126,7 @@
     }
 
     function cargarEditNivel1() {
-        fetch('/api/areas', {
+        fetch('{{ route("admin.niveles.nivel1") }}', {
             headers: { 'Accept': 'application/json' }
         })
         .then(response => response.json())
@@ -1244,10 +1272,14 @@
                 btnBuscar.textContent = '✓ Validado';
                 btnBuscar.classList.remove('bg-blue-600', 'hover:bg-blue-700');
                 btnBuscar.classList.add('bg-green-600');
+                document.getElementById('dniValidado').value = 'true';
+                checkCrearValido();
             } else {
                 document.getElementById('dni-error').textContent = data.message || 'No se pudo validar el DNI';
+                document.getElementById('dniValidado').value = 'false';
                 btnBuscar.disabled = false;
                 btnBuscar.textContent = 'Buscar';
+                checkCrearValido();
             }
         })
         .catch(error => {
@@ -1259,6 +1291,25 @@
     }
 
     // Función para crear usuario
+    // Gatea el botón Guardar: solo visible con todo válido (como en registro).
+    // Nivel 1 obligatorio; niveles 2-4 opcionales.
+    function checkCrearValido() {
+        const btn = document.getElementById('btnGuardarUsuario');
+        if (!btn) return;
+
+        const dniOk = document.getElementById('dniValidado').value === 'true'
+            && document.getElementById('nombreUsuario').value.trim() !== '';
+        const emailOk = document.getElementById('emailValidado').value === 'true';
+        const pass = document.getElementById('contrasena').value;
+        const passOk = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[@$!%*?&_])[A-Za-z\d@$!%*?&_]{8,}$/.test(pass);
+        const telOk = /^\d{9}$/.test(document.getElementById('telefonoUsuario').value);
+        const dirOk = document.getElementById('direccionUsuario').value.trim() !== '';
+        const distOk = document.getElementById('distritoUsuario').value !== '';
+        const n1Ok = document.getElementById('nivel1').value !== '';
+
+        btn.style.display = (dniOk && emailOk && passOk && telOk && dirOk && distOk && n1Ok) ? '' : 'none';
+    }
+
     function crearUsuario(event) {
         event.preventDefault();
         const form = event.target;
@@ -1740,6 +1791,8 @@
                 requirements.unique.element.innerHTML = `<span class="icon">✕</span> ${requirements.unique.text}`;
                 emailFeedback.textContent = '';
             }
+
+            checkCrearValido();
         }
 
         emailInput.addEventListener('input', function() {
@@ -1791,6 +1844,7 @@
 
         passwordInput.addEventListener('input', function() {
             validatePassword(this.value);
+            checkCrearValido();
         });
     }
 

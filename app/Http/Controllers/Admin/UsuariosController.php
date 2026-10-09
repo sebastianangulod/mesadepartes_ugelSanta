@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use App\Mail\BienvenidaUsuarioInterno;
+use App\Mail\ClaveActualizada;
 
 /**
  * Controlador para la gestión de usuarios internos
@@ -685,7 +686,17 @@ class UsuariosController extends Controller
 
             DB::commit();
 
-            // TODO: Enviar email con nueva contraseña
+            // Aviso de seguridad SIN la clave (el admin la entrega en persona).
+            // No bloquea si el correo falla.
+            try {
+                Mail::to($usuario->email)->send(new ClaveActualizada([
+                    'nombres' => $usuario->nombres,
+                    'apellido_paterno' => $usuario->apellido_paterno,
+                    'email' => $usuario->email,
+                ], 'admin'));
+            } catch (\Exception $e) {
+                Log::warning("No se pudo enviar aviso de reseteo a: {$usuario->email}");
+            }
 
             return response()->json([
                 'success' => true,
