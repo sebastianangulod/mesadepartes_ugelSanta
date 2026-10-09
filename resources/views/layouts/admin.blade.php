@@ -312,9 +312,13 @@
 
         // Agregar evento de clic a los enlaces para mostrar el indicador de carga
         document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('a[href]:not([href^="#"]):not([href^="javascript:"]):not([onclick])').forEach(link => {
+            document.querySelectorAll('a[href]:not([href^="#"]):not([href^="javascript:"]):not([onclick]):not([download])').forEach(link => {
                 link.addEventListener('click', function() {
                     // Solo mostrar loading si no es un enlace que abre en nueva pestaña
+                    // ni una descarga (no recargan la página y el indicador se quedaría pegado)
+                    if (this.hasAttribute('download')) {
+                        return;
+                    }
                     if (!this.target || this.target === '_self') {
                         const href = this.getAttribute('href');
                         if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {

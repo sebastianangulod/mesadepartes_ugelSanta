@@ -24,18 +24,6 @@ class TramitePolicy
     }
 
     /**
-     * Determinar si el usuario puede ver cualquier trámite
-     * 
-     * @param Usuario $usuario
-     * @return bool
-     */
-    public function viewAny(Usuario $usuario): bool
-    {
-        // Solo usuarios autenticados pueden ver la lista de trámites
-        return true;
-    }
-
-    /**
      * Determinar si el usuario puede ver un trámite específico
      * 
      * @param Usuario $usuario
@@ -71,58 +59,6 @@ class TramitePolicy
         }
 
         return false;
-    }
-
-    /**
-     * Determinar si el usuario puede crear trámites
-     * 
-     * @param Usuario $usuario
-     * @return bool
-     */
-    public function create(Usuario $usuario): bool
-    {
-        // Cualquier usuario autenticado puede crear trámites
-        return $usuario->estaActivo();
-    }
-
-    /**
-     * Determinar si el usuario puede actualizar un trámite
-     * 
-     * @param Usuario $usuario
-     * @param Tramite $tramite
-     * @return bool
-     */
-    public function update(Usuario $usuario, Tramite $tramite): bool
-    {
-        // Los administradores pueden actualizar cualquier trámite
-        if ($usuario->esAdministrador()) {
-            return true;
-        }
-
-        // Los usuarios solo pueden actualizar sus propios trámites en ciertos estados
-        if ($usuario->id === $tramite->id_usuario) {
-            return $tramite->puedeSerEditado() && $usuario->estaActivo();
-        }
-
-        return false;
-    }
-
-    /**
-     * Determinar si el usuario puede eliminar un trámite
-     * 
-     * @param Usuario $usuario
-     * @param Tramite $tramite
-     * @return bool
-     */
-    public function delete(Usuario $usuario, Tramite $tramite): bool
-    {
-        // Solo los administradores pueden eliminar trámites
-        if (!$usuario->esAdministrador()) {
-            return false;
-        }
-
-        // No se pueden eliminar trámites en ciertos estados
-        return $tramite->puedeSerEliminado();
     }
 
     /**
@@ -203,46 +139,6 @@ class TramitePolicy
             $tramite->loadMissing('nodoActual');
             if ($tramite->nodoActual && $this->tramiteFlujoService->usuarioInternoPuedeActuarEnNodo($usuario, $tramite->nodoActual)) {
                 return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Determinar si el usuario puede derivar a otro Nivel 1
-     * Solo en trámites PENDIENTE en nivel 1
-     * 
-     * @param Usuario $usuario
-     * @param Tramite $tramite
-     * @return bool
-     */
-    public function derivarNivel1(Usuario $usuario, Tramite $tramite): bool
-    {
-        if (!$usuario->estaActivo() || $tramite->estado !== 'PENDIENTE' || $tramite->nivel_actual !== 1) {
-            return false;
-        }
-
-        if ($usuario->esAdministrador()) {
-            return true;
-        }
-
-        // El usuario actual asignado al trámite (Nivel 1) puede derivar
-        if ((int) $tramite->id_usuario === (int) $usuario->id) {
-            return true;
-        }
-
-        // Usuario interno del mismo Nivel 1 (misma área)
-        if ($usuario->esInterno()) {
-            $tramite->loadMissing('procedimiento');
-            if ($tramite->procedimiento && $tramite->procedimiento->id_area) {
-                $esMismoNivel1 = \App\Models\UsuariosNiveles::where('id_usuario', $usuario->id)
-                    ->where('nivel', 1)
-                    ->where('id_nivel', $tramite->procedimiento->id_area)
-                    ->exists();
-                if ($esMismoNivel1) {
-                    return true;
-                }
             }
         }
 
@@ -356,7 +252,8 @@ class TramitePolicy
     }
 
     /**
-     * Determinar si el usuario puede finalizar un trámite
+     * Determinar si el usuario puede finalizar un trámite (acción PROCESAR:
+     * verifica, genera voucher y cierra). Se usa desde el endpoint procesar.
      * 
      * @param Usuario $usuario
      * @param Tramite $tramite

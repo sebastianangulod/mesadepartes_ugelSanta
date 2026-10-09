@@ -111,10 +111,28 @@
     
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold text-gray-900">Administración de Usuarios</h2>
-        <button id="addUserButton" onclick="openModal('modalAddUser')" class="btn-primary">
-            Agregar Usuario
-                    </button>
+        <div class="flex items-center gap-3">
+            <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden">
+                <a href="{{ route('admin.usuarios', ['tipo' => 'interno']) }}"
+                   class="px-4 py-2 text-sm font-medium {{ $tipo !== 'externo' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50' }}">
+                    Internos
+                </a>
+                <a href="{{ route('admin.usuarios', ['tipo' => 'externo']) }}"
+                   class="px-4 py-2 text-sm font-medium {{ $tipo === 'externo' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50' }}">
+                    Externos
+                </a>
+            </div>
+            @if($tipo !== 'externo')
+            <button id="addUserButton" onclick="openModal('modalAddUser')" class="btn-primary">
+                Agregar Usuario
+            </button>
+            @endif
+        </div>
     </div>
+
+    @if($tipo === 'externo')
+    <p class="text-sm text-gray-500 mb-4">Vista de solo lectura: los usuarios externos no se gestionan desde aquí.</p>
+    @endif
 
     <!-- Tabla de Usuarios -->
     <div class="bg-white shadow-md rounded-lg p-6 overflow-x-auto">
@@ -125,7 +143,11 @@
                     <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre Completo</th>
                     <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Correo</th>
                     <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Teléfono</th>
+                    @if($tipo === 'externo')
+                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">DNI / RUC</th>
+                    @else
                     <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Niveles Asignados</th>
+                    @endif
                     <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
                     </tr>
                 </thead>
@@ -138,6 +160,14 @@
                             </td>
                     <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ $usuario->email }}</td>
                     <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">{{ $usuario->telefono }}</td>
+                    @if($tipo === 'externo')
+                    <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                        {{ $usuario->dni }}@if($usuario->ruc) / {{ $usuario->ruc }}@endif
+                    </td>
+                    <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                        <span class="text-gray-400">Solo lectura</span>
+                    </td>
+                    @else
                     <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
                         @if($usuario->usuariosNiveles->isNotEmpty())
                             <div class="flex flex-wrap gap-1">
@@ -197,6 +227,7 @@
                         </button>
                         @endif
                             </td>
+                    @endif
                         </tr>
                     @empty
                         <tr>
@@ -210,6 +241,7 @@
         </div>
 </div>
 
+@if($tipo !== 'externo')
 <!-- Modal Agregar Usuario -->
 <div id="modalAddUser" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="overflow-y: auto;">
     <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl relative my-auto modal-content border-2 border-gray-200" style="max-height: 90vh; overflow-y: auto;">
@@ -577,6 +609,7 @@
         </div>
     </div>
 </div>
+@endif
 
 @push('scripts')
 <script>
@@ -1523,11 +1556,24 @@
                     return;
                 }
                 
-                if (data.success && data.data && data.data.tiene_dependencias && data.data.asignaciones_especialista > 0) {
+                if (data.success && data.data && data.data.tiene_dependencias) {
                     dependenciasList.innerHTML = '';
-                    const li = document.createElement('li');
-                    li.textContent = `Asignaciones como especialista en procedimientos: ${data.data.asignaciones_especialista}`;
-                    dependenciasList.appendChild(li);
+                    const d = data.data;
+                    const lineas = [];
+                    if (d.asignaciones_especialista > 0) {
+                        lineas.push(`Asignaciones como especialista en procedimientos: ${d.asignaciones_especialista} (se eliminarán)`);
+                    }
+                    if (d.tramites_asignados > 0) {
+                        lineas.push(`Trámites asignados: ${d.tramites_asignados} (SE ELIMINARÁN en cascada)`);
+                    }
+                    if (d.tramites_creados > 0) {
+                        lineas.push(`Trámites creados por el usuario: ${d.tramites_creados} (se conservarán sin creador)`);
+                    }
+                    lineas.forEach(texto => {
+                        const li = document.createElement('li');
+                        li.textContent = texto;
+                        dependenciasList.appendChild(li);
+                    });
                     dependenciasDiv.classList.remove('hidden');
                 } else {
                     dependenciasDiv.classList.add('hidden');

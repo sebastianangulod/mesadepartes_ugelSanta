@@ -205,7 +205,7 @@
             <!-- Formulario de recuperación (oculto por defecto) -->
             <div id="formRecuperacion" class="mt-4 hidden">
                 <div class="bg-white rounded-lg p-4 border border-yellow-300">
-                    <form action="{{ route('password.request') }}" method="POST">
+                    <form action="{{ url('/recuperar') }}" method="POST">
                         @csrf
                         <div class="mb-4">
                             <label for="dni_recuperacion" class="block text-sm font-medium text-gray-700 mb-1">

@@ -113,7 +113,6 @@ Route::middleware(['auth'])->group(function () {
             // Acciones de derivación
             Route::post('/{tramite}/derivar', [TramiteController::class, 'derivar'])->name('tramites.derivar');
             Route::post('/{tramite}/derivar-especialista', [TramiteController::class, 'derivarEspecialista'])->name('tramites.derivar-especialista');
-            Route::post('/{tramite}/derivar-nivel1', [TramiteController::class, 'derivarNivel1'])->name('tramites.derivar-nivel1');
             
             // Acciones de corrección (usuario externo)
             Route::post('/{tramite}/corregir', [TramiteController::class, 'corregir'])->name('tramites.corregir');

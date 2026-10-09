@@ -55,7 +55,9 @@ class UsuariosController extends Controller
      */
     public function index(Request $request)
     {
-        $usuarios = Usuario::where('tipo_user', 2)
+        $tipo = $request->get('tipo', 'interno') === 'externo' ? 'externo' : 'interno';
+
+        $usuarios = Usuario::where('tipo_user', $tipo === 'externo' ? 1 : 2)
             ->with(['usuariosNiveles', 'administrador'])
             ->orderBy('nombres')
             ->get();
@@ -89,7 +91,7 @@ class UsuariosController extends Controller
             }
         }
 
-        return view('admin.usuarios.index', compact('usuarios'));
+        return view('admin.usuarios.index', compact('usuarios', 'tipo'));
     }
 
     /**
@@ -351,18 +353,30 @@ class UsuariosController extends Controller
     {
         try {
             $usuario = Usuario::findOrFail($id);
-            
-            // Solo contar asignaciones como especialista en procedimientos
+
+            // Asignaciones como especialista en procedimientos (se borran en cascada)
             $asignacionesEspecialista = DB::table('procedimiento_usuarios')
                 ->where('id_usuario', $id)
                 ->count();
-            
-            $tieneDependencias = $asignacionesEspecialista > 0;
-            
+
+            // Trámites asignados al usuario: SE ELIMINAN en cascada (FK tramites.id_usuario)
+            $tramitesAsignados = DB::table('tramites')
+                ->where('id_usuario', $id)
+                ->count();
+
+            // Trámites creados por el usuario: se conservan pero quedan huérfanos (creado_por = null)
+            $tramitesCreados = DB::table('tramites')
+                ->where('creado_por', $id)
+                ->count();
+
+            $tieneDependencias = ($asignacionesEspecialista + $tramitesAsignados + $tramitesCreados) > 0;
+
             return response()->json([
                 'success' => true,
                 'data' => [
                     'asignaciones_especialista' => $asignacionesEspecialista,
+                    'tramites_asignados' => $tramitesAsignados,
+                    'tramites_creados' => $tramitesCreados,
                     'tiene_dependencias' => $tieneDependencias
                 ]
             ]);

@@ -415,9 +415,13 @@
 
         // Prevenir que el loading se muestre automáticamente en enlaces normales
         document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('a[href]:not([href^="#"]):not([href^="javascript:"]):not([onclick])').forEach(link => {
+            document.querySelectorAll('a[href]:not([href^="#"]):not([href^="javascript:"]):not([onclick]):not([download])').forEach(link => {
                 link.addEventListener('click', function(e) {
                     // Solo mostrar loading si no es un enlace que abre en nueva pestaña
+                    // ni una descarga (no recargan la página y el overlay se quedaría pegado)
+                    if (this.hasAttribute('download')) {
+                        return;
+                    }
                     if (!this.target || this.target === '_self') {
                         // Mostrar loading solo si es una navegación real
                         const href = this.getAttribute('href');
