@@ -4,69 +4,36 @@
 --}}
 @extends('layouts.admin')
 
-@section('title', 'Administración de Usuarios - Mesa de Partes')
+@section('title', 'Administración de Usuarios · UGEL Santa')
+
+@section('header', 'Administración de Usuarios')
+
+@section('subtitle', 'Gestione usuarios internos, asígneles niveles y administre sus accesos.')
+
+@section('actions')
+    <div class="inline-flex rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <a href="{{ route('admin.usuarios', ['tipo' => 'interno']) }}"
+           class="px-4 py-2 text-[13px] font-bold {{ $tipo !== 'externo' ? 'bg-primary-700 text-white' : 'text-slate-600 hover:bg-slate-50' }}">
+            Internos
+        </a>
+        <a href="{{ route('admin.usuarios', ['tipo' => 'externo']) }}"
+           class="px-4 py-2 text-[13px] font-bold border-l border-slate-200 {{ $tipo === 'externo' ? 'bg-primary-700 text-white' : 'text-slate-600 hover:bg-slate-50' }}">
+            Externos
+        </a>
+    </div>
+    @if($tipo !== 'externo')
+    <button id="addUserButton" onclick="openModal('modalAddUser')"
+        class="inline-flex items-center gap-2 rounded-xl bg-primary-700 hover:bg-primary-800 px-4 py-2.5 text-[13px] font-bold text-white shadow-md shadow-primary-700/20 transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+        Agregar Usuario
+    </button>
+    @endif
+@endsection
 
 @push('styles')
 <style>
-    /* Estilos para modales - centrados en el área de contenido (sin sidebar) */
-    #modalAddUser,
-    #modalEditUser,
-    #modalDeleteUser {
-        backdrop-filter: blur(4px);
-        /* Centrar solo en el área de contenido, considerando el sidebar de 250px */
-        left: 250px;
-        width: calc(100% - 250px);
-    }
-    
-    /* Resaltar bordes del modal para mejor visibilidad */
-    #modalAddUser > div,
-    #modalEditUser > div,
-    #modalDeleteUser > div {
-        border: 2px solid #e5e7eb;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    }
-    
-    /* Borde más visible en hover o focus */
-    #modalAddUser > div:focus-within,
-    #modalEditUser > div:focus-within,
-    #modalDeleteUser > div:focus-within {
-        border-color: #3b82f6;
-        box-shadow: 0 20px 25px -5px rgba(59, 130, 246, 0.1), 0 10px 10px -5px rgba(59, 130, 246, 0.04);
-    }
-    
-    /* Asegurar que el contenido del modal sea scrollable */
-    .modal-content {
-        scrollbar-width: thin;
-        scrollbar-color: #cbd5e0 #f7fafc;
-    }
-    
-    .modal-content::-webkit-scrollbar {
-        width: 8px;
-    }
-    
-    .modal-content::-webkit-scrollbar-track {
-        background: #f7fafc;
-    }
-    
-    .modal-content::-webkit-scrollbar-thumb {
-        background-color: #cbd5e0;
-        border-radius: 4px;
-    }
-    
-    .modal-content::-webkit-scrollbar-thumb:hover {
-        background-color: #a0aec0;
-    }
-    
-    /* En pantallas pequeñas, el modal debe ocupar toda la pantalla */
-    @media (max-width: 768px) {
-        #modalAddUser,
-        #modalEditUser,
-        #modalDeleteUser {
-            left: 0;
-            width: 100%;
-        }
-    }
-    
+    /* Los modales usan overlay a pantalla completa centrado (sin offsets de sidebar) */
+
     /* Estilos para validación de email */
     .email-requirement {
         display: flex;
@@ -108,47 +75,27 @@
 @endpush
 
 @section('content')
-    
-    <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-gray-900">Administración de Usuarios</h2>
-        <div class="flex items-center gap-3">
-            <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden">
-                <a href="{{ route('admin.usuarios', ['tipo' => 'interno']) }}"
-                   class="px-4 py-2 text-sm font-medium {{ $tipo !== 'externo' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50' }}">
-                    Internos
-                </a>
-                <a href="{{ route('admin.usuarios', ['tipo' => 'externo']) }}"
-                   class="px-4 py-2 text-sm font-medium {{ $tipo === 'externo' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50' }}">
-                    Externos
-                </a>
-            </div>
-            @if($tipo !== 'externo')
-            <button id="addUserButton" onclick="openModal('modalAddUser')" class="btn-primary">
-                Agregar Usuario
-            </button>
-            @endif
-        </div>
-    </div>
 
     @if($tipo === 'externo')
-    <p class="text-sm text-gray-500 mb-4">Vista de solo lectura: los usuarios externos no se gestionan desde aquí.</p>
+    <p class="text-[13px] text-slate-500 bg-primary-50 border border-primary-100 rounded-xl px-4 py-3 mb-5">Vista de solo lectura: los usuarios externos no se gestionan desde aquí.</p>
     @endif
 
     <!-- Tabla de Usuarios -->
-    <div class="bg-white shadow-md rounded-lg p-6 overflow-x-auto">
-        <table class="min-w-full leading-normal">
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto mp-scroll">
+        <table class="min-w-full text-sm">
             <thead>
-                <tr>
-                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">N°</th>
-                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre Completo</th>
-                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Correo</th>
-                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Teléfono</th>
+                <tr class="bg-slate-50 text-left">
+                    <th class="px-5 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">N°</th>
+                    <th class="px-5 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Nombre Completo</th>
+                    <th class="px-5 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Correo</th>
+                    <th class="px-5 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Teléfono</th>
                     @if($tipo === 'externo')
-                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">DNI / RUC</th>
+                    <th class="px-5 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">DNI / RUC</th>
                     @else
-                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Niveles Asignados</th>
+                    <th class="px-5 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Niveles Asignados</th>
                     @endif
-                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
+                    <th class="px-5 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider text-right">Acciones</th>
                     </tr>
                 </thead>
 <tbody id="usuariosTable">
@@ -239,12 +186,12 @@
                 </tbody>
             </table>
         </div>
-</div>
+</section>
 
 @if($tipo !== 'externo')
 <!-- Modal Agregar Usuario -->
-<div id="modalAddUser" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="overflow-y: auto;">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl relative my-auto modal-content border-2 border-gray-200" style="max-height: 90vh; overflow-y: auto;">
+<div id="modalAddUser" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto">
+    <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-4xl relative my-auto modal-content border border-slate-200" style="max-height: 90vh; overflow-y: auto;">
         <div class="sticky top-0 bg-white border-b-2 border-gray-300 px-6 py-4 z-10 rounded-t-lg">
             <h3 class="text-xl font-bold text-gray-900">Agregar Usuario</h3>
         </div>
@@ -394,8 +341,8 @@
             </div>
 
             <div class="col-span-2 flex justify-end space-x-2 mt-6 pt-4 border-t-2 border-gray-300">
-                <button type="button" onclick="closeModal('modalAddUser')" class="btn-secondary">Cancelar</button>
-                <button type="submit" id="btnGuardarUsuario" class="btn-primary" style="display: none;">Guardar</button>
+                <button type="button" onclick="closeModal('modalAddUser')" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm font-bold hover:bg-slate-200 transition">Cancelar</button>
+                <button type="submit" id="btnGuardarUsuario" class="px-4 py-2.5 rounded-xl bg-primary-700 text-white text-sm font-bold hover:bg-primary-800 transition" style="display: none;">Guardar</button>
             </div>
         </form>
         </div>
@@ -403,8 +350,8 @@
 </div>
 
 <!-- Modal Editar Usuario -->
-<div id="modalEditUser" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="overflow-y: auto;">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl relative my-auto modal-content border-2 border-gray-200" style="max-height: 90vh; overflow-y: auto;">
+<div id="modalEditUser" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto">
+    <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-4xl relative my-auto modal-content border border-slate-200" style="max-height: 90vh; overflow-y: auto;">
         <div class="sticky top-0 bg-white border-b-2 border-gray-300 px-6 py-4 z-10 rounded-t-lg">
             <h3 class="text-xl font-bold text-gray-900">Editar Usuario</h3>
         </div>
@@ -515,8 +462,8 @@
             </div>
 
             <div class="col-span-2 flex justify-end space-x-2 mt-6 pt-4 border-t-2 border-gray-300">
-                <button type="button" onclick="closeModal('modalEditUser')" class="btn-secondary">Cancelar</button>
-                <button type="button" onclick="actualizarUsuario()" class="btn-primary" id="btnEditarUsuario">Guardar Cambios</button>
+                <button type="button" onclick="closeModal('modalEditUser')" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm font-bold hover:bg-slate-200 transition">Cancelar</button>
+                <button type="button" onclick="actualizarUsuario()" class="px-4 py-2.5 rounded-xl bg-primary-700 text-white text-sm font-bold hover:bg-primary-800 transition" id="btnEditarUsuario">Guardar Cambios</button>
             </div>
         </form>
         </div>
@@ -524,8 +471,8 @@
 </div>
 
 <!-- Modal Eliminar Usuario -->
-<div id="modalDeleteUser" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="backdrop-filter: blur(4px);">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-md border-2 border-gray-200">
+<div id="modalDeleteUser" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px]">
+    <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200">
         <div class="px-6 py-4 border-b-2 border-gray-300">
             <h2 class="text-2xl font-bold text-red-600">Eliminar Usuario</h2>
         </div>
@@ -550,15 +497,15 @@
         <p class="text-sm text-gray-500 mb-4">Esta acción no se puede deshacer.</p>
         </div>
         <div class="px-6 py-4 border-t-2 border-gray-300 flex justify-end space-x-2">
-            <button type="button" onclick="closeModal('modalDeleteUser')" class="btn-secondary">Cancelar</button>
-            <button type="button" onclick="confirmarEliminarUsuario()" class="btn-danger">Eliminar</button>
+            <button type="button" onclick="closeModal('modalDeleteUser')" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm font-bold hover:bg-slate-200 transition">Cancelar</button>
+            <button type="button" onclick="confirmarEliminarUsuario()" class="px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition">Eliminar</button>
         </div>
     </div>
 </div>
 
 <!-- Modal Asignar Niveles Múltiples -->
-<div id="modalAsignarNiveles" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="overflow-y: auto;">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl relative my-auto modal-content border-2 border-gray-200" style="max-height: 90vh; overflow-y: auto;">
+<div id="modalAsignarNiveles" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto">
+    <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative my-auto modal-content border border-slate-200" style="max-height: 90vh; overflow-y: auto;">
         <div class="sticky top-0 bg-white border-b-2 border-gray-300 px-6 py-4 z-10 rounded-t-lg">
             <h3 class="text-xl font-bold text-gray-900">Asignar Niveles</h3>
             <p class="text-sm text-gray-600 mt-1" id="modalNivelesUsuarioNombre"></p>
@@ -605,7 +552,7 @@
             </div>
             
             <div class="flex justify-end space-x-2 mt-6 pt-4 border-t-2 border-gray-300">
-                <button type="button" onclick="closeModal('modalAsignarNiveles')" class="btn-secondary">Cerrar</button>
+                <button type="button" onclick="closeModal('modalAsignarNiveles')" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm font-bold hover:bg-slate-200 transition">Cerrar</button>
             </div>
         </div>
     </div>
@@ -699,7 +646,7 @@
     
     // Cerrar modal al hacer clic en el backdrop
     document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('bg-gray-900') || e.target.classList.contains('bg-opacity-75')) {
+        if (e.target.classList.contains('bg-gray-900') || e.target.classList.contains('bg-opacity-75') || e.target.classList.contains('bg-slate-950/55')) {
             const modal = e.target.closest('[id^="modal"]');
             if (modal) {
                 closeModal(modal.id);

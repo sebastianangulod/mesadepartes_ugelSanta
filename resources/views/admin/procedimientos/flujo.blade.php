@@ -1,7 +1,19 @@
 {{-- Configuración del flujo por nodos (admin) --}}
 @extends('layouts.admin')
 
-@section('title', 'Flujo del procedimiento — Mesa de Partes')
+@section('title', 'Flujo del procedimiento · UGEL Santa')
+
+@section('header', 'Flujo: ' . $procedimiento->nombre)
+
+@section('subtitle', 'Configure nodos, equipos y nodo de entrada. La derivación AUTO avanza al siguiente nodo por orden; en MANUAL se elige cualquier destino.')
+
+@section('actions')
+    <a href="{{ route('admin.procedimientos') }}"
+        class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        Volver a procedimientos
+    </a>
+@endsection
 
 @push('styles')
 <style>
@@ -60,34 +72,31 @@
         border-top-color: #1f2937;
         z-index: 50;
     }
-    .input-sm { @apply border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full; }
-    .select-sm { @apply border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500; }
-    .btn-sm { @apply px-3 py-1.5 rounded text-sm font-medium transition-colors; }
-    .btn-primary-sm { @apply btn-sm bg-blue-600 text-white hover:bg-blue-700; }
-    .btn-secondary-sm { @apply btn-sm bg-gray-200 text-gray-700 hover:bg-gray-300; }
-    .btn-danger-sm { @apply btn-sm bg-red-100 text-red-600 hover:bg-red-200; }
-    .btn-purple-sm { @apply btn-sm bg-purple-100 text-purple-700 hover:bg-purple-200; }
-    .btn-indigo-sm { @apply btn-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-200; }
-    .label-xs { @apply block text-xs text-gray-500 mb-1; }
-    .checkbox-wrap { @apply flex items-center gap-1.5 cursor-pointer; }
-    .checkbox-wrap input { @apply w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500; }
+    /* Utilidades del editor (CSS real: @apply no funciona en <style> inline) */
+    .input-sm { border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.25rem 0.5rem; font-size: 0.875rem; width: 100%; }
+    .input-sm:focus { outline: none; box-shadow: 0 0 0 2px rgba(43,109,192,.35); border-color: #2b6dc0; }
+    .select-sm { border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.25rem 0.5rem; font-size: 0.875rem; background: #fff; }
+    .select-sm:focus { outline: none; box-shadow: 0 0 0 2px rgba(43,109,192,.35); border-color: #2b6dc0; }
+    .btn-sm { padding: 0.375rem 0.75rem; border-radius: 0.375rem; font-size: 0.875rem; font-weight: 500; transition: background-color .15s, color .15s; cursor: pointer; border: none; }
+    .btn-primary-sm { background: #1a4078; color: #fff; }
+    .btn-primary-sm:hover { background: #173763; }
+    .btn-secondary-sm { background: #e5e7eb; color: #374151; }
+    .btn-secondary-sm:hover { background: #d1d5db; }
+    .btn-danger-sm { background: #fee2e2; color: #b91c1c; }
+    .btn-danger-sm:hover { background: #fecaca; }
+    .btn-purple-sm { background: #f3e8ff; color: #6d28d9; }
+    .btn-purple-sm:hover { background: #e9d5ff; }
+    .btn-indigo-sm { background: #eef2ff; color: #4338ca; }
+    .btn-indigo-sm:hover { background: #e0e7ff; }
+    .label-xs { display: block; font-size: 0.75rem; color: #6b7280; margin-bottom: 0.25rem; }
+    .checkbox-wrap { display: flex; align-items: center; gap: 0.375rem; cursor: pointer; }
+    .checkbox-wrap input { width: 1rem; height: 1rem; accent-color: #1a4078; }
 </style>
 @endpush
 
 @section('content')
-<div class="p-6 max-w-7xl mx-auto">
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div>
-            <a href="{{ route('admin.procedimientos') }}" class="text-sm text-blue-600 hover:underline flex items-center gap-1">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                Volver a procedimientos
-            </a>
-            <h1 class="text-2xl font-bold text-gray-900 mt-2">Flujo: {{ $procedimiento->nombre }}</h1>
-            <p class="text-gray-600 text-sm mt-1">Configura nodos, equipos y nodo de entrada. La derivación AUTO avanza al siguiente nodo por orden; en MANUAL se elige cualquier destino.</p>
-        </div>
-    </div>
-
-    <div id="flujoAlert" class="hidden mb-4 p-3 rounded border text-sm"></div>
+<div class="max-w-7xl mx-auto">
+    <div id="flujoAlert" class="hidden mb-4 p-3 rounded-xl border text-sm"></div>
 
     {{-- NODO DE ENTRADA --}}
     <section class="section-card overflow-hidden mb-6">

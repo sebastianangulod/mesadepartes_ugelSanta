@@ -65,7 +65,7 @@ class VoucherService
             $rutaRelativa = $relDir . '/' . $nombreVoucher;
 
             // Cargar datos completos del trámite
-            $tramite->load(['usuario', 'procedimiento']);
+            $tramite->load(['usuario', 'titular', 'creador', 'procedimiento']);
             $procedimiento = $tramite->procedimiento;
 
             // Obtener nombres de niveles jerárquicos
@@ -160,10 +160,17 @@ class VoucherService
             $pdf->Cell(0, 8, 'INFORMACIÓN DEL SOLICITANTE', 0, 1, 'L');
             $pdf->SetFont('helvetica', '', 10);
 
-            $pdf->Cell(40, 6, 'Razón Social:', 0);
-            $pdf->Cell(60, 6, $tramite->usuario->razon_social ?? 'N/A', 0);
+            // Información del solicitante: siempre el titular ciudadano
+            // (snapshot en presenciales de no registrados), nunca el responsable.
+            $sol = $tramite->datosSolicitante();
+            $nombreSol = $tramite->nombre_solicitante !== '' ? $tramite->nombre_solicitante : 'N/A';
+
+            $pdf->Cell(40, 6, 'Solicitante:', 0);
+            $pdf->MultiCell(0, 6, $nombreSol);
             $pdf->Cell(40, 6, 'DNI:', 0);
-            $pdf->Cell(0, 6, $tramite->usuario->dni ?? 'N/A', 0, 1);
+            $pdf->Cell(60, 6, $sol['dni'] !== '' ? $sol['dni'] : 'N/A', 0);
+            $pdf->Cell(40, 6, 'RUC:', 0);
+            $pdf->Cell(0, 6, !empty($sol['ruc']) ? $sol['ruc'] : 'N/A', 0, 1);
 
             $pdf->Ln(3);
 

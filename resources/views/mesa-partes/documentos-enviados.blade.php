@@ -47,7 +47,15 @@
                                     {{ $documento->fecha_creacion->format('d/m/Y H:i') }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-300">
-                                    {{ $documento->procedimiento->nombre ?? 'N/A' }}
+                                    <span class="block text-sm text-gray-900">{{ $documento->procedimiento->nombre ?? 'N/A' }}</span>
+                                    @php
+                                        $datosSol = $documento->datosSolicitante();
+                                        $nombreSol = trim($documento->nombre_solicitante);
+                                        $docSol = $datosSol['dni'] ?: ($datosSol['ruc'] ?? '');
+                                    @endphp
+                                    @if($nombreSol !== '')
+                                    <span class="block text-[11px] text-slate-400 font-medium truncate max-w-[240px]" title="Titular: {{ $nombreSol }}{{ $docSol ? ' · ' . $docSol : '' }}">Titular: {{ $nombreSol }}{{ $docSol ? ' · ' . $docSol : '' }}</span>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-300">
                                     {{ $documento->archivo_adjunto ? basename($documento->archivo_adjunto) : 'Sin archivo' }}

@@ -11,6 +11,7 @@
 <div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-4xl mx-auto">
         <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+            <div class="h-1 bg-gradient-to-r from-primary-800 via-primary-500 to-accent-600"></div>
             <div class="px-6 py-4 bg-primary-700">
                 <h2 class="text-xl font-semibold text-white">Registro de Usuario</h2>
                 <p class="text-primary-100">Complete todos los campos para crear su cuenta</p>
@@ -74,8 +75,8 @@
                     </div>
                 </div>
 
-                {{-- Información Personal (se autocompleta después de validar DNI) --}}
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {{-- Información Personal (se autocompleta después de validar DNI; no aplica a Entidad Pública) --}}
+                <div id="datos-personales" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label for="nombres" class="block text-sm font-medium text-gray-700">Nombres</label>
                         <input type="text" name="nombres" id="nombres" required maxlength="20"
@@ -193,15 +194,39 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label for="password" class="block text-sm font-medium text-gray-700">Contraseña</label>
-                        <input type="password" name="password" id="password" required maxlength="25"
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm px-4 py-2.5 focus:ring-primary-600 focus:border-primary-600">
+                        <div class="relative">
+                            <input type="password" name="password" id="password" required maxlength="25"
+                                   class="mt-1 block w-full pl-4 pr-11 py-2.5 border-gray-300 rounded-md shadow-sm focus:ring-primary-600 focus:border-primary-600">
+                            <button type="button" id="toggleRegPassword" aria-label="Mostrar contraseña" aria-pressed="false" title="Mostrar contraseña"
+                                    class="absolute inset-y-0 right-0 mt-1 px-3 flex items-center text-gray-400 hover:text-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-600 rounded-r-md">
+                                <svg id="iconRegEyeOpen" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                                <svg id="iconRegEyeClosed" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.948 9.948 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+                                </svg>
+                            </button>
+                        </div>
                         <div id="passwordRequirements" class="mt-2 space-y-1"></div>
                     </div>
 
                     <div>
                         <label for="password_confirmation" class="block text-sm font-medium text-gray-700">Confirmar Contraseña</label>
-                        <input type="password" name="password_confirmation" id="password_confirmation" required
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm px-4 py-2.5 focus:ring-primary-600 focus:border-primary-600">
+                        <div class="relative">
+                            <input type="password" name="password_confirmation" id="password_confirmation" required
+                                   class="mt-1 block w-full pl-4 pr-11 py-2.5 border-gray-300 rounded-md shadow-sm focus:ring-primary-600 focus:border-primary-600">
+                            <button type="button" id="toggleRegPasswordConfirm" aria-label="Mostrar contraseña" aria-pressed="false" title="Mostrar contraseña"
+                                    class="absolute inset-y-0 right-0 mt-1 px-3 flex items-center text-gray-400 hover:text-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-600 rounded-r-md">
+                                <svg id="iconRegConfirmEyeOpen" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                                <svg id="iconRegConfirmEyeClosed" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.948 9.948 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -230,7 +255,7 @@
                         <div class="p-6 overflow-y-auto text-sm text-gray-700 space-y-4">
                             <div>
                                 <h4 class="font-semibold text-gray-900 mb-1">1. Objeto del servicio</h4>
-                                <p>La Mesa de Partes Digital es el canal virtual que la Unidad de Gestión Educativa Local Santa pone a disposición de la ciudadanía para presentar documentos e iniciar trámites desde cualquier lugar a través de internet, en el horario de Lun a Vie de 9:00 a.m. a 4:30 p.m.</p>
+                                <p>La Mesa de Partes Digital es el canal virtual que la Unidad de Gestión Educativa Local Santa pone a disposición de la ciudadanía para presentar documentos e iniciar trámites desde cualquier lugar a través de internet, en el horario de Lun a Vie de 8:00 a.m. a 4:30 p.m.</p>
                             </div>
                             <div>
                                 <h4 class="font-semibold text-gray-900 mb-1">2. Validez de los trámites</h4>
@@ -254,7 +279,7 @@
                             </div>
                             <div>
                                 <h4 class="font-semibold text-gray-900 mb-1">7. Contacto</h4>
-                                <p>Av. los Alcatraces S/N – Nuevo Chimbote · <span class="font-medium">mesadepartes@ugelsanta.gob.pe</span> · Lun a Vie de 9:00 a.m. a 4:30 p.m.</p>
+                                <p>Av. los Alcatraces S/N – Nuevo Chimbote · <span class="font-medium">mesadepartes@ugelsanta.gob.pe</span> · Lun a Vie de 8:00 a.m. a 4:30 p.m.</p>
                             </div>
                         </div>
                         <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
@@ -263,7 +288,7 @@
                                 Cerrar
                             </button>
                             <button type="button" id="btnAceptarTerminos"
-                                    class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                                    class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">
                                 He leído y acepto
                             </button>
                         </div>
@@ -277,16 +302,27 @@
                 
                 @if($recaptchaEnabled && !empty($recaptchaSiteKey))
                 <div class="flex justify-center mt-4">
-                    <div class="g-recaptcha" data-sitekey="{{ $recaptchaSiteKey }}" data-callback="onRecaptchaSuccess" data-expired-callback="onRecaptchaExpired"></div>
+                    <div id="recaptcha-widget"
+                         class="g-recaptcha"
+                         data-sitekey="{{ $recaptchaSiteKey }}"
+                         data-callback="onRecaptchaSuccess"
+                         data-expired-callback="onRecaptchaExpired"
+                         data-size="normal"
+                         data-theme="light"
+                         data-type="image"></div>
                 </div>
                 <div id="recaptcha-error" class="hidden mt-2 text-center text-sm text-red-600">
                     Por favor, complete el reCAPTCHA para continuar.
+                </div>
+                <div id="recaptcha-config-error" class="hidden mt-2 text-center text-sm text-red-600 bg-red-50 p-3 rounded border border-red-200">
+                    <strong>Error de configuración de reCAPTCHA</strong><br>
+                    <small>Verifique que el dominio esté registrado en Google reCAPTCHA y que las claves correspondan al mismo sitio.</small>
                 </div>
                 @endif
 
                 <div class="flex justify-between pt-4">
                     <button type="button" id="cancelar" 
-                            class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-md transition duration-200"
+                            class="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600 transition duration-200"
                             onclick="window.location.href='{{ route('login') }}'">
                         Cancelar
                     </button>
@@ -340,6 +376,32 @@ document.addEventListener('DOMContentLoaded', function() {
     const tipoPersonaRadios = document.querySelectorAll('input[name="tipo_persona"]');
     const datosJuridica = document.getElementById('datos-juridica');
     const datosEntidad = document.getElementById('datos-entidad');
+    const dniField = document.getElementById('dni_field');
+    const datosPersonales = document.getElementById('datos-personales');
+    const dniInputReg = document.getElementById('dni');
+    const nombresInputReg = document.getElementById('nombres');
+    const apPatInputReg = document.getElementById('apellido_paterno');
+    const apMatInputReg = document.getElementById('apellido_materno');
+
+    // Mostrar/ocultar contraseñas (helper único, sin colisión de nombres)
+    function wireRegPasswordToggle(btnId, inputId, openId, closedId) {
+        const btn = document.getElementById(btnId);
+        const input = document.getElementById(inputId);
+        const iconOpen = document.getElementById(openId);
+        const iconClosed = document.getElementById(closedId);
+        if (!btn || !input) return;
+        btn.addEventListener('click', function() {
+            const visible = input.type === 'text';
+            input.type = visible ? 'password' : 'text';
+            btn.setAttribute('aria-pressed', String(!visible));
+            btn.setAttribute('aria-label', visible ? 'Mostrar contraseña' : 'Ocultar contraseña');
+            btn.setAttribute('title', visible ? 'Mostrar contraseña' : 'Ocultar contraseña');
+            if (iconOpen) iconOpen.classList.toggle('hidden', !visible);
+            if (iconClosed) iconClosed.classList.toggle('hidden', visible);
+        });
+    }
+    wireRegPasswordToggle('toggleRegPassword', 'password', 'iconRegEyeOpen', 'iconRegEyeClosed');
+    wireRegPasswordToggle('toggleRegPasswordConfirm', 'password_confirmation', 'iconRegConfirmEyeOpen', 'iconRegConfirmEyeClosed');
     
     // Inicializar validación de contraseña
     initPasswordValidation();
@@ -348,9 +410,19 @@ document.addEventListener('DOMContentLoaded', function() {
     initEmailValidation();
     
     // Manejar cambio de tipo de persona
+    // Entidad Pública no usa DNI ni datos personales: solo nombre de la entidad.
     function toggleDatosTipoPersona() {
         const selectedValue = document.querySelector('input[name="tipo_persona"]:checked').value;
-        
+        const esEntidad = selectedValue === '3';
+
+        if (dniField) dniField.classList.toggle('hidden', esEntidad);
+        if (datosPersonales) datosPersonales.classList.toggle('hidden', esEntidad);
+        [dniInputReg, nombresInputReg, apPatInputReg, apMatInputReg].forEach(function(el) {
+            if (!el) return;
+            if (esEntidad) el.removeAttribute('required');
+            else el.setAttribute('required', 'required');
+        });
+
         if (selectedValue === '2') {
             datosJuridica.classList.remove('hidden');
             datosEntidad.classList.add('hidden');
@@ -550,14 +622,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const telefono = document.getElementById('telefono').value;
         const telefonoValido = /^\d{9}$/.test(telefono);
         
-        // Validaciones específicas por tipo
+        // Validaciones específicas por tipo (Entidad Pública no usa DNI)
         let validacionesEspecificas = false;
         if (tipoPersona === '1') {
             validacionesEspecificas = dniValidado && emailValidado;
         } else if (tipoPersona === '2') {
             validacionesEspecificas = dniValidado && rucValidado && emailValidado;
         } else if (tipoPersona === '3') {
-            validacionesEspecificas = dniValidado && emailValidado && 
+            validacionesEspecificas = emailValidado &&
                                      document.getElementById('nombre_entidad').value.trim() !== '';
         }
         
@@ -835,18 +907,39 @@ document.addEventListener('DOMContentLoaded', function() {
 @endphp
 
 @if($recaptchaEnabled && !empty($recaptchaSiteKey))
-<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+<script src="https://www.google.com/recaptcha/api.js?hl=es" async defer></script>
 <script>
+// Variable global para almacenar el token
+window.recaptchaToken = null;
+
 // Callback cuando reCAPTCHA se completa exitosamente
 function onRecaptchaSuccess(token) {
+    window.recaptchaToken = token;
     const errorDiv = document.getElementById('recaptcha-error');
     if (errorDiv) {
         errorDiv.classList.add('hidden');
+    }
+
+    const form = document.getElementById('registroForm');
+    if (form) {
+        setTimeout(function() {
+            const textarea = form.querySelector('textarea[name="g-recaptcha-response"]');
+            if (textarea && !textarea.value && token) {
+                textarea.value = token;
+            } else if (!textarea) {
+                const hiddenInput = document.createElement('textarea');
+                hiddenInput.name = 'g-recaptcha-response';
+                hiddenInput.style.display = 'none';
+                hiddenInput.value = token;
+                form.appendChild(hiddenInput);
+            }
+        }, 100);
     }
 }
 
 // Callback cuando reCAPTCHA expira
 function onRecaptchaExpired() {
+    window.recaptchaToken = null;
     const errorDiv = document.getElementById('recaptcha-error');
     if (errorDiv) {
         errorDiv.classList.remove('hidden');
@@ -856,18 +949,40 @@ function onRecaptchaExpired() {
 // Validar reCAPTCHA antes de enviar el formulario
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('registroForm');
-    if (form && {{ $recaptcha_enabled ? 'true' : 'false' }}) {
+    if (form) {
         form.addEventListener('submit', function(e) {
-            if (typeof grecaptcha !== 'undefined') {
-                const recaptchaResponse = grecaptcha.getResponse();
-                if (!recaptchaResponse || recaptchaResponse.length === 0) {
-                    e.preventDefault();
-                    const errorDiv = document.getElementById('recaptcha-error');
-                    if (errorDiv) {
-                        errorDiv.classList.remove('hidden');
-                    }
-                    return false;
+            const existingTextarea = form.querySelector('textarea[name="g-recaptcha-response"]');
+            let recaptchaResponse = null;
+
+            if (existingTextarea && existingTextarea.value) {
+                recaptchaResponse = existingTextarea.value;
+            } else if (window.recaptchaToken) {
+                recaptchaResponse = window.recaptchaToken;
+            } else if (typeof grecaptcha !== 'undefined') {
+                try {
+                    recaptchaResponse = grecaptcha.getResponse() || grecaptcha.getResponse(0);
+                } catch (err) {
+                    console.error('Error al obtener respuesta de grecaptcha:', err);
                 }
+            }
+
+            if (!recaptchaResponse || recaptchaResponse.length === 0) {
+                e.preventDefault();
+                const errorDiv = document.getElementById('recaptcha-error');
+                if (errorDiv) {
+                    errorDiv.classList.remove('hidden');
+                }
+                return false;
+            }
+
+            if (!existingTextarea) {
+                const hiddenInput = document.createElement('textarea');
+                hiddenInput.name = 'g-recaptcha-response';
+                hiddenInput.style.display = 'none';
+                hiddenInput.value = recaptchaResponse;
+                form.appendChild(hiddenInput);
+            } else if (!existingTextarea.value) {
+                existingTextarea.value = recaptchaResponse;
             }
         });
     }

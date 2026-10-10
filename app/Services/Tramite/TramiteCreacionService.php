@@ -226,6 +226,40 @@ class TramiteCreacionService
             throw new Exception('Debe seleccionar el tipo de persona del ciudadano.');
         }
 
+        // Entidad pública: solo nombre de la entidad (sin DNI ni RUC).
+        // El nombre cumple el rol de identificador (columna razon_social,
+        // igual que la razón social del RUC en persona jurídica).
+        if ($tipo === 3) {
+            $razon = mb_strtoupper(trim((string) ($datos['titular_razon_social'] ?? '')), 'UTF-8');
+            if ($razon === '') {
+                throw new Exception('Debe ingresar el nombre de la entidad pública.');
+            }
+
+            $existente = Usuario::where('tipo_persona', 3)
+                ->whereRaw('UPPER(razon_social) = ?', [$razon])
+                ->first();
+            if ($existente && (int) $existente->id === (int) $usuarioInterno->id) {
+                throw new Exception('La entidad ingresada corresponde al propio usuario interno.');
+            }
+
+            Log::info('Titular presencial resuelto (entidad pública)', [
+                'razon_social' => $razon,
+                'registrado' => (bool) $existente,
+                'id_titular' => $existente?->id,
+            ]);
+
+            return [
+                'id_titular' => $existente?->id,
+                'titular_tipo_persona' => $tipo,
+                'titular_dni' => null,
+                'titular_nombres' => null,
+                'titular_apellido_paterno' => null,
+                'titular_apellido_materno' => null,
+                'titular_ruc' => null,
+                'titular_razon_social' => $razon,
+            ];
+        }
+
         $dni = preg_replace('/[^0-9]/', '', (string) ($datos['titular_dni'] ?? ''));
         if (!preg_match('/^\d{8}$/', $dni)) {
             throw new Exception('El DNI del ciudadano debe tener 8 dígitos.');
@@ -248,11 +282,6 @@ class TramiteCreacionService
             }
             if ($razon === '') {
                 throw new Exception('Debe validar el RUC para obtener la razón social.');
-            }
-        } elseif ($tipo === 3) {
-            $razon = mb_strtoupper(trim((string) ($datos['titular_razon_social'] ?? '')), 'UTF-8');
-            if ($razon === '') {
-                throw new Exception('Debe ingresar el nombre de la entidad pública.');
             }
         }
 

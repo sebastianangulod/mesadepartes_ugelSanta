@@ -89,7 +89,7 @@ class MesaPartesController extends Controller
         // Obtener documentos enviados por el usuario
         // - Usuarios externos: trámites que ellos crearon (creado_por), o legacy por id_usuario
         // - Usuarios internos: trámites asignados a ellos (id_usuario) O que ellos crearon (creado_por)
-        $query = Tramite::with('procedimiento');
+        $query = Tramite::with(['procedimiento', 'titular', 'creador', 'usuario']);
 
         if ($usuario->tipo_user == 1) {
             $query->where(function ($q) use ($usuario) {

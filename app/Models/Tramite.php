@@ -145,7 +145,8 @@ class Tramite extends Model
      */
     public function datosSolicitante(): array
     {
-        if ($this->titular_dni || $this->titular_nombres || $this->id_titular) {
+        if ($this->titular_dni || $this->titular_nombres || $this->titular_razon_social
+            || $this->titular_tipo_persona || $this->id_titular) {
             if ($this->relationLoaded('titular') && $this->titular) {
                 return [
                     'nombres' => $this->titular_nombres ?? $this->titular->nombres ?? '',

@@ -93,28 +93,63 @@ class AuthController extends Controller
                 $this->validarRecaptcha($request->input('g-recaptcha-response'));
             }
 
-            // Validar credenciales
-            $credentials = $request->validate([
-                'dni' => 'required|string|size:8|regex:/^\\d{8}$/',
+            // Validar credenciales.
+            // Entidad Pública (tipo_persona 3) se identifica con el nombre
+            // de la entidad y no usa DNI.
+            $tipoPersona = (int) $request->input('tipo_persona');
+            $esEntidad = $tipoPersona === 3;
+
+            $rules = [
                 'password' => 'required|string|min:6',
                 // 1: Natural, 2: Jurídica, 3: Entidad Pública
                 'tipo_persona' => 'required|in:1,2,3',
                 'ruc' => 'nullable|string|max:45',
-                'nombre_entidad' => 'nullable|string|max:255',
+                'nombre_entidad' => 'nullable|string|max:45',
                 'remember' => 'boolean'
-            ]);
+            ];
 
-            // Buscar usuario por DNI y tipo de persona
-            $usuario = Usuario::where('dni', $credentials['dni'])
-                ->where('tipo_user', 1) // 1: Usuario externo
-                ->where('tipo_persona', $credentials['tipo_persona'])
-                ->first();
+            if ($esEntidad) {
+                $rules['dni'] = 'nullable|string';
+                $rules['nombre_entidad'] = 'required|string|max:45';
+            } else {
+                $rules['dni'] = 'required|string|size:8|regex:/^\\d{8}$/';
+            }
 
-            if (!$usuario) {
-                Log::warning("Intento de login con DNI no registrado: {$credentials['dni']}");
-                throw ValidationException::withMessages([
-                    'dni' => 'El DNI no está registrado o no coincide con el tipo de persona seleccionado.'
-                ]);
+            $credentials = $request->validate($rules);
+
+            if ($esEntidad) {
+                // Buscar entidad por nombre (guardado en mayúsculas) y tipo de persona
+                $nombreEntidad = mb_strtoupper(trim($credentials['nombre_entidad']));
+                $identificador = 'ENTIDAD:' . $nombreEntidad;
+                $campoId = 'nombre_entidad';
+
+                $usuario = Usuario::where('razon_social', $nombreEntidad)
+                    ->where('tipo_user', 1) // 1: Usuario externo
+                    ->where('tipo_persona', 3)
+                    ->first();
+
+                if (!$usuario) {
+                    Log::warning("Intento de login con entidad no registrada: {$nombreEntidad}");
+                    throw ValidationException::withMessages([
+                        'nombre_entidad' => 'La entidad no está registrada o no coincide con el tipo de persona seleccionado.'
+                    ]);
+                }
+            } else {
+                // Buscar usuario por DNI y tipo de persona
+                $identificador = $credentials['dni'];
+                $campoId = 'dni';
+
+                $usuario = Usuario::where('dni', $credentials['dni'])
+                    ->where('tipo_user', 1) // 1: Usuario externo
+                    ->where('tipo_persona', $credentials['tipo_persona'])
+                    ->first();
+
+                if (!$usuario) {
+                    Log::warning("Intento de login con DNI no registrado: {$credentials['dni']}");
+                    throw ValidationException::withMessages([
+                        'dni' => 'El DNI no está registrado o no coincide con el tipo de persona seleccionado.'
+                    ]);
+                }
             }
 
             // Verificaciones adicionales según tipo de persona (mismas que en el PHP puro)
@@ -131,12 +166,8 @@ class AuthController extends Controller
                     ]);
                 }
             } elseif ((int)$credentials['tipo_persona'] === 3) { // Entidad Pública
-                if (empty($credentials['nombre_entidad'])) {
-                    throw ValidationException::withMessages([
-                        'nombre_entidad' => 'El nombre de la entidad es obligatorio para entidad pública.'
-                    ]);
-                }
-
+                // La entidad ya fue localizada por su nombre (razon_social);
+                // solo se verifica que la cuenta tenga entidad asociada.
                 if (empty($usuario->razon_social)) {
                     throw ValidationException::withMessages([
                         'nombre_entidad' => 'Su cuenta no tiene una entidad asociada. Comuníquese con la mesa de partes.'
@@ -151,8 +182,8 @@ class AuthController extends Controller
                     $usuario->passw = Hash::make($credentials['password']);
                     $usuario->save();
                 } else {
-                    Log::warning("Intento de login fallido para DNI: {$credentials['dni']}");
-                    $this->registrarIntentoFallido($credentials['dni'], $request->ip());
+                    Log::warning("Intento de login fallido para: {$identificador}");
+                    $this->registrarIntentoFallido($identificador, $request->ip());
                     
                     throw ValidationException::withMessages([
                         'password' => 'La contraseña es incorrecta.'
@@ -163,7 +194,7 @@ class AuthController extends Controller
             // Verificar si el usuario está bloqueado
             if ($this->estaUsuarioBloqueado($usuario)) {
                 throw ValidationException::withMessages([
-                    'dni' => 'La cuenta está temporalmente bloqueada por múltiples intentos fallidos.'
+                    $campoId => 'La cuenta está temporalmente bloqueada por múltiples intentos fallidos.'
                 ]);
             }
 
@@ -171,7 +202,7 @@ class AuthController extends Controller
             Auth::login($usuario, $credentials['remember'] ?? false);
             
             // Limpiar intentos fallidos
-            $this->limpiarIntentosFallidos($credentials['dni']);
+            $this->limpiarIntentosFallidos($identificador);
             
             // Registrar acceso exitoso
             $this->registrarAccesoExitoso($usuario, $request->ip());
@@ -297,9 +328,13 @@ class AuthController extends Controller
                 $this->validarRecaptcha($request->input('g-recaptcha-response'));
             }
 
-            // Validar datos del formulario según estructura SQL (como en PHP puro)
-            $validated = $request->validate([
-                'dni' => 'required|string|size:8|regex:/^\\d{8}$/',
+            // Validar datos del formulario según estructura SQL (como en PHP puro).
+            // Entidad Pública (tipo_persona 3) no usa DNI: se identifica
+            // con el nombre de la entidad.
+            $tipoPersona = (int) $request->input('tipo_persona');
+            $esEntidad = $tipoPersona === 3;
+
+            $rules = [
                 'nombres' => 'required|string|max:20',
                 'apellido_paterno' => 'required|string|max:20',
                 'apellido_materno' => 'required|string|max:20',
@@ -312,17 +347,54 @@ class AuthController extends Controller
                 'ruc' => 'nullable|string|max:45',
                 'razon_social' => 'nullable|string|max:45',
                 'nombre_entidad' => 'nullable|string|max:45',
-            ]);
+            ];
 
-            // Validar que DNI + tipo_persona sea único (como en PHP puro)
-            $existeUsuario = Usuario::where('dni', $validated['dni'])
-                ->where('tipo_persona', $validated['tipo_persona'])
-                ->exists();
-            
-            if ($existeUsuario) {
-                throw ValidationException::withMessages([
-                    'dni' => 'Ya existe un usuario registrado con este DNI y tipo de persona.'
-                ]);
+            if ($esEntidad) {
+                $rules['dni'] = 'nullable|string';
+                // Sin persona natural detrás: el nombre de la entidad
+                // ocupa el campo de nombres para la visualización.
+                $rules['nombres'] = 'nullable|string|max:100';
+                $rules['apellido_paterno'] = 'nullable|string|max:100';
+                $rules['apellido_materno'] = 'nullable|string|max:100';
+                $rules['nombre_entidad'] = 'required|string|max:45';
+            } else {
+                $rules['dni'] = 'required|string|size:8|regex:/^\\d{8}$/';
+            }
+
+            $validated = $request->validate($rules);
+
+            if ($esEntidad) {
+                // Unicidad por nombre de entidad + tipo de persona
+                $nombreEntidad = mb_strtoupper(trim($validated['nombre_entidad']));
+
+                $existeEntidad = Usuario::where('razon_social', $nombreEntidad)
+                    ->where('tipo_persona', 3)
+                    ->exists();
+
+                if ($existeEntidad) {
+                    throw ValidationException::withMessages([
+                        'nombre_entidad' => 'Ya existe una cuenta registrada con este nombre de entidad.'
+                    ]);
+                }
+
+                // Para entidad pública, nombre_entidad se guarda en razon_social
+                // y también en nombres para la visualización en el sistema.
+                $validated['razon_social'] = $nombreEntidad;
+                $validated['nombres'] = $nombreEntidad;
+                $validated['apellido_paterno'] = '';
+                $validated['apellido_materno'] = null;
+                $validated['dni'] = null;
+            } else {
+                // Validar que DNI + tipo_persona sea único (como en PHP puro)
+                $existeUsuario = Usuario::where('dni', $validated['dni'])
+                    ->where('tipo_persona', $validated['tipo_persona'])
+                    ->exists();
+
+                if ($existeUsuario) {
+                    throw ValidationException::withMessages([
+                        'dni' => 'Ya existe un usuario registrado con este DNI y tipo de persona.'
+                    ]);
+                }
             }
 
             // Validaciones según tipo de persona
@@ -331,16 +403,11 @@ class AuthController extends Controller
                     'ruc' => 'required|string|max:45',
                     'razon_social' => 'required|string|max:45',
                 ]);
-            } elseif ($validated['tipo_persona'] == 3) { // Entidad Pública
-                $request->validate([
-                    'nombre_entidad' => 'required|string|max:45',
-                ]);
-                // Para entidad pública, nombre_entidad se guarda en razon_social
-                $validated['razon_social'] = strtoupper($validated['nombre_entidad']);
             }
 
             // Validar documento con API externa si está habilitado
-            if (config('services.reniec.enabled', false)) {
+            // (solo cuando hay DNI: Entidad Pública no lo usa)
+            if (!$esEntidad && config('services.reniec.enabled', false)) {
                 $datosDocumento = $this->apiPeruService->consultarDni($validated['dni']);
                 
                 if ($datosDocumento) {
@@ -349,12 +416,14 @@ class AuthController extends Controller
                 }
             }
 
-            // Crear el usuario (convertir nombres a mayúsculas como en PHP puro)
+            // Crear el usuario (convertir nombres a mayúsculas como en PHP puro).
+            // Entidad Pública: nombres ya trae la entidad en mayúsculas,
+            // apellidos en blanco y DNI nulo.
             $usuario = Usuario::create([
-                'dni' => $validated['dni'],
-                'nombres' => strtoupper($validated['nombres']),
-                'apellido_paterno' => strtoupper($validated['apellido_paterno']),
-                'apellido_materno' => strtoupper($validated['apellido_materno']),
+                'dni' => $validated['dni'] ?? null,
+                'nombres' => strtoupper($validated['nombres'] ?? ''),
+                'apellido_paterno' => strtoupper($validated['apellido_paterno'] ?? ''),
+                'apellido_materno' => isset($validated['apellido_materno']) ? strtoupper($validated['apellido_materno']) : null,
                 'email' => $validated['email'],
                 'telefono' => $validated['telefono'],
                 'direccion' => strtoupper($validated['direccion']),
@@ -371,7 +440,8 @@ class AuthController extends Controller
             $this->enviarEmailBienvenida($usuario);
 
             // Registrar el registro exitoso
-            Log::info("Usuario registrado exitosamente: {$usuario->email} (DNI: {$usuario->dni})");
+            $identificadorRegistro = $usuario->dni ?? ('ENTIDAD:' . $usuario->razon_social);
+            Log::info("Usuario registrado exitosamente: {$usuario->email} ({$identificadorRegistro})");
 
             return redirect()->route('login')->with('success', 'Registro exitoso. Por favor, inicie sesión con sus credenciales.');
 
@@ -1002,12 +1072,24 @@ class AuthController extends Controller
     }
 
     /**
+     * Identificador de la cuenta para bloqueo, intentos y bitácora.
+     * Entidad Pública no tiene DNI: se usa su nombre (razon_social).
+     */
+    protected function identificadorCuenta($usuario): string
+    {
+        if (!empty($usuario->dni)) {
+            return (string) $usuario->dni;
+        }
+
+        return 'ENTIDAD:' . ($usuario->razon_social ?? $usuario->id);
+    }
+
+    /**
      * Verificar si el usuario está bloqueado por intentos fallidos
-     * NOTA: Tanto usuarios internos como externos usan DNI
      */
     protected function estaUsuarioBloqueado($usuario)
     {
-        $identificador = $usuario->dni; // Ambos tipos de usuario usan DNI
+        $identificador = $this->identificadorCuenta($usuario);
         $intentosFallidos = cache()->get("intentos_fallidos_{$identificador}", 0);
         $tiempoBloqueo = config('auth.lockout_time', 300); // 5 minutos por defecto
         $ultimoIntento = cache()->get("ultimo_intento_{$identificador}");
@@ -1046,11 +1128,10 @@ class AuthController extends Controller
 
     /**
      * Registrar acceso exitoso
-     * NOTA: Tanto usuarios internos como externos usan DNI en el sistema PHP puro
      */
     protected function registrarAccesoExitoso($usuario, $ip)
     {
-        $identificador = $usuario->dni; // Ambos tipos de usuario usan DNI
+        $identificador = $this->identificadorCuenta($usuario);
         Log::info("Login exitoso para usuario: {$identificador} (ID: {$usuario->id}, Tipo: {$usuario->tipo_user}) desde IP: {$ip}");
     }
 

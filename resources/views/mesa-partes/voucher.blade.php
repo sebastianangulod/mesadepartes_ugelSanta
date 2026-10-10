@@ -117,7 +117,9 @@
             <p><span>Razón Social & Apellidos y Nombres:</span> 
                 {{ $sol['razon_social'] && in_array($tramite->titular_tipo_persona, [2, 3]) ? $sol['razon_social'] : trim($sol['nombres'] . ' ' . $sol['apellido_paterno'] . ' ' . $sol['apellido_materno']) }}
             </p>
+            @if(!empty($sol['dni']))
             <p><span>DNI:</span> {{ $sol['dni'] }}</p>
+            @endif
             @if(!empty($sol['ruc']))
             <p><span>RUC:</span> {{ $sol['ruc'] }}</p>
             @endif

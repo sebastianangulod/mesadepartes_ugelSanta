@@ -4,39 +4,24 @@
 --}}
 @extends('layouts.admin')
 
-@section('title', 'Administración de Procedimientos - Mesa de Partes')
+@section('title', 'Gestión de Procedimientos · UGEL Santa')
+
+@section('header', 'Gestión de Procedimientos')
+
+@section('subtitle', 'Cree procedimientos, defina su flujo por nodos y asigne especialistas.')
+
+@section('actions')
+    <button onclick="openModal('modalAddProcedimiento')"
+        class="inline-flex items-center gap-2 rounded-xl bg-primary-700 hover:bg-primary-800 px-4 py-2.5 text-[13px] font-bold text-white shadow-md shadow-primary-700/20 transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+        Crear Procedimiento
+    </button>
+@endsection
 
 @push('styles')
 <style>
-    /* Estilos para modales - centrados en el área de contenido (sin sidebar) */
-    #modalAddProcedimiento,
-    #modalEditProcedimiento,
-    #modalDeleteProcedimiento,
-    #modalAsignarEspecialistas {
-        backdrop-filter: blur(4px);
-        /* Centrar solo en el área de contenido, considerando el sidebar de 250px */
-        left: 250px;
-        width: calc(100% - 250px);
-    }
-    
-    /* Resaltar bordes del modal para mejor visibilidad */
-    #modalAddProcedimiento > div,
-    #modalEditProcedimiento > div,
-    #modalDeleteProcedimiento > div,
-    #modalAsignarEspecialistas > div {
-        border: 2px solid #e5e7eb;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    }
-    
-    /* Borde más visible en hover o focus */
-    #modalAddProcedimiento > div:focus-within,
-    #modalEditProcedimiento > div:focus-within,
-    #modalDeleteProcedimiento > div:focus-within,
-    #modalAsignarEspecialistas > div:focus-within {
-        border-color: #3b82f6;
-        box-shadow: 0 20px 25px -5px rgba(59, 130, 246, 0.1), 0 10px 10px -5px rgba(59, 130, 246, 0.04);
-    }
-    
+    /* Los modales usan overlay a pantalla completa centrado (sin offsets de sidebar) */
+
     /* Asegurar que el contenido del modal sea scrollable */
     .modal-content-procedimiento {
         scrollbar-width: thin;
@@ -64,12 +49,8 @@
     
     /* En pantallas pequeñas, el modal debe ocupar toda la pantalla */
     @media (max-width: 768px) {
-        #modalAddProcedimiento,
-        #modalEditProcedimiento,
-        #modalDeleteProcedimiento,
-        #modalAsignarEspecialistas {
-            left: 0;
-            width: 100%;
+        .modal-content-procedimiento {
+            max-height: 94vh;
         }
     }
     
@@ -98,28 +79,19 @@
 @endpush
 
 @section('content')
-    
-    <div class="flex justify-between items-center mb-6">
-        <h2 class="text-3xl font-bold text-gray-900">Gestión de Procedimientos</h2>
-        <button onclick="openModal('modalAddProcedimiento')" class="btn-primary flex items-center">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-            Crear Procedimiento
-        </button>
-    </div>
 
     <!-- Tabla de Procedimientos -->
-    <div class="bg-white shadow-md rounded-lg p-6 overflow-x-auto">
-        <table class="min-w-full leading-normal">
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto mp-scroll">
+        <table class="min-w-full text-sm">
             <thead>
-                <tr>
-                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">#</th>
-                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre del Procedimiento</th>
-                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nivel 1</th>
-                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nivel 2</th>
-                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nivel Final</th>
-                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
+                <tr class="bg-slate-50 text-left">
+                    <th class="px-5 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">#</th>
+                    <th class="px-5 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Nombre del Procedimiento</th>
+                    <th class="px-5 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Nivel 1</th>
+                    <th class="px-5 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Nivel 2</th>
+                    <th class="px-5 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Nivel Final</th>
+                    <th class="px-5 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider text-right">Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -171,12 +143,12 @@
                 @endforelse
             </tbody>
         </table>
-    </div>
-</div>
+        </div>
+</section>
 
 <!-- Modal Añadir Procedimiento -->
-<div id="modalAddProcedimiento" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="overflow-y: auto;">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-md relative my-auto modal-content-procedimiento border-2 border-gray-200">
+<div id="modalAddProcedimiento" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto">
+    <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-md relative my-auto modal-content-procedimiento border border-slate-200">
         <div class="sticky top-0 bg-white border-b-2 border-gray-300 px-6 py-4 z-10 rounded-t-lg">
             <h2 class="text-xl font-bold text-gray-900">Añadir Procedimiento</h2>
         </div>
@@ -241,8 +213,8 @@
                 </select>
             </div>
             <div class="flex justify-end space-x-2 mt-6 pt-4 border-t-2 border-gray-300">
-                <button type="button" onclick="closeModal('modalAddProcedimiento')" class="btn-secondary">Cancelar</button>
-                <button type="submit" class="btn-primary">Guardar</button>
+                <button type="button" onclick="closeModal('modalAddProcedimiento')" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm font-bold hover:bg-slate-200 transition">Cancelar</button>
+                <button type="submit" class="px-4 py-2.5 rounded-xl bg-primary-700 text-white text-sm font-bold hover:bg-primary-800 transition">Guardar</button>
             </div>
         </form>
         </div>
@@ -250,8 +222,8 @@
 </div>
 
 <!-- Modal Editar Procedimiento -->
-<div id="modalEditProcedimiento" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="overflow-y: auto;">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-md relative my-auto modal-content-procedimiento border-2 border-gray-200">
+<div id="modalEditProcedimiento" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto">
+    <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-md relative my-auto modal-content-procedimiento border border-slate-200">
         <div class="sticky top-0 bg-white border-b-2 border-gray-300 px-6 py-4 z-10 rounded-t-lg">
             <h2 class="text-xl font-bold text-gray-900">Editar Procedimiento</h2>
         </div>
@@ -318,8 +290,8 @@
                 </select>
             </div>
             <div class="flex justify-end space-x-2 mt-6 pt-4 border-t-2 border-gray-300">
-                <button type="button" onclick="closeModal('modalEditProcedimiento')" class="btn-secondary">Cancelar</button>
-                <button type="submit" class="btn-primary">Actualizar</button>
+                <button type="button" onclick="closeModal('modalEditProcedimiento')" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm font-bold hover:bg-slate-200 transition">Cancelar</button>
+                <button type="submit" class="px-4 py-2.5 rounded-xl bg-primary-700 text-white text-sm font-bold hover:bg-primary-800 transition">Actualizar</button>
             </div>
         </form>
         </div>
@@ -327,8 +299,8 @@
 </div>
 
 <!-- Modal Asignar Especialistas -->
-<div id="modalAsignarEspecialistas" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="overflow-y: auto;">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl relative my-auto modal-content-procedimiento border-2 border-gray-200">
+<div id="modalAsignarEspecialistas" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto">
+    <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative my-auto modal-content-procedimiento border border-slate-200">
         <div class="sticky top-0 bg-white border-b-2 border-gray-300 px-6 py-4 z-10 rounded-t-lg">
             <h2 class="text-xl font-bold text-gray-900">Asignar Especialistas</h2>
             <p class="text-sm text-gray-600 mt-1" id="modalProcedimientoNombre"></p>
@@ -350,16 +322,16 @@
                 </div>
             </div>
             <div class="flex justify-end space-x-2 mt-6 pt-4 border-t-2 border-gray-300">
-                <button type="button" onclick="closeModal('modalAsignarEspecialistas')" class="btn-secondary">Cancelar</button>
-                <button type="button" onclick="guardarAsignacionEspecialistas(event)" class="btn-primary">Guardar Asignación</button>
+                <button type="button" onclick="closeModal('modalAsignarEspecialistas')" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm font-bold hover:bg-slate-200 transition">Cancelar</button>
+                <button type="button" onclick="guardarAsignacionEspecialistas(event)" class="px-4 py-2.5 rounded-xl bg-primary-700 text-white text-sm font-bold hover:bg-primary-800 transition">Guardar Asignación</button>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Modal Eliminar Procedimiento -->
-<div id="modalDeleteProcedimiento" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="backdrop-filter: blur(4px);">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-md border-2 border-gray-200">
+<div id="modalDeleteProcedimiento" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px]">
+    <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200">
         <div class="px-6 py-4 border-b-2 border-gray-300">
             <h2 class="text-2xl font-bold text-red-600">Eliminar Procedimiento</h2>
         </div>
@@ -380,8 +352,8 @@
             </div>
         </div>
         <div class="px-6 py-4 border-t-2 border-gray-300 flex justify-end space-x-2">
-            <button type="button" onclick="closeModal('modalDeleteProcedimiento')" class="btn-secondary">Cancelar</button>
-            <button type="button" onclick="confirmarEliminarProcedimiento(event)" class="btn-danger">Eliminar</button>
+            <button type="button" onclick="closeModal('modalDeleteProcedimiento')" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm font-bold hover:bg-slate-200 transition">Cancelar</button>
+            <button type="button" onclick="confirmarEliminarProcedimiento(event)" class="px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition">Eliminar</button>
         </div>
     </div>
 </div>
@@ -405,7 +377,7 @@
     
     // Cerrar modal al hacer clic en el backdrop
     document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('bg-gray-900') || e.target.classList.contains('bg-opacity-75')) {
+        if (e.target.classList.contains('bg-gray-900') || e.target.classList.contains('bg-opacity-75') || e.target.classList.contains('bg-slate-950/55')) {
             const modal = e.target.closest('[id^="modal"]');
             if (modal) {
                 closeModal(modal.id);

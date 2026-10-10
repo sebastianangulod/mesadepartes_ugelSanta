@@ -4,333 +4,302 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    
-    <title>@yield('title', 'Panel de Administración - Mesa de Partes')</title>
-    
-    <!-- Tailwind CSS -->
+    <meta name="description" content="Panel de Administración — UGEL Santa">
+
+    <title>@yield('title', 'Panel de Administración · UGEL Santa')</title>
+    <link rel="icon" href="{{ asset('favicon.ico') }}">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    
-    <!-- Admin Sidebar CSS -->
+
     <style>
-        /* Sidebar container */
-        .sidebar {
-            position: fixed;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            width: 250px;
-            z-index: 100;
-            padding: 48px 0 0;
-            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
-            background-color: #2D3748 !important;
-            color: white;
-            overflow-y: auto;
+        html { -webkit-font-smoothing: antialiased; }
+        body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+
+        /* Scrollbar institucional */
+        .mp-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+        .mp-scroll::-webkit-scrollbar-track { background: transparent; }
+        .mp-scroll::-webkit-scrollbar-thumb { background: rgba(148,163,184,.45); border-radius: 999px; }
+        .mp-scroll::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,.7); }
+        .sidebar-scroll::-webkit-scrollbar { width: 5px; }
+        .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 999px; }
+
+        /* Patrón sutil del sidebar */
+        .sidebar-pattern {
+            background-image:
+                radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px);
+            background-size: 18px 18px;
         }
 
-        /* Main content area */
-        .main-content {
-            margin-left: 250px;
-            min-height: 100vh;
-            background-color: #f3f4f6;
-            overflow-x: hidden;
-            max-width: calc(100% - 250px);
-            width: 100%;
-        }
-        
-        body {
-            background-color: #f3f4f6;
-            margin: 0;
-            padding: 0;
-        }
-        
-        html {
-            margin: 0;
-            padding: 0;
-        }
-        
-        @media (max-width: 767.98px) {
-            .sidebar {
-                position: static;
-                padding-top: 0;
-            }
-            
-            .main-content {
-                margin-left: 0;
-                max-width: 100%;
-            }
-        }
+        /* Animaciones */
+        @keyframes mp-fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .mp-animate { animation: mp-fade-up .45s ease both; }
+        .mp-animate-1 { animation-delay: .05s; } .mp-animate-2 { animation-delay: .12s; }
+        .mp-animate-3 { animation-delay: .18s; } .mp-animate-4 { animation-delay: .24s; }
 
-        /* Loading indicator */
-        .loading {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 9999;
-        }
+        @keyframes mp-spin { to { transform: rotate(360deg); } }
+        .mp-spinner { animation: mp-spin 1s linear infinite; }
 
-        .loading-content {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 20px;
-            border-radius: 5px;
-            text-align: center;
-        }
+        @keyframes mp-modal-in { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .mp-modal-panel { animation: mp-modal-in .22s ease both; }
 
-        /* User profile section */
-        .user-profile {
-            text-align: center;
-            padding: 20px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
+        /* Foco accesible */
+        :focus-visible { outline: 2px solid #2b6dc0; outline-offset: 2px; }
 
-        .user-avatar {
-            background-color: white;
-            border-radius: 50%;
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        /* Nav list styling */
-        nav ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        /* Menu items */
-        .menu-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 20px;
-            transition: background-color 0.3s;
-            color: white;
-            text-decoration: none;
-        }
-
-        .menu-item:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-
-        .menu-item svg {
-            margin-right: 10px;
-        }
-
-        /* Active menu item */
-        .menu-item.active,
-        .menu-item.bg-blue-900 {
-            background-color: #1a365d;
-        }
-
-        /* Card styles */
-        .card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Button styles */
-        .btn-primary {
-            background-color: #2563eb;
-            color: white;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            transition: all 0.2s ease-in-out;
-            border: none;
-            cursor: pointer;
-        }
-        .btn-primary:hover {
-            background-color: #1d4ed8;
-        }
-        
-        .btn-secondary {
-            background-color: #4b5563;
-            color: white;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            transition: all 0.2s ease-in-out;
-            border: none;
-            cursor: pointer;
-        }
-        .btn-secondary:hover {
-            background-color: #374151;
-        }
-        
-        .btn-success {
-            background-color: #16a34a;
-            color: white;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            transition: all 0.2s ease-in-out;
-            border: none;
-            cursor: pointer;
-        }
-        .btn-success:hover {
-            background-color: #15803d;
-        }
-        
-        .btn-danger {
-            background-color: #dc2626;
-            color: white;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            transition: all 0.2s ease-in-out;
-            border: none;
-            cursor: pointer;
-        }
-        .btn-danger:hover {
-            background-color: #b91c1c;
-        }
-        
-        .btn-warning {
-            background-color: #ca8a04;
-            color: white;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            transition: all 0.2s ease-in-out;
-            border: none;
-            cursor: pointer;
-        }
-        .btn-warning:hover {
-            background-color: #a16207;
+        @media print {
+            aside, header.mp-topbar, footer.mp-footer, #sidebarOverlay { display: none !important; }
+            .mp-main-wrap { margin-left: 0 !important; }
         }
     </style>
-    
+
     @stack('styles')
 </head>
-<body>
-    <div class="flex">
-        <x-admin-sidebar />
-        
-        <!-- Contenido principal -->
-        <main class="main-content flex-1 p-8">
-            @unless(isset($hideAlerts) && $hideAlerts)
-                @if(session('success'))
-                    <div class="mb-4 rounded-md bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
-                        <span class="font-semibold">Correcto:</span>
-                        <span>{{ session('success') }}</span>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+
+    <!-- Overlay móvil -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-slate-950/50 backdrop-blur-[2px] z-30 hidden lg:hidden"></div>
+
+    <div class="min-h-screen lg:flex">
+        <!-- Sidebar -->
+        <x-admin-sidebar :tramitesPendientes="$tramitesPendientes ?? 0" />
+
+        <!-- Columna principal -->
+        <div class="mp-main-wrap flex-1 flex flex-col min-w-0 lg:ml-[280px] min-h-screen">
+
+            @php
+                $mpUser = Auth::user();
+                $mpName = $mpUser ? trim($mpUser->nombres ?? '') : '';
+                if ($mpName === '') {
+                    $mpName = 'Usuario';
+                }
+                $mpWords = preg_split('/\s+/', $mpName);
+                $mpFirst = $mpWords[0] ?? 'U';
+                $mpSecond = isset($mpWords[1]) ? mb_substr($mpWords[1], 0, 1) : mb_substr($mpFirst, 1, 1);
+                $mpInitials = strtoupper(mb_substr($mpFirst, 0, 1) . $mpSecond);
+                // Encabezado: nombre y apellido paterno (el sidebar muestra solo el nombre).
+                $mpShort = trim($mpFirst . ' ' . ($mpUser->apellido_paterno ?? ''));
+                $mpFull = ($mpUser->nombre_completo ?? $mpName) ?: $mpName;
+            @endphp
+            <!-- ══════════ TOPBAR ══════════ -->
+            <header class="mp-topbar sticky top-0 z-20 bg-white/85 backdrop-blur-md border-b border-slate-200">
+                <div class="flex items-center gap-3 px-4 sm:px-6 lg:px-8 h-[68px] max-w-[1440px] mx-auto w-full">
+                    <!-- Hamburger móvil -->
+                    <button id="sidebarToggle" type="button"
+                        class="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
+                        aria-label="Abrir menú">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+
+                    <!-- Título -->
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2.5">
+                            <h1 class="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 truncate">@yield('header', 'Administración')</h1>
+                            <span class="hidden sm:inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-bold px-2.5 py-0.5 uppercase tracking-wide">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                Administración
+                            </span>
+                        </div>
                     </div>
+
+                    <!-- Fecha + usuario -->
+                    <div class="hidden md:flex flex-col items-end mr-1 leading-tight">
+                        <span class="text-[12px] font-semibold text-slate-700 capitalize">{{ ucfirst(\Carbon\Carbon::now('America/Lima')->locale('es')->translatedFormat('l, d \d\e F')) }}</span>
+                        <span class="text-[11px] text-slate-400">{{ \Carbon\Carbon::now('America/Lima')->format('Y · H:i') }} · Lima, Perú</span>
+                    </div>
+
+                    @auth
+                    <div class="flex items-center gap-2 pl-2 sm:border-l sm:border-slate-200 sm:ml-1 sm:pl-4">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary-600 to-primary-900 text-white flex items-center justify-center text-sm font-extrabold shadow-md ring-2 ring-white">
+                            {{ $mpInitials }}
+                        </div>
+                        <div class="hidden sm:block leading-tight">
+                            <p class="text-[13px] font-bold text-slate-800 max-w-[160px] truncate" title="{{ $mpFull }}">{{ $mpShort }}</p>
+                            <p class="text-[11px] text-slate-500 font-medium">Administrador</p>
+                        </div>
+                    </div>
+                    @endauth
+                </div>
+                <!-- Línea institucional -->
+                <div class="h-[3px] bg-gradient-to-r from-primary-800 via-primary-500 to-accent-600"></div>
+            </header>
+
+            <!-- ══════════ CONTENIDO ══════════ -->
+            <main class="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                {{-- El título de la vista vive únicamente en el encabezado superior (topbar).
+                     Aquí solo se muestra el subtítulo y las acciones para evitar la duplicación. --}}
+                @php
+                    $hasSubtitle = trim($__env->yieldContent('subtitle')) !== '';
+                    $hasActions = trim($__env->yieldContent('actions')) !== '';
+                @endphp
+                @if($hasSubtitle || $hasActions)
+                <div class="mp-animate flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
+                    <div class="min-w-0">
+                        @hasSection('subtitle')
+                            <p class="text-sm text-slate-500 max-w-2xl">@yield('subtitle')</p>
+                        @endif
+                    </div>
+                    @hasSection('actions')
+                        <div class="flex flex-wrap items-center gap-2 shrink-0">
+                            @yield('actions')
+                        </div>
+                    @endif
+                </div>
                 @endif
-            @endunless
-            
-            @if(session('error'))
-                <div class="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-                            </svg>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm font-medium text-red-800">{{ session('error') }}</p>
-                        </div>
+
+                <!-- Alertas -->
+                @unless(isset($hideAlerts) && $hideAlerts)
+                    <div class="mp-animate mp-animate-1"><x-alerts /></div>
+                @endunless
+
+                <!-- Cuerpo -->
+                <div class="content-body mp-animate mp-animate-2">
+                    @yield('content')
+                </div>
+            </main>
+
+            <!-- ══════════ FOOTER ══════════ -->
+            <footer class="mp-footer mt-auto border-t border-slate-200 bg-white">
+                <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col lg:flex-row items-center justify-between gap-4">
+                    <div class="flex items-center gap-3.5">
+                        <span class="inline-flex items-center rounded-2xl border border-slate-200 bg-white shadow-sm px-4 py-2.5 shrink-0">
+                            <img src="{{ asset('img/logo-ugel.png') }}" alt="UGEL Santa" class="h-12 w-auto object-contain" onerror="this.style.display='none'">
+                        </span>
+                        <span class="text-[12.5px] leading-snug text-slate-500">
+                            <strong class="block text-[13.5px] text-slate-800">UGEL Santa · Panel de Administración</strong>
+                            Sistema de trámite documentario — Unidad de Gestión Educativa Local Santa
+                        </span>
+                    </div>
+                    <div class="flex flex-col sm:flex-row items-center gap-x-6 gap-y-1.5 text-[12px] text-slate-500 text-center sm:text-right">
+                        <p class="flex items-center gap-1.5 font-semibold text-slate-600">
+                            <svg class="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Atención al ciudadano · Lun–Vie 8:00–16:30 · Chimbote, Santa — Áncash
+                        </p>
+                        <p class="font-medium">© {{ date('Y') }} UGEL Santa · Todos los derechos reservados</p>
                     </div>
                 </div>
-            @endif
-            
-            @yield('content')
-        </main>
+            </footer>
+        </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="hidden fixed inset-0 z-[9999] bg-slate-950/45 backdrop-blur-[2px] items-center justify-center">
+        <div class="bg-white rounded-2xl px-8 py-6 shadow-2xl flex flex-col items-center gap-3 mp-modal-panel">
+            <div class="mp-spinner w-10 h-10 rounded-full border-4 border-slate-200 border-t-primary-600"></div>
+            <p class="text-sm font-semibold text-slate-700">Procesando solicitud…</p>
+            <p class="text-xs text-slate-400">Por favor, espere un momento</p>
+        </div>
+    </div>
+
     <script>
-        // Configuración global para AJAX
-        if (typeof $ !== 'undefined') {
-            $.ajaxSetup({
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        (function() {
+            const overlay = document.getElementById('sidebarOverlay');
+            const toggle = document.getElementById('sidebarToggle');
+            // El aside lo renderiza el componente con id="mpSidebar"
+            const sidebar = document.getElementById('mpSidebar');
+            const loading = document.getElementById('loadingOverlay');
+
+            function openSidebar() {
+                if (!sidebar) return;
+                sidebar.classList.remove('-translate-x-full');
+                if (overlay) overlay.classList.remove('hidden');
+                document.body.classList.add('overflow-hidden', 'lg:overflow-auto');
+            }
+            function closeSidebar() {
+                if (!sidebar) return;
+                if (window.innerWidth < 1024) {
+                    sidebar.classList.add('-translate-x-full');
+                    if (overlay) overlay.classList.add('hidden');
+                    document.body.classList.remove('overflow-hidden');
+                }
+            }
+            if (toggle) toggle.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (sidebar && sidebar.classList.contains('-translate-x-full')) openSidebar();
+                else closeSidebar();
+            });
+            if (overlay) overlay.addEventListener('click', closeSidebar);
+            window.addEventListener('resize', function() {
+                if (window.innerWidth >= 1024) {
+                    if (overlay) overlay.classList.add('hidden');
+                    if (sidebar) sidebar.classList.remove('-translate-x-full');
+                    document.body.classList.remove('overflow-hidden');
+                } else {
+                    if (sidebar) sidebar.classList.add('-translate-x-full');
                 }
             });
-        }
-        
-        // Función para mostrar el indicador de carga
-        function showLoading() {
-            const indicator = document.getElementById('loadingIndicator');
-            if (indicator) {
-                indicator.style.display = 'block';
-            }
-        }
-        
-        // Función para ocultar el indicador de carga
-        function hideLoading() {
-            const indicator = document.getElementById('loadingIndicator');
-            if (indicator) {
-                indicator.style.display = 'none';
-            }
-        }
-        
-        // Asegurar que el loading esté oculto al cargar la página
-        (function() {
-            const loadingIndicator = document.getElementById('loadingIndicator');
-            if (loadingIndicator) {
-                loadingIndicator.style.display = 'none';
-            }
-        })();
+            // Cerrar sidebar móvil al navegar
+            document.querySelectorAll('#mpSidebar a').forEach(function(a) {
+                a.addEventListener('click', function() { closeSidebar(); });
+            });
 
-        // Ocultar loading cuando la página se carga completamente
-        document.addEventListener('DOMContentLoaded', function() {
+            function hideLoading() {
+                if (!loading) return;
+                loading.classList.add('hidden');
+                loading.classList.remove('flex');
+            }
+            function showLoading() {
+                if (!loading) return;
+                loading.classList.remove('hidden');
+                loading.classList.add('flex');
+            }
             hideLoading();
-        });
 
-        // Ocultar loading cuando la ventana se carga completamente
-        window.addEventListener('load', function() {
-            hideLoading();
-        });
+            // Compatibilidad con vistas que llaman a showLoading()/hideLoading() globales
+            window.showLoading = showLoading;
+            window.hideLoading = hideLoading;
 
-        // Ocultar loading cuando se navega con el historial del navegador (botones atrás/adelante)
-        window.addEventListener('pageshow', function(event) {
-            // Si la página se carga desde el cache del navegador (navegación con historial)
-            if (event.persisted) {
-                hideLoading();
-            } else {
-                // Si es una carga normal, también ocultar el loading
-                hideLoading();
+            if (typeof window.$ !== 'undefined' && window.$.ajaxSetup) {
+                window.$.ajaxSetup({
+                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') }
+                });
             }
-        });
 
-        // Ocultar loading cuando se navega hacia atrás o adelante
-        window.addEventListener('popstate', function(event) {
-            hideLoading();
-        });
+            window.app = {
+                showLoading: showLoading,
+                hideLoading: hideLoading,
+                openSidebar: openSidebar,
+                closeSidebar: closeSidebar,
+                showNotification: function(message, type) {
+                    console.log('[' + (type || 'success').toUpperCase() + '] ' + message);
+                },
+                confirmAction: function(message, callback) { if (confirm(message)) callback(); },
+                formatDate: function(dateString) {
+                    try {
+                        return new Date(dateString).toLocaleDateString('es-PE', {
+                            year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                        });
+                    } catch (e) { return dateString; }
+                },
+                formatEstado: function(estado) {
+                    const estados = { 'PENDIENTE': 'Pendiente', 'EN_PROCESO': 'En Proceso', 'OBSERVADO': 'Observado', 'VERIFICADO': 'Verificado', 'FINALIZADO': 'Finalizado', 'RECHAZADO': 'Rechazado' };
+                    return estados[estado] || estado;
+                }
+            };
 
-        // Agregar evento de clic a los enlaces para mostrar el indicador de carga
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('a[href]:not([href^="#"]):not([href^="javascript:"]):not([onclick]):not([download])').forEach(link => {
-                link.addEventListener('click', function() {
-                    // Solo mostrar loading si no es un enlace que abre en nueva pestaña
-                    // ni una descarga (no recargan la página y el indicador se quedaría pegado)
-                    if (this.hasAttribute('download')) {
-                        return;
-                    }
-                    if (!this.target || this.target === '_self') {
+            document.addEventListener('DOMContentLoaded', hideLoading);
+            window.addEventListener('load', hideLoading);
+            window.addEventListener('pageshow', hideLoading);
+            window.addEventListener('popstate', hideLoading);
+
+            // Loading solo en navegación real (evita que se quede pegado en descargas / nueva pestaña)
+            document.addEventListener('DOMContentLoaded', function() {
+                document.querySelectorAll('a[href]:not([href^="#"]):not([href^="javascript:"])').forEach(function(link) {
+                    link.addEventListener('click', function() {
+                        if (this.hasAttribute('download')) return;
+                        if (this.target && this.target !== '_self') return;
                         const href = this.getAttribute('href');
-                        if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
-                            showLoading();
-                        }
-                    }
+                        if (href && !href.startsWith('#') && !href.startsWith('javascript:')) showLoading();
+                    });
                 });
             });
-        });
+        })();
     </script>
-    
+
     @stack('scripts')
 </body>
 </html>
-

@@ -84,10 +84,12 @@
                                 @endif
                             </dd>
                         </div>
+                        @if(!empty($sol['dni']))
                         <div>
                             <dt class="text-sm font-medium text-gray-500">DNI:</dt>
                             <dd class="mt-1 text-sm text-gray-900">{{ $sol['dni'] }}</dd>
                         </div>
+                        @endif
                         @if(!empty($sol['ruc']))
                         <div>
                             <dt class="text-sm font-medium text-gray-500">RUC:</dt>

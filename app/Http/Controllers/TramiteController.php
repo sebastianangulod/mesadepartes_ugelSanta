@@ -531,15 +531,29 @@ class TramiteController extends Controller
             ];
 
             if ($esInterno) {
+                $tipoTitular = (int) $request->input('titular_tipo_persona');
                 $reglas = array_merge($reglas, [
                     'titular_tipo_persona' => 'required|in:1,2,3',
-                    'titular_dni' => 'required|string|size:8|regex:/^\d{8}$/',
-                    'titular_nombres' => 'required|string|max:100',
-                    'titular_apellido_paterno' => 'required|string|max:100',
-                    'titular_apellido_materno' => 'required|string|max:100',
                     'titular_ruc' => 'nullable|string|size:11|regex:/^\d{11}$/',
                     'titular_razon_social' => 'nullable|string|max:200',
                 ]);
+                // Natural y jurídica: DNI + nombres validados.
+                // Entidad pública: solo nombre de la entidad (sin DNI ni RUC).
+                if (in_array($tipoTitular, [1, 2], true)) {
+                    $reglas = array_merge($reglas, [
+                        'titular_dni' => 'required|string|size:8|regex:/^\d{8}$/',
+                        'titular_nombres' => 'required|string|max:100',
+                        'titular_apellido_paterno' => 'required|string|max:100',
+                        'titular_apellido_materno' => 'required|string|max:100',
+                    ]);
+                } else {
+                    $reglas = array_merge($reglas, [
+                        'titular_dni' => 'nullable|string|size:8|regex:/^\d{8}$/',
+                        'titular_nombres' => 'nullable|string|max:100',
+                        'titular_apellido_paterno' => 'nullable|string|max:100',
+                        'titular_apellido_materno' => 'nullable|string|max:100',
+                    ]);
+                }
                 $mensajes = array_merge($mensajes, [
                     'titular_tipo_persona.required' => 'Debe seleccionar el tipo de persona del ciudadano.',
                     'titular_dni.required' => 'Debe ingresar el DNI del ciudadano.',
