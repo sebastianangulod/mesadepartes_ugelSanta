@@ -24,7 +24,9 @@ return new class extends Migration
             $table->string('nombres', 100);
             $table->string('apellido_paterno', 100);
             $table->string('apellido_materno', 100)->nullable();
-            $table->string('dni', 15)->unique();
+            // Nullable: las cuentas de Entidad Pública se identifican
+            // con el nombre de la entidad y no usan DNI.
+            $table->string('dni', 15)->nullable()->unique();
             $table->string('direccion', 255)->nullable();
             $table->unsignedBigInteger('distrito_id')->nullable();
             $table->string('telefono', 20)->nullable();

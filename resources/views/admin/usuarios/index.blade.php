@@ -190,9 +190,9 @@
 
 @if($tipo !== 'externo')
 <!-- Modal Agregar Usuario -->
-<div id="modalAddUser" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto">
+<div id="modalAddUser" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto overscroll-contain">
     <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-4xl relative my-auto modal-content border border-slate-200" style="max-height: 90vh; overflow-y: auto;">
-        <div class="sticky top-0 bg-white border-b-2 border-gray-300 px-6 py-4 z-10 rounded-t-lg">
+        <div class="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 z-10 rounded-t-2xl">
             <h3 class="text-xl font-bold text-gray-900">Agregar Usuario</h3>
         </div>
         <div class="p-6">
@@ -205,9 +205,9 @@
                 <label for="dniUsuario" class="block text-sm font-medium text-gray-700 mb-1">DNI</label>
                 <div class="flex gap-2">
                     <input type="text" id="dniUsuario" name="dniUsuario" 
-                           class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                           class="flex-1 px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" 
                            placeholder="Ingrese el DNI" maxlength="8" pattern="[0-9]{8}" required>
-                    <button type="button" id="btnBuscarDNI" onclick="obtenerDNI()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200">
+                    <button type="button" id="btnBuscarDNI" onclick="obtenerDNI()" class="px-4 py-2 bg-primary-700 text-white text-sm font-bold rounded-xl hover:bg-primary-800 transition duration-200">
                         Buscar
                     </button>
                 </div>
@@ -217,21 +217,21 @@
             <div>
                 <label for="nombreUsuario" class="block text-sm font-medium text-gray-700 mb-1">Nombres</label>
                 <input type="text" id="nombreUsuario" name="nombreUsuario" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-100 cursor-not-allowed" 
+                       class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-gray-100 cursor-not-allowed" 
                        readonly disabled maxlength="20" required>
             </div>
 
             <div>
                 <label for="apellidoPaternoUsuario" class="block text-sm font-medium text-gray-700 mb-1">Apellido Paterno</label>
                 <input type="text" id="apellidoPaternoUsuario" name="apellidoPaternoUsuario" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-100 cursor-not-allowed" 
+                       class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-gray-100 cursor-not-allowed" 
                        readonly disabled maxlength="20" required>
             </div>
 
             <div>
                 <label for="apellidoMaternoUsuario" class="block text-sm font-medium text-gray-700 mb-1">Apellido Materno</label>
                 <input type="text" id="apellidoMaternoUsuario" name="apellidoMaternoUsuario" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-100 cursor-not-allowed" 
+                       class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-gray-100 cursor-not-allowed" 
                        readonly disabled maxlength="20" required>
             </div>
 
@@ -240,7 +240,7 @@
                 <label for="correo_electronico" class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
                 <input type="hidden" id="emailValidado" value="false">
                 <input type="email" id="correo_electronico" name="correoUsuario" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                       class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" 
                        placeholder="Ingrese el correo electrónico" maxlength="45" required>
                 <div id="email-feedback" class="mt-1 text-sm"></div>
                 <div id="emailRequirements" class="mt-2 space-y-1"></div>
@@ -250,7 +250,7 @@
                 <label for="contrasena" class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
                 <div class="relative">
                     <input type="password" id="contrasena" name="contrasenaUsuario" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                           class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" 
                            placeholder="Ingrese la contraseña" maxlength="25" required>
                     <button type="button" onclick="togglePassword('contrasena')" class="absolute right-2 top-2 text-gray-500">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -266,14 +266,14 @@
             <div class="col-span-2">
                 <label for="direccionUsuario" class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
                 <input type="text" id="direccionUsuario" name="direccionUsuario" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                       class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" 
                        maxlength="35" required>
             </div>
 
             <div>
                 <label for="telefonoUsuario" class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
                 <input type="tel" id="telefonoUsuario" name="telefonoUsuario" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                       class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" 
                        placeholder="9 dígitos" maxlength="9" pattern="[0-9]{9}" required>
             </div>
 
@@ -281,7 +281,7 @@
             <div>
                 <label for="departamentoUsuario" class="block text-sm font-medium text-gray-700 mb-1">Departamento</label>
                 <select id="departamentoUsuario" name="departamentoUsuario" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
                     <option value="">Seleccione un departamento</option>
                 </select>
             </div>
@@ -289,7 +289,7 @@
             <div>
                 <label for="provinciaUsuario" class="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
                 <select id="provinciaUsuario" name="provinciaUsuario" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" 
                         disabled>
                     <option value="">Seleccione una provincia</option>
                 </select>
@@ -298,7 +298,7 @@
             <div>
                 <label for="distritoUsuario" class="block text-sm font-medium text-gray-700 mb-1">Distrito</label>
                 <select id="distritoUsuario" name="distritoUsuario" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" 
                         disabled required>
                     <option value="">Seleccione un distrito</option>
                 </select>
@@ -308,7 +308,7 @@
             <div>
                 <label for="nivel1" class="block text-sm font-medium text-gray-700 mb-1">Nivel 1 <span class="text-red-500">*</span></label>
                 <select id="nivel1" name="nivel1" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
                     <option value="">Seleccione Nivel 1</option>
                 </select>
             </div>
@@ -316,7 +316,7 @@
             <div>
                 <label for="nivel2" class="block text-sm font-medium text-gray-700 mb-1">Nivel 2</label>
                 <select id="nivel2" name="nivel2" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" 
                         disabled>
                     <option value="">Seleccione Nivel 2</option>
                 </select>
@@ -325,7 +325,7 @@
             <div>
                 <label for="nivel3" class="block text-sm font-medium text-gray-700 mb-1">Nivel 3</label>
                 <select id="nivel3" name="nivel3" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" 
                         disabled>
                     <option value="">Seleccione Nivel 3</option>
                 </select>
@@ -334,7 +334,7 @@
             <div>
                 <label for="nivel4" class="block text-sm font-medium text-gray-700 mb-1">Nivel 4</label>
                 <select id="nivel4" name="nivel4" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" 
                         disabled>
                     <option value="">Seleccione Nivel 4</option>
                 </select>
@@ -350,9 +350,9 @@
 </div>
 
 <!-- Modal Editar Usuario -->
-<div id="modalEditUser" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto">
+<div id="modalEditUser" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto overscroll-contain">
     <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-4xl relative my-auto modal-content border border-slate-200" style="max-height: 90vh; overflow-y: auto;">
-        <div class="sticky top-0 bg-white border-b-2 border-gray-300 px-6 py-4 z-10 rounded-t-lg">
+        <div class="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 z-10 rounded-t-2xl">
             <h3 class="text-xl font-bold text-gray-900">Editar Usuario</h3>
         </div>
         <div class="p-6">
@@ -365,43 +365,43 @@
             <div>
                 <label for="editNombreUsuario" class="block text-sm font-medium text-gray-700 mb-1">Nombres</label>
                 <input type="text" id="editNombreUsuario" name="nombres" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                       class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
             </div>
 
             <div>
                 <label for="editApellidoPaternoUsuario" class="block text-sm font-medium text-gray-700 mb-1">Apellido Paterno</label>
                 <input type="text" id="editApellidoPaternoUsuario" name="apellido_paterno" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                       class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
             </div>
 
             <div>
                 <label for="editApellidoMaternoUsuario" class="block text-sm font-medium text-gray-700 mb-1">Apellido Materno</label>
                 <input type="text" id="editApellidoMaternoUsuario" name="apellido_materno" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                       class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
             </div>
 
             <div>
                 <label for="editCorreoUsuario" class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
                 <input type="email" id="editCorreoUsuario" name="email" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                       class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
             </div>
 
             <div class="col-span-2">
                 <label for="editDireccionUsuario" class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
                 <input type="text" id="editDireccionUsuario" name="direccion" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                       class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
             </div>
 
             <div>
                 <label for="editTelefonoUsuario" class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
                 <input type="text" id="editTelefonoUsuario" name="telefono" maxlength="9" pattern="[0-9]{9}"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                       class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
             </div>
 
             <div>
                 <label for="editDepartamentoUsuario" class="block text-sm font-medium text-gray-700 mb-1">Departamento</label>
                 <select id="editDepartamentoUsuario" name="departamento_id" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                         onchange="cargarProvinciasEdit(this.value)">
                     <option value="">Seleccione un departamento</option>
                 </select>
@@ -410,7 +410,7 @@
             <div>
                 <label for="editProvinciaUsuario" class="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
                 <select id="editProvinciaUsuario" name="provincia_id" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                         onchange="cargarDistritosEdit(this.value)">
                     <option value="">Seleccione una provincia</option>
                 </select>
@@ -419,7 +419,7 @@
             <div>
                 <label for="editDistritoUsuario" class="block text-sm font-medium text-gray-700 mb-1">Distrito</label>
                 <select id="editDistritoUsuario" name="distrito_id" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
                     <option value="">Seleccione un distrito</option>
                 </select>
             </div>
@@ -428,7 +428,7 @@
             <div>
                 <label for="editNivel1" class="block text-sm font-medium text-gray-700 mb-1">Nivel 1</label>
                 <select id="editNivel1" name="nivel1" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                         onchange="cargarEditNivel2(this.value)">
                     <option value="">Seleccione Nivel 1</option>
                 </select>
@@ -437,7 +437,7 @@
             <div>
                 <label for="editNivel2" class="block text-sm font-medium text-gray-700 mb-1">Nivel 2</label>
                 <select id="editNivel2" name="nivel2" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" 
                         disabled onchange="cargarEditNivel3(this.value)">
                     <option value="">Seleccione Nivel 2</option>
                 </select>
@@ -446,7 +446,7 @@
             <div>
                 <label for="editNivel3" class="block text-sm font-medium text-gray-700 mb-1">Nivel 3</label>
                 <select id="editNivel3" name="nivel3" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" 
                         disabled onchange="cargarEditNivel4(this.value)">
                     <option value="">Seleccione Nivel 3</option>
                 </select>
@@ -455,7 +455,7 @@
             <div>
                 <label for="editNivel4" class="block text-sm font-medium text-gray-700 mb-1">Nivel 4</label>
                 <select id="editNivel4" name="nivel4" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" 
                         disabled>
                     <option value="">Seleccione Nivel 4</option>
                 </select>
@@ -471,8 +471,8 @@
 </div>
 
 <!-- Modal Eliminar Usuario -->
-<div id="modalDeleteUser" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px]">
-    <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200">
+<div id="modalDeleteUser" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto overscroll-contain">
+    <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-md my-auto border border-slate-200" style="max-height: 90vh; overflow-y: auto;">
         <div class="px-6 py-4 border-b-2 border-gray-300">
             <h2 class="text-2xl font-bold text-red-600">Eliminar Usuario</h2>
         </div>
@@ -504,9 +504,9 @@
 </div>
 
 <!-- Modal Asignar Niveles Múltiples -->
-<div id="modalAsignarNiveles" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto">
+<div id="modalAsignarNiveles" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto overscroll-contain">
     <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative my-auto modal-content border border-slate-200" style="max-height: 90vh; overflow-y: auto;">
-        <div class="sticky top-0 bg-white border-b-2 border-gray-300 px-6 py-4 z-10 rounded-t-lg">
+        <div class="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 z-10 rounded-t-2xl">
             <h3 class="text-xl font-bold text-gray-900">Asignar Niveles</h3>
             <p class="text-sm text-gray-600 mt-1" id="modalNivelesUsuarioNombre"></p>
         </div>
@@ -529,7 +529,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
                         <label for="nuevoNivel" class="block text-sm font-medium text-gray-700 mb-1">Nivel</label>
-                        <select id="nuevoNivel" name="nivel" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="cargarOpcionesNivel(this.value)">
+                        <select id="nuevoNivel" name="nivel" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" onchange="cargarOpcionesNivel(this.value)">
                             <option value="">Seleccione nivel</option>
                             <option value="1">Nivel 1</option>
                             <option value="2">Nivel 2</option>
@@ -539,12 +539,12 @@
                     </div>
                     <div>
                         <label for="nuevoIdNivel" class="block text-sm font-medium text-gray-700 mb-1">Unidad</label>
-                        <select id="nuevoIdNivel" name="id_nivel" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" disabled>
+                        <select id="nuevoIdNivel" name="id_nivel" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" disabled>
                             <option value="">Primero seleccione nivel</option>
                         </select>
                     </div>
                     <div class="flex items-end">
-                        <button type="button" onclick="agregarNivelUsuario()" class="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200" disabled id="btnAgregarNivel">
+                        <button type="button" onclick="agregarNivelUsuario()" class="w-full px-4 py-2 bg-primary-700 text-white text-sm font-bold rounded-xl hover:bg-primary-800 transition duration-200" disabled id="btnAgregarNivel">
                             Agregar
                         </button>
                     </div>
@@ -609,8 +609,8 @@
         if (btnBuscar) {
             btnBuscar.disabled = false;
             btnBuscar.textContent = 'Buscar';
-            btnBuscar.classList.remove('bg-green-600', 'bg-gray-400');
-            btnBuscar.classList.add('bg-blue-600', 'hover:bg-blue-700', 'transition', 'duration-200');
+            btnBuscar.classList.remove('bg-emerald-600', 'bg-slate-300');
+            btnBuscar.classList.add('bg-primary-700', 'hover:bg-primary-800', 'transition', 'duration-200');
         }
         
         // Limpiar mensajes de error
@@ -1217,8 +1217,8 @@
                 
                 btnBuscar.disabled = false;
                 btnBuscar.textContent = '✓ Validado';
-                btnBuscar.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-                btnBuscar.classList.add('bg-green-600');
+                btnBuscar.classList.remove('bg-primary-700', 'hover:bg-primary-800');
+                btnBuscar.classList.add('bg-emerald-600');
                 document.getElementById('dniValidado').value = 'true';
                 checkCrearValido();
             } else {

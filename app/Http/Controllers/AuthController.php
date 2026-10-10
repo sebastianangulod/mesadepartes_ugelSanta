@@ -104,13 +104,13 @@ class AuthController extends Controller
                 // 1: Natural, 2: Jurídica, 3: Entidad Pública
                 'tipo_persona' => 'required|in:1,2,3',
                 'ruc' => 'nullable|string|max:45',
-                'nombre_entidad' => 'nullable|string|max:45',
+                'nombre_entidad' => 'nullable|string|max:50',
                 'remember' => 'boolean'
             ];
 
             if ($esEntidad) {
                 $rules['dni'] = 'nullable|string';
-                $rules['nombre_entidad'] = 'required|string|max:45';
+                $rules['nombre_entidad'] = 'required|string|max:50';
             } else {
                 $rules['dni'] = 'required|string|size:8|regex:/^\\d{8}$/';
             }
@@ -346,7 +346,7 @@ class AuthController extends Controller
                 'tipo_persona' => 'required|in:1,2,3', // 1: Natural, 2: Jurídica, 3: Entidad Pública
                 'ruc' => 'nullable|string|max:45',
                 'razon_social' => 'nullable|string|max:45',
-                'nombre_entidad' => 'nullable|string|max:45',
+                'nombre_entidad' => 'nullable|string|max:50',
             ];
 
             if ($esEntidad) {
@@ -356,7 +356,7 @@ class AuthController extends Controller
                 $rules['nombres'] = 'nullable|string|max:100';
                 $rules['apellido_paterno'] = 'nullable|string|max:100';
                 $rules['apellido_materno'] = 'nullable|string|max:100';
-                $rules['nombre_entidad'] = 'required|string|max:45';
+                $rules['nombre_entidad'] = 'required|string|max:50';
             } else {
                 $rules['dni'] = 'required|string|size:8|regex:/^\\d{8}$/';
             }
@@ -1232,20 +1232,12 @@ class AuthController extends Controller
                 $this->validarRecaptcha($request->input('g-recaptcha-response'));
             }
             
-            $validated = $request->validate([
-                'nombres' => 'required|string|max:20',
-                'apellido_paterno' => 'required|string|max:20',
-                'apellido_materno' => 'required|string|max:20',
-                'email' => ['required', 'email', 'max:50', Rule::unique('usuarios')->ignore($usuario->id)],
-                'telefono' => 'required|string|size:9|regex:/^[0-9]{9}$/',
-                'direccion' => 'required|string|max:35',
-                'distrito_id' => 'required|exists:distritos,id',
-            ]);
+            $validated = $request->validate($this->reglasActualizarDatos($usuario));
 
             $usuario->update([
                 'nombres' => strtoupper($validated['nombres']),
-                'apellido_paterno' => strtoupper($validated['apellido_paterno']),
-                'apellido_materno' => strtoupper($validated['apellido_materno']),
+                'apellido_paterno' => strtoupper($validated['apellido_paterno'] ?? ''),
+                'apellido_materno' => strtoupper($validated['apellido_materno'] ?? ''),
                 'email' => $validated['email'],
                 'telefono' => $validated['telefono'],
                 'direccion' => strtoupper($validated['direccion']),
@@ -1263,6 +1255,31 @@ class AuthController extends Controller
             Log::error("Error al actualizar datos del usuario: " . $e->getMessage());
             return back()->withErrors(['error' => 'Ocurrió un error al actualizar sus datos. Por favor, inténtelo nuevamente.'])->withInput();
         }
+    }
+
+    /**
+     * Reglas para actualizar datos personales.
+     * Entidad Pública no usa DNI ni apellidos: solo nombre de la entidad.
+     */
+    protected function reglasActualizarDatos($usuario): array
+    {
+        $rules = [
+            'nombres' => 'required|string|max:20',
+            'email' => ['required', 'email', 'max:50', Rule::unique('usuarios')->ignore($usuario->id)],
+            'telefono' => 'required|string|size:9|regex:/^[0-9]{9}$/',
+            'direccion' => 'required|string|max:35',
+            'distrito_id' => 'required|exists:distritos,id',
+        ];
+
+        if ((int) ($usuario->tipo_persona ?? 0) === 3) {
+            $rules['apellido_paterno'] = 'nullable|string|max:20';
+            $rules['apellido_materno'] = 'nullable|string|max:20';
+        } else {
+            $rules['apellido_paterno'] = 'required|string|max:20';
+            $rules['apellido_materno'] = 'required|string|max:20';
+        }
+
+        return $rules;
     }
 
     /**

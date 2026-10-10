@@ -10,34 +10,10 @@
     <!-- Tailwind CSS -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     
-    <!-- Estilos personalizados -->
+    <!-- Estilos personalizados (solo CSS válido: @apply no funciona en <style> inline) -->
     <style>
         .sidebar-transition {
             transition: all 0.3s ease-in-out;
-        }
-        
-        .status-badge {
-            @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
-        }
-        
-        .btn-primary {
-            @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
-        }
-        
-        .btn-secondary {
-            @apply bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
-        }
-        
-        .btn-success {
-            @apply bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2;
-        }
-        
-        .btn-danger {
-            @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2;
-        }
-        
-        .btn-warning {
-            @apply bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2;
         }
     </style>
     
@@ -54,10 +30,10 @@
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
                             <h1 class="flex items-baseline space-x-2 text-lg sm:text-xl font-semibold tracking-tight">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-blue-50 text-xs font-bold uppercase text-blue-800 border border-blue-400">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-primary-50 text-xs font-bold uppercase text-primary-800 border border-primary-200">
                                     UGEL
                                 </span>
-                                <span class="hidden sm:inline text-blue-600">
+                                <span class="hidden sm:inline text-primary-700">
                                     Mesa de Partes
                                 </span>
                             </h1>
@@ -68,15 +44,15 @@
                     @auth
                     <nav class="hidden md:flex space-x-8">
                         @if(auth()->user()->esAdministrador())
-                            <a href="{{ route('admin.index') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
+                            <a href="{{ route('admin.index') }}" class="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
                                 Dashboard Admin
                             </a>
                         @elseif(auth()->user()->esInterno())
-                            <a href="{{ route('mesa-partes.tramites-recibidos') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
+                            <a href="{{ route('mesa-partes.tramites-recibidos') }}" class="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
                                 Trámites Recibidos
                             </a>
                         @else
-                            <a href="{{ route('mesa-partes.index') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
+                            <a href="{{ route('mesa-partes.index') }}" class="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
                                 Dashboard
                             </a>
                         @endif
@@ -96,7 +72,7 @@
                         <!-- Perfil de usuario -->
                         <div class="relative">
                             <div class="flex items-center space-x-2">
-                                <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                                <div class="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center">
                                     <span class="text-white text-sm font-medium">
                                         {{ substr(auth()->user()->nombres ?? 'U', 0, 1) }}
                                     </span>

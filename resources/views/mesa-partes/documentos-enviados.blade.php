@@ -9,6 +9,8 @@
 
 @section('header', 'Documentos Enviados')
 
+@section('subtitle', 'Historial de los documentos que ha enviado a través de la mesa de partes.')
+
 @section('content')
         
         <div class="bg-white rounded-lg shadow p-6">
@@ -61,7 +63,17 @@
                                     {{ $documento->archivo_adjunto ? basename($documento->archivo_adjunto) : 'Sin archivo' }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-300">
-                                    <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $documento->estado_clases_css ?? 'bg-gray-100 text-gray-800' }}">
+                                    @php
+                                        $docEstadoClases = [
+                                            'PENDIENTE' => 'estado-pendiente',
+                                            'OBSERVADO' => 'estado-observado',
+                                            'EN_PROCESO' => 'estado-proceso',
+                                            'VERIFICADO' => 'estado-verificado',
+                                            'FINALIZADO' => 'estado-finalizado',
+                                            'RECHAZADO' => 'estado-rechazado',
+                                        ];
+                                    @endphp
+                                    <span class="estado-pill {{ $docEstadoClases[$documento->estado] ?? '' }}">
                                         {{ $documento->estado_etiqueta ?? $documento->estado }}
                                     </span>
                                 </td>
@@ -106,3 +118,16 @@
             @endif
         </div>
 @endsection
+
+@push('styles')
+<style>
+    .estado-pill { display:inline-flex; align-items:center; gap:6px; padding:4px 11px; border-radius:999px; font-size:11.5px; font-weight:700; white-space:nowrap; border:1px solid transparent; }
+    .estado-pill::before { content:''; width:6px; height:6px; border-radius:999px; background:currentColor; }
+    .estado-pendiente { background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe; }
+    .estado-observado { background:#fffbeb; color:#b45309; border-color:#fde68a; }
+    .estado-proceso { background:#ecfdf5; color:#047857; border-color:#a7f3d0; }
+    .estado-verificado { background:#faf5ff; color:#7e22ce; border-color:#e9d5ff; }
+    .estado-finalizado { background:#eef2ff; color:#4338ca; border-color:#c7d2fe; }
+    .estado-rechazado { background:#fef2f2; color:#b91c1c; border-color:#fecaca; }
+</style>
+@endpush

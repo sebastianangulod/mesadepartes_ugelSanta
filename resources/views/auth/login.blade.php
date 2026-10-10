@@ -74,9 +74,9 @@
 
                 <div id="campo_nombre_entidad" class="{{ old('tipo_persona') == '3' ? '' : 'hidden' }}">
                     <label for="nombre_entidad" class="block text-sm font-medium text-gray-700 mb-1">Nombre de Entidad (solo Entidad Pública)</label>
-                    <input id="nombre_entidad" name="nombre_entidad" type="text" autocomplete="off"
+                    <input id="nombre_entidad" name="nombre_entidad" type="text" autocomplete="off" maxlength="50"
                            class="block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-600 focus:border-primary-600 text-base sm:text-sm"
-                           placeholder="Ingrese el nombre de la entidad"
+                           placeholder="Ingrese el nombre de la entidad (máx. 50 caracteres)"
                            value="{{ old('nombre_entidad') }}">
                 </div>
 

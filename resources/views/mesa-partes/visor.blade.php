@@ -22,7 +22,7 @@
                 Abrir en pestaña
             </a>
             <a href="{{ route('tramites.archivo.descargar', ['tramite' => $tramite->id, 'nombreArchivo' => $nombreArchivo]) }}"
-               class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors">
+               class="bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors">
                 Descargar
             </a>
         </div>

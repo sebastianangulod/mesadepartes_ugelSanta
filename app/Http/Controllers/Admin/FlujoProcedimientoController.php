@@ -7,8 +7,12 @@ use App\Models\FlujoNodo;
 use App\Models\Procedimiento;
 use App\Models\Usuario;
 use Exception;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use App\Models\Tramite;
 
 /**
  * CRUD del flujo configurable (nodos, transiciones, equipos) por procedimiento.
@@ -33,6 +37,9 @@ class FlujoProcedimientoController extends Controller
                 'id' => $procedimiento->id,
                 'nombre' => $procedimiento->nombre,
                 'id_nodo_entrada' => $procedimiento->id_nodo_entrada,
+                // Trámites no terminales: cambiar entrada o regenerar
+                // afecta su aceptación, bandeja y retroceso.
+                'tramites_activos' => $this->tramitesSensiblesCount($procedimiento),
             ],
             'nodos' => $nodos->map(function (FlujoNodo $n) {
                 return [
@@ -102,10 +109,37 @@ class FlujoProcedimientoController extends Controller
         ]);
     }
 
+    /**
+     * Trámites del procedimiento cuyo comportamiento operativo depende
+     * del nodo de entrada o de las banderas de los nodos:
+     * pendientes, observados o en proceso (se excluyen terminales).
+     */
+    private function tramitesSensiblesCount(Procedimiento $procedimiento): int
+    {
+        return Tramite::query()
+            ->where('id_procedimiento', $procedimiento->id)
+            ->whereIn('estado', ['PENDIENTE', 'EN_PROCESO', 'OBSERVADO', 'VERIFICADO'])
+            ->count();
+    }
+
+    /**
+     * Quién realiza el cambio, para auditoría.
+     */
+    private function actorDescripcion(): string
+    {
+        $u = Auth::user();
+        if (!$u) {
+            return 'sistema';
+        }
+
+        return trim(($u->nombres ?? '') . ' ' . ($u->apellido_paterno ?? '')) . " (ID {$u->id})";
+    }
+
     public function setNodoEntrada(Request $request, Procedimiento $procedimiento): JsonResponse
     {
         $data = $request->validate([
             'id_nodo_entrada' => 'nullable|integer|exists:flujo_nodos,id',
+            'confirmado' => 'nullable|boolean',
         ]);
 
         if (!empty($data['id_nodo_entrada'])) {
@@ -115,16 +149,51 @@ class FlujoProcedimientoController extends Controller
             }
         }
 
+        // Con trámites sensibles en curso, el cambio exige confirmación
+        // explícita: la aceptación, la bandeja y el retroceso siguen a la entrada vigente.
+        $sensibles = $this->tramitesSensiblesCount($procedimiento);
+        $cambiaEntrada = ($procedimiento->id_nodo_entrada ?? null) !== ($data['id_nodo_entrada'] ?? null);
+
+        if ($cambiaEntrada && $sensibles > 0 && !$request->boolean('confirmado')) {
+            return response()->json([
+                'success' => false,
+                'needs_confirm' => true,
+                'sensibles' => $sensibles,
+                'message' => "Hay {$sensibles} trámite(s) en curso. Cambiar el nodo de entrada moverá su aceptación, bandeja y retroceso al nuevo nodo.",
+            ], 422);
+        }
+
+        $anterior = $procedimiento->id_nodo_entrada;
         $procedimiento->id_nodo_entrada = $data['id_nodo_entrada'] ?? null;
         $procedimiento->save();
+
+        Log::info("Nodo de entrada cambiado en procedimiento {$procedimiento->id} ({$procedimiento->nombre}): {$anterior} → {$procedimiento->id_nodo_entrada} por {$this->actorDescripcion()}.");
 
         return response()->json(['success' => true, 'id_nodo_entrada' => $procedimiento->id_nodo_entrada]);
     }
 
-    public function regenerarDesdeJerarquia(Procedimiento $procedimiento): JsonResponse
+    public function regenerarDesdeJerarquia(Request $request, Procedimiento $procedimiento): JsonResponse
     {
         try {
+            // Regenerar restablece nombres, banderas y entrada: con trámites
+            // en curso exige confirmación explícita.
+            $sensibles = $this->tramitesSensiblesCount($procedimiento);
+
+            if ($sensibles > 0 && !$request->boolean('confirmado')) {
+                return response()->json([
+                    'success' => false,
+                    'needs_confirm' => true,
+                    'sensibles' => $sensibles,
+                    'message' => "Hay {$sensibles} trámite(s) en curso. Regenerar restablecerá nombres, banderas y nodo de entrada del flujo.",
+                ], 422);
+            }
+
+            $entradaAnterior = $procedimiento->id_nodo_entrada;
             $procedimiento->crearFlujoConfigurativo();
+            $procedimiento->refresh();
+
+            Log::info("Flujo regenerado desde jerarquía en procedimiento {$procedimiento->id} ({$procedimiento->nombre}). Entrada: {$entradaAnterior} → {$procedimiento->id_nodo_entrada} por {$this->actorDescripcion()}.");
+
             return response()->json(['success' => true, 'message' => 'Flujo regenerado desde la jerarquía de niveles.']);
         } catch (Exception $e) {
             return response()->json(['success' => false, 'message' => 'Error al regenerar: ' . $e->getMessage()], 500);

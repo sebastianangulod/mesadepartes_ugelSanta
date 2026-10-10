@@ -40,7 +40,8 @@
             @csrf
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- DNI (solo lectura) -->
+                <!-- DNI (solo lectura; las entidades no usan DNI) -->
+                @if($usuario->dni)
                 <div class="md:col-span-2">
                     <label for="dni" class="block text-sm font-medium text-gray-700 mb-1">DNI</label>
                     <input type="text" id="dni" name="dni" value="{{ $usuario->dni }}" 
@@ -48,11 +49,12 @@
                            readonly disabled>
                     <p class="mt-1 text-xs text-gray-500">El DNI no puede ser modificado</p>
                 </div>
+                @endif
 
                 <!-- Nombres -->
                 <div>
                     <label for="nombres" class="block text-sm font-medium text-gray-700 mb-1">
-                        Nombres <span class="text-red-500">*</span>
+                        {{ (int)($usuario->tipo_persona ?? 0) === 3 ? 'Nombre de la Entidad' : 'Nombres' }} <span class="text-red-500">*</span>
                     </label>
                     <input type="text" id="nombres" name="nombres" 
                            value="{{ old('nombres', $usuario->nombres) }}" 
@@ -63,7 +65,8 @@
                     @enderror
                 </div>
 
-                <!-- Apellido Paterno -->
+                <!-- Apellido Paterno (no aplica a Entidad Pública) -->
+                @if((int)($usuario->tipo_persona ?? 0) !== 3)
                 <div>
                     <label for="apellido_paterno" class="block text-sm font-medium text-gray-700 mb-1">
                         Apellido Paterno <span class="text-red-500">*</span>
@@ -77,7 +80,7 @@
                     @enderror
                 </div>
 
-                <!-- Apellido Materno -->
+                <!-- Apellido Materno (no aplica a Entidad Pública) -->
                 <div>
                     <label for="apellido_materno" class="block text-sm font-medium text-gray-700 mb-1">
                         Apellido Materno <span class="text-red-500">*</span>
@@ -90,6 +93,7 @@
                         <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
+                @endif
 
                 <!-- Email -->
                 <div>
@@ -231,7 +235,7 @@
                     Cancelar
                 </a>
                 <button type="submit" 
-                        class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors font-medium">
+                        class="px-6 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600 transition-colors font-medium">
                     Actualizar Datos
                 </button>
             </div>

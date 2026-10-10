@@ -36,7 +36,10 @@
 
         /* Animaciones */
         @keyframes mp-fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .mp-animate { animation: mp-fade-up .45s ease both; }
+        /* NOTA: fill 'backwards' (no 'both'): retener el keyframe final dejaría un
+           transform perpetuo que rompería el posicionamiento fixed de los modales
+           (el overlay debe cubrir toda la pantalla, no solo el contenedor). */
+        .mp-animate { animation: mp-fade-up .45s ease backwards; }
         .mp-animate-1 { animation-delay: .05s; } .mp-animate-2 { animation-delay: .12s; }
         .mp-animate-3 { animation-delay: .18s; } .mp-animate-4 { animation-delay: .24s; }
 

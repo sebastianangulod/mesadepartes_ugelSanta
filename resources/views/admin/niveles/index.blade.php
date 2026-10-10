@@ -227,12 +227,11 @@
             </div>
         </div>
     </div>
-</div>
 
 <!-- Modal Agregar/Editar Nivel -->
-<div id="modalNivel" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto">
-    <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200">
-        <div class="sticky top-0 bg-white border-b-2 border-gray-300 px-6 py-4 z-10 rounded-t-lg">
+<div id="modalNivel" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto overscroll-contain">
+    <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-md my-auto border border-slate-200" style="max-height: 90vh; overflow-y: auto;">
+        <div class="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 z-10 rounded-t-2xl">
             <h2 class="text-xl font-bold text-gray-900" id="modalNivelTitulo">Crear Nivel</h2>
         </div>
         <div class="p-6">
@@ -248,7 +247,7 @@
                     </label>
                     <input type="text" id="nombreNivel" name="nombre" required
                            placeholder="Nombre del Nivel" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                           class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
                 </div>
                 
                 <p class="text-xs text-gray-500 mb-4">El orden se asigna automáticamente (alfabético por nombre).</p>
@@ -263,8 +262,8 @@
 </div>
 
 <!-- Modal Eliminar Nivel -->
-<div id="modalDeleteNivel" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px]">
-    <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200">
+<div id="modalDeleteNivel" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto overscroll-contain">
+    <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-md my-auto border border-slate-200" style="max-height: 90vh; overflow-y: auto;">
         <div class="px-6 py-4 border-b-2 border-gray-300">
             <h2 class="text-2xl font-bold text-red-600">Eliminar Nivel</h2>
         </div>

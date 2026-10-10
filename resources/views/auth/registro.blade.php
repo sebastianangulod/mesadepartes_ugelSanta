@@ -10,7 +10,7 @@
 @section('content')
 <div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-4xl mx-auto">
-        <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+        <div class="bg-white shadow-lg rounded-2xl border border-gray-200 overflow-hidden">
             <div class="h-1 bg-gradient-to-r from-primary-800 via-primary-500 to-accent-600"></div>
             <div class="px-6 py-4 bg-primary-700">
                 <h2 class="text-xl font-semibold text-white">Registro de Usuario</h2>
@@ -127,8 +127,8 @@
                 {{-- Datos de Entidad Pública --}}
                 <div id="datos-entidad" class="hidden">
                     <div>
-                        <label for="nombre_entidad" class="block text-sm font-medium text-gray-700">Nombre de Entidad</label>
-                        <input type="text" name="nombre_entidad" id="nombre_entidad" maxlength="45"
+                        <label for="nombre_entidad" class="block text-sm font-medium text-gray-700">Nombre de Entidad (máx. 50 caracteres)</label>
+                        <input type="text" name="nombre_entidad" id="nombre_entidad" maxlength="50"
                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm px-4 py-2.5 focus:ring-primary-600 focus:border-primary-600"
                                value="{{ old('nombre_entidad') }}"
                                onInput="this.value = this.value.toUpperCase()">
@@ -247,7 +247,7 @@
 
                 {{-- Modal de Términos y Condiciones --}}
                 <div id="modalTerminos" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="tituloTerminos">
-                    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl relative my-auto" style="max-height: 90vh; display: flex; flex-direction: column;">
+                    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl relative my-auto" style="max-height: 90vh; display: flex; flex-direction: column;">
                         <div class="px-6 py-4 border-b border-gray-200">
                             <h3 id="tituloTerminos" class="text-xl font-bold text-gray-900">Términos y Condiciones de Uso</h3>
                             <p class="text-sm text-gray-500">Mesa de Partes Digital · UGEL Santa</p>

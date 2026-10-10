@@ -75,17 +75,17 @@
     /* Utilidades del editor (CSS real: @apply no funciona en <style> inline) */
     .input-sm { border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.25rem 0.5rem; font-size: 0.875rem; width: 100%; }
     .input-sm:focus { outline: none; box-shadow: 0 0 0 2px rgba(43,109,192,.35); border-color: #2b6dc0; }
-    .select-sm { border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.25rem 0.5rem; font-size: 0.875rem; background: #fff; }
+    .select-sm { border: 1px solid #d1d5db; border-radius: 0.625rem; padding: 0.5rem 0.75rem; font-size: 0.875rem; font-weight: 500; color: #1f2937; background: #fff; }
     .select-sm:focus { outline: none; box-shadow: 0 0 0 2px rgba(43,109,192,.35); border-color: #2b6dc0; }
-    .btn-sm { padding: 0.375rem 0.75rem; border-radius: 0.375rem; font-size: 0.875rem; font-weight: 500; transition: background-color .15s, color .15s; cursor: pointer; border: none; }
-    .btn-primary-sm { background: #1a4078; color: #fff; }
+    .btn-sm { padding: 0.375rem 0.75rem; border-radius: 0.375rem; font-size: 0.875rem; font-weight: 500; transition: background-color .15s, color .15s; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 0.5rem; }
+    .btn-primary-sm { background: #1a4078; color: #fff; font-weight: 700; padding: 0.5rem 1.25rem; border-radius: 0.625rem; box-shadow: 0 1px 2px rgba(17,42,77,.25); display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
     .btn-primary-sm:hover { background: #173763; }
     .btn-secondary-sm { background: #e5e7eb; color: #374151; }
     .btn-secondary-sm:hover { background: #d1d5db; }
     .btn-danger-sm { background: #fee2e2; color: #b91c1c; }
     .btn-danger-sm:hover { background: #fecaca; }
-    .btn-purple-sm { background: #f3e8ff; color: #6d28d9; }
-    .btn-purple-sm:hover { background: #e9d5ff; }
+    .btn-purple-sm { background: #6d28d9; color: #fff; font-weight: 700; padding: 0.5rem 1.25rem; border-radius: 0.625rem; box-shadow: 0 1px 2px rgba(109,40,217,.25); display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
+    .btn-purple-sm:hover { background: #5b21b6; }
     .btn-indigo-sm { background: #eef2ff; color: #4338ca; }
     .btn-indigo-sm:hover { background: #e0e7ff; }
     .label-xs { display: block; font-size: 0.75rem; color: #6b7280; margin-bottom: 0.25rem; }
@@ -108,7 +108,7 @@
             <span class="text-xs text-gray-400">Obligatorio para iniciar trámites</span>
         </div>
         <div class="p-5">
-            <p class="text-sm text-gray-600 mb-4">Los trámites nuevos quedan en PENDIENTE hasta que un equipo del nodo de entrada acepte el ingreso (cambia a EN_PROCESO).</p>
+            <p class="text-sm text-gray-600 mb-4">Los trámites nuevos quedan en PENDIENTE hasta que un equipo del nodo de entrada acepte el ingreso (cambia a EN_PROCESO). Cambiar la entrada con trámites en curso pide confirmación y queda registrado.</p>
             <div class="flex flex-wrap items-end gap-3">
                 <div class="flex-1 min-w-[220px]">
                     <label class="label-xs">Nodo de entrada</label>
@@ -116,7 +116,10 @@
                         <option value="">— Sin definir —</option>
                     </select>
                 </div>
-                <button type="button" id="btnGuardarEntrada" class="btn-primary-sm">Guardar</button>
+                <button type="button" id="btnGuardarEntrada" class="btn-primary-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    Guardar
+                </button>
             </div>
         </div>
     </section>
@@ -162,7 +165,12 @@
         if (body) opt.body = JSON.stringify(body);
         const r = await fetch(url, opt);
         const j = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(j.message || j.error || ('Error HTTP ' + r.status));
+        if (!r.ok) {
+            const err = new Error(j.message || j.error || ('Error HTTP ' + r.status));
+            err.status = r.status;
+            err.body = j;
+            throw err;
+        }
         return j;
     }
 
@@ -190,20 +198,84 @@
     document.getElementById('btnGuardarEntrada').onclick = async () => {
         try {
             const v = document.getElementById('selNodoEntrada').value;
-            await api('POST', '{{ url('/admin/procedimientos') }}/' + procId + '/flujo/nodo-entrada', { id_nodo_entrada: v ? parseInt(v, 10) : null });
-            alertBox('Nodo de entrada actualizado.', true);
-            await load();
+            const destinoId = v ? parseInt(v, 10) : null;
+
+            // Vaciar la entrada pausa la recepción: confirmación dedicada.
+            if (destinoId === null) {
+                if (!confirm('¿Dejar el procedimiento sin nodo de entrada? Mientras tanto no podrá recibir trámites nuevos.')) return;
+                await guardarEntrada(destinoId, true);
+                return;
+            }
+
+            // Si no hay cambio, nada que guardar.
+            if (String(data.procedimiento.id_nodo_entrada ?? '') === String(destinoId)) {
+                alertBox('El nodo de entrada ya es ese. Sin cambios.', true);
+                return;
+            }
+
+            await guardarEntrada(destinoId, false);
         } catch (e) { alertBox(e.message, false); }
     };
 
-    document.getElementById('btnRegenerarJerarquia').onclick = async () => {
-        if (!confirm('¿Regenerar el flujo completo desde la jerarquía del procedimiento? Se perderán cambios manuales en nodos.')) return;
+    async function guardarEntrada(destinoId, confirmado) {
+        let r;
         try {
-            await api('POST', base + '/regenerar-jerarquia', {});
-            alertBox('Flujo regenerado desde jerarquía.', true);
+            r = await api('POST', '{{ url('/admin/procedimientos') }}/' + procId + '/flujo/nodo-entrada', { id_nodo_entrada: destinoId, confirmado: confirmado });
+        } catch (e) {
+            r = (e && e.body) ? e.body : null;
+            if (!r || !r.needs_confirm) {
+                alertBox((e && e.message) || 'No se pudo guardar.', false);
+                return;
+            }
+        }
+        if (r && r.success) {
+            alertBox('Nodo de entrada actualizado.', true);
             await load();
+            return;
+        }
+        // El backend pide confirmación cuando hay trámites en curso.
+        if (r && r.needs_confirm) {
+            const n = r.sensibles || 0;
+            if (confirm(`Hay ${n} trámite(s) en curso. Cambiar el nodo de entrada moverá su aceptación, bandeja y retroceso al nuevo nodo. ¿Continuar?`)) {
+                await guardarEntrada(destinoId, true);
+            }
+            return;
+        }
+        alertBox((r && r.message) || 'No se pudo guardar.', false);
+    }
+
+    document.getElementById('btnRegenerarJerarquia').onclick = async () => {
+        try {
+            await regenerarDesdeJerarquia(false);
         } catch (e) { alertBox(e.message, false); }
     };
+
+    async function regenerarDesdeJerarquia(confirmado) {
+        let r;
+        try {
+            r = await api('POST', base + '/regenerar-jerarquia', { confirmado: confirmado });
+        } catch (e) {
+            r = (e && e.body) ? e.body : null;
+            if (!r || !r.needs_confirm) {
+                alertBox((e && e.message) || 'No se pudo regenerar.', false);
+                return;
+            }
+        }
+        if (r && r.success) {
+            alertBox('Flujo regenerado desde jerarquía.', true);
+            await load();
+            return;
+        }
+        // El backend pide confirmación cuando hay trámites en curso.
+        if (r && r.needs_confirm) {
+            const n = r.sensibles || 0;
+            if (confirm(`Hay ${n} trámite(s) en curso. Regenerar restablecerá nombres, banderas y nodo de entrada del flujo (los trámites existentes conservan su nodo actual). ¿Continuar?`)) {
+                await regenerarDesdeJerarquia(true);
+            }
+            return;
+        }
+        alertBox((r && r.message) || 'No se pudo regenerar.', false);
+    }
 
     function badgeFlag(label, active, tip) {
         return `<span class="badge-flag ${active ? 'active' : 'inactive'} tooltipped" data-tip="${tip}">${label} ${active ? '✓' : '✗'}</span>`;

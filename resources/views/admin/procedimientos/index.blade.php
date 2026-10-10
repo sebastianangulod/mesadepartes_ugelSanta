@@ -147,9 +147,9 @@
 </section>
 
 <!-- Modal Añadir Procedimiento -->
-<div id="modalAddProcedimiento" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto">
+<div id="modalAddProcedimiento" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto overscroll-contain">
     <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-md relative my-auto modal-content-procedimiento border border-slate-200">
-        <div class="sticky top-0 bg-white border-b-2 border-gray-300 px-6 py-4 z-10 rounded-t-lg">
+        <div class="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 z-10 rounded-t-2xl">
             <h2 class="text-xl font-bold text-gray-900">Añadir Procedimiento</h2>
         </div>
         <div class="p-6">
@@ -158,13 +158,13 @@
             <div class="mb-4">
                 <label for="nombreProcedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nombre del Procedimiento</label>
                 <input type="text" id="nombreProcedimiento" name="nombre" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                       class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" 
                        required minlength="3" maxlength="255">
             </div>
             <div class="mb-4">
                 <label for="areaProcedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 1 *</label>
                 <select id="areaProcedimiento" name="id_area" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" 
                         required onchange="cargarSubareas(this.value)">
                     <option value="">Seleccione Nivel 1</option>
                     @foreach($nivel1 as $area)
@@ -176,15 +176,15 @@
                 <label class="block text-sm font-medium text-gray-700 mb-1">Nivel Final *</label>
                 <div class="flex items-center space-x-4 flex-wrap">
                     <label class="inline-flex items-center">
-                        <input type="radio" name="nivel_final" value="2" class="form-radio text-blue-600" onchange="toggleNivelFinal(2)">
+                        <input type="radio" name="nivel_final" value="2" class="form-radio accent-primary-700" onchange="toggleNivelFinal(2)">
                         <span class="ml-2">Nivel 2</span>
                     </label>
                     <label class="inline-flex items-center">
-                        <input type="radio" name="nivel_final" value="3" class="form-radio text-blue-600" onchange="toggleNivelFinal(3)">
+                        <input type="radio" name="nivel_final" value="3" class="form-radio accent-primary-700" onchange="toggleNivelFinal(3)">
                         <span class="ml-2">Nivel 3</span>
                     </label>
                     <label class="inline-flex items-center">
-                        <input type="radio" name="nivel_final" value="4" class="form-radio text-blue-600" onchange="toggleNivelFinal(4)">
+                        <input type="radio" name="nivel_final" value="4" class="form-radio accent-primary-700" onchange="toggleNivelFinal(4)">
                         <span class="ml-2">Nivel 4</span>
                     </label>
                 </div>
@@ -192,7 +192,7 @@
             <div class="mb-4 nivel2-container" style="display: none;">
                 <label for="subareaProcedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 2 *</label>
                 <select id="subareaProcedimiento" name="id_subarea" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" 
                         required disabled onchange="cargarNivelesFinales(this.value)">
                     <option value="">Seleccione Nivel 2</option>
                 </select>
@@ -200,7 +200,7 @@
             <div class="mb-4 nivel3-container" style="display: none;">
                 <label for="nivel3Procedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 3 *</label>
                 <select id="nivel3Procedimiento" name="id_nivel3" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                         onchange="cargarNivel4DesdeNivel3(this.value)">
                     <option value="">Seleccione Nivel 3</option>
                 </select>
@@ -208,7 +208,7 @@
             <div class="mb-4 nivel4-container" style="display: none;">
                 <label for="nivel4Procedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 4 *</label>
                 <select id="nivel4Procedimiento" name="id_nivel_final" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
                     <option value="">Seleccione Nivel 4</option>
                 </select>
             </div>
@@ -222,9 +222,9 @@
 </div>
 
 <!-- Modal Editar Procedimiento -->
-<div id="modalEditProcedimiento" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto">
+<div id="modalEditProcedimiento" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto overscroll-contain">
     <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-md relative my-auto modal-content-procedimiento border border-slate-200">
-        <div class="sticky top-0 bg-white border-b-2 border-gray-300 px-6 py-4 z-10 rounded-t-lg">
+        <div class="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 z-10 rounded-t-2xl">
             <h2 class="text-xl font-bold text-gray-900">Editar Procedimiento</h2>
         </div>
         <div class="p-6">
@@ -235,13 +235,13 @@
             <div class="mb-4">
                 <label for="editNombreProcedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nombre del Procedimiento</label>
                 <input type="text" id="editNombreProcedimiento" name="nombre" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                       class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" 
                        required minlength="3" maxlength="255">
             </div>
             <div class="mb-4">
                 <label for="editAreaProcedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 1 *</label>
                 <select id="editAreaProcedimiento" name="id_area" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" 
                         required onchange="cargarSubareasEdit(this.value)">
                     <option value="">Seleccione Nivel 1</option>
                     @foreach($nivel1 as $area)
@@ -253,15 +253,15 @@
                 <label class="block text-sm font-medium text-gray-700 mb-1">Nivel Final *</label>
                 <div class="flex items-center space-x-4 flex-wrap">
                     <label class="inline-flex items-center">
-                        <input type="radio" name="edit_nivel_final" value="2" class="form-radio text-blue-600" onchange="toggleNivelFinalEdit(2)">
+                        <input type="radio" name="edit_nivel_final" value="2" class="form-radio accent-primary-700" onchange="toggleNivelFinalEdit(2)">
                         <span class="ml-2">Nivel 2</span>
                     </label>
                     <label class="inline-flex items-center">
-                        <input type="radio" name="edit_nivel_final" value="3" class="form-radio text-blue-600" onchange="toggleNivelFinalEdit(3)">
+                        <input type="radio" name="edit_nivel_final" value="3" class="form-radio accent-primary-700" onchange="toggleNivelFinalEdit(3)">
                         <span class="ml-2">Nivel 3</span>
                     </label>
                     <label class="inline-flex items-center">
-                        <input type="radio" name="edit_nivel_final" value="4" class="form-radio text-blue-600" onchange="toggleNivelFinalEdit(4)">
+                        <input type="radio" name="edit_nivel_final" value="4" class="form-radio accent-primary-700" onchange="toggleNivelFinalEdit(4)">
                         <span class="ml-2">Nivel 4</span>
                     </label>
                 </div>
@@ -269,7 +269,7 @@
             <div class="mb-4 edit-nivel2-container" style="display: none;">
                 <label for="editSubareaProcedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 2 *</label>
                 <select id="editSubareaProcedimiento" name="id_subarea" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" 
                         required disabled onchange="cargarNivelesFinalesEdit(this.value)">
                     <option value="">Seleccione Nivel 2</option>
                 </select>
@@ -277,7 +277,7 @@
             <div class="mb-4 edit-nivel3-container" style="display: none;">
                 <label for="editNivel3Procedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 3 *</label>
                 <select id="editNivel3Procedimiento" name="id_nivel3" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                         onchange="cargarNivel4DesdeNivel3Edit(this.value)">
                     <option value="">Seleccione Nivel 3</option>
                 </select>
@@ -285,7 +285,7 @@
             <div class="mb-4 edit-nivel4-container" style="display: none;">
                 <label for="editNivel4Procedimiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel 4 *</label>
                 <select id="editNivel4Procedimiento" name="id_nivel_final" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
                     <option value="">Seleccione Nivel 4</option>
                 </select>
             </div>
@@ -299,9 +299,9 @@
 </div>
 
 <!-- Modal Asignar Especialistas -->
-<div id="modalAsignarEspecialistas" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto">
+<div id="modalAsignarEspecialistas" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto overscroll-contain">
     <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative my-auto modal-content-procedimiento border border-slate-200">
-        <div class="sticky top-0 bg-white border-b-2 border-gray-300 px-6 py-4 z-10 rounded-t-lg">
+        <div class="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 z-10 rounded-t-2xl">
             <h2 class="text-xl font-bold text-gray-900">Asignar Especialistas</h2>
             <p class="text-sm text-gray-600 mt-1" id="modalProcedimientoNombre"></p>
         </div>
@@ -330,8 +330,8 @@
 </div>
 
 <!-- Modal Eliminar Procedimiento -->
-<div id="modalDeleteProcedimiento" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px]">
-    <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200">
+<div id="modalDeleteProcedimiento" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[2px] overflow-y-auto overscroll-contain">
+    <div class="mp-modal-panel bg-white rounded-2xl shadow-2xl w-full max-w-md my-auto border border-slate-200" style="max-height: 90vh; overflow-y: auto;">
         <div class="px-6 py-4 border-b-2 border-gray-300">
             <h2 class="text-2xl font-bold text-red-600">Eliminar Procedimiento</h2>
         </div>

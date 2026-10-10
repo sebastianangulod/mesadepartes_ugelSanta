@@ -118,7 +118,7 @@
                                         {{ $tramite->fecha_creacion ? $tramite->fecha_creacion->format('d/m/Y H:i') : 'N/A' }}
                                     </td>
                                     <td class="px-4 py-3.5 text-right whitespace-nowrap">
-                                        <a href="{{ route('mesa-partes.tramites-recibidos') }}?tramite_id={{ $tramite->id }}" class="text-[12.5px] font-bold text-primary-700 hover:text-primary-900">Ver</a>
+                                        <a href="{{ route('mesa-partes.rastrear', ['codigo' => $tramite->codigo_seguimiento ?? $tramite->id]) }}" class="text-[12.5px] font-bold text-primary-700 hover:text-primary-900">Ver</a>
                                     </td>
                                 </tr>
                             @endforeach
