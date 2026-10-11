@@ -185,6 +185,21 @@
                         <p class="px-3 mt-1.5 text-[11px] leading-snug text-slate-400">Bandeja de trabajo diaria: acepta, observa, deriva y finaliza.</p>
                         @endif
                     </li>
+                    @if($isInternal)
+                    <li>
+                        <a href="{{ route('mesa-partes.reportes') }}"
+                           class="{{ $linkBase }} {{ request()->routeIs('mesa-partes.reportes*') ? $linkActive : $linkIdle }}">
+                            <span class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 {{ request()->routeIs('mesa-partes.reportes*') ? 'bg-primary-50 text-primary-700' : 'bg-white/10 text-slate-200 group-hover:bg-white/15' }}">
+                                <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-6m4 6V7m4 10v-3M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                            </span>
+                            <span class="flex-1">Reportes</span>
+                            @if(request()->routeIs('mesa-partes.reportes*'))
+                                <span class="w-1.5 h-6 rounded-full bg-primary-600"></span>
+                            @endif
+                        </a>
+                        <p class="px-3 mt-1.5 text-[11px] leading-snug text-slate-400">Estadísticas semanales y mensuales de trámites ingresados.</p>
+                    </li>
+                    @endif
                 </ul>
             </div>
 

@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\UsuariosController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\MesaPartesController;
 use App\Http\Controllers\NotificacionController;
+use App\Http\Controllers\ReporteController;
 
 /*
 |--------------------------------------------------------------------------
@@ -231,6 +232,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/no-leidas', [NotificacionController::class, 'noLeidas'])->name('notificaciones.no-leidas');
         Route::post('/{id}/leer', [NotificacionController::class, 'leer'])->name('notificaciones.leer');
         Route::post('/leer-todas', [NotificacionController::class, 'leerTodas'])->name('notificaciones.leer-todas');
+    });
+    // Reportes semanales y mensuales (solo lectura, solo usuarios internos)
+    Route::prefix('mesa-partes/reportes')->group(function () {
+        Route::get('/', [ReporteController::class, 'index'])->name('mesa-partes.reportes');
+        Route::get('/ajax', [ReporteController::class, 'datos'])->name('mesa-partes.reportes.ajax');
+        Route::get('/exportar', [ReporteController::class, 'exportar'])->name('mesa-partes.reportes.exportar');
     });
     // Rutas API AJAX para administración
     Route::prefix('api')->group(function () {        // Niveles dinámicos para selects
