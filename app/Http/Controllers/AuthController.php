@@ -200,6 +200,8 @@ class AuthController extends Controller
 
             // Autenticar al usuario
             Auth::login($usuario, $credentials['remember'] ?? false);
+            // Regenerar la sesión tras el login (previene fijación de sesión).
+            $request->session()->regenerate();
             
             // Limpiar intentos fallidos
             $this->limpiarIntentosFallidos($identificador);
@@ -274,6 +276,8 @@ class AuthController extends Controller
 
             // Autenticar al usuario
             Auth::login($usuario, $credentials['remember'] ?? false);
+            // Regenerar la sesión tras el login (previene fijación de sesión).
+            $request->session()->regenerate();
             
             // Limpiar intentos fallidos
             $this->limpiarIntentosFallidos($credentials['dni']);

@@ -119,13 +119,13 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path>
                                 </svg>
                             </a>
-                            <button onclick="asignarEspecialistas({{ $procedimiento->id }}, '{{ $procedimiento->nombre }}')" 
+                            <button onclick="asignarEspecialistas({{ $procedimiento->id }}, this.dataset.nombre)" data-nombre="{{ $procedimiento->nombre }}"
                                     class="text-blue-500 hover:text-blue-700" title="Asignar Especialistas">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
                                 </svg>
                             </button>
-                            <button onclick="eliminarProcedimiento({{ $procedimiento->id }}, '{{ $procedimiento->nombre }}')" 
+                            <button onclick="eliminarProcedimiento({{ $procedimiento->id }}, this.dataset.nombre)" data-nombre="{{ $procedimiento->nombre }}"
                                     class="text-red-500 hover:text-red-700" title="Eliminar">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -450,9 +450,9 @@
                                    ${isChecked ? 'checked' : ''}>
                             <div class="flex-1">
                                 <div class="font-medium text-gray-900">
-                                    ${usuario.nombres} ${usuario.apellido_paterno} ${usuario.apellido_materno || ''}
+                                    ${window.app.esc(usuario.nombres)} ${window.app.esc(usuario.apellido_paterno)} ${window.app.esc(usuario.apellido_materno) || ''}
                                 </div>
-                                <div class="text-sm text-gray-500">${usuario.email}</div>
+                                <div class="text-sm text-gray-500">${window.app.esc(usuario.email)}</div>
                             </div>
                         </label>
                     `;
@@ -463,7 +463,7 @@
                 container.innerHTML = `
                     <div class="text-center text-red-500 py-8">
                         <p class="text-lg font-medium mb-2">Error al cargar especialistas</p>
-                        <p class="text-sm">${data.message || 'Ocurrió un error inesperado'}</p>
+                        <p class="text-sm">${window.app.esc(data.message) || 'Ocurrió un error inesperado'}</p>
                     </div>
                 `;
             }

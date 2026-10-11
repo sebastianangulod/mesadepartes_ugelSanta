@@ -101,13 +101,13 @@
                             <p class="text-sm text-gray-500">ID: {{ $nivel1->id }}</p>
                         </div>
                         <div class="space-x-2" onclick="event.stopPropagation();">
-                            <button onclick="editarNivel('nivel_1', {{ $nivel1->id }}, '{{ $nivel1->nombre }}')" 
+                            <button onclick="editarNivel('nivel_1', {{ $nivel1->id }}, this.dataset.nombre)" data-nombre="{{ $nivel1->nombre }}" 
                                     class="text-blue-500 hover:text-blue-700" title="Editar">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                 </svg>
                             </button>
-                            <button onclick="eliminarNivel('nivel_1', {{ $nivel1->id }}, '{{ $nivel1->nombre }}')" 
+                            <button onclick="eliminarNivel('nivel_1', {{ $nivel1->id }}, this.dataset.nombre)" data-nombre="{{ $nivel1->nombre }}" 
                                     class="text-red-500 hover:text-red-700" title="Eliminar">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -135,13 +135,13 @@
                                         <p class="text-xs text-gray-500">ID: {{ $nivel2->id }}</p>
                                     </div>
                                     <div class="space-x-2" onclick="event.stopPropagation();">
-                                        <button onclick="editarNivel('nivel_2', {{ $nivel2->id }}, '{{ $nivel2->nombre }}')" 
+                                        <button onclick="editarNivel('nivel_2', {{ $nivel2->id }}, this.dataset.nombre)" data-nombre="{{ $nivel2->nombre }}" 
                                                 class="text-green-500 hover:text-green-700" title="Editar">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                             </svg>
                                         </button>
-                                        <button onclick="eliminarNivel('nivel_2', {{ $nivel2->id }}, '{{ $nivel2->nombre }}')" 
+                                        <button onclick="eliminarNivel('nivel_2', {{ $nivel2->id }}, this.dataset.nombre)" data-nombre="{{ $nivel2->nombre }}" 
                                                 class="text-red-500 hover:text-red-700" title="Eliminar">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -166,13 +166,13 @@
                                                     <p class="text-xs text-gray-500">ID: {{ $nivel3->id }}</p>
                                                 </div>
                                                 <div class="space-x-2" onclick="event.stopPropagation();">
-                                                    <button onclick="editarNivel('nivel_3', {{ $nivel3->id }}, '{{ $nivel3->nombre }}')" 
+                                                    <button onclick="editarNivel('nivel_3', {{ $nivel3->id }}, this.dataset.nombre)" data-nombre="{{ $nivel3->nombre }}" 
                                                             class="text-yellow-500 hover:text-yellow-700" title="Editar">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                                         </svg>
                                                     </button>
-                                                    <button onclick="eliminarNivel('nivel_3', {{ $nivel3->id }}, '{{ $nivel3->nombre }}')" 
+                                                    <button onclick="eliminarNivel('nivel_3', {{ $nivel3->id }}, this.dataset.nombre)" data-nombre="{{ $nivel3->nombre }}" 
                                                             class="text-red-500 hover:text-red-700" title="Eliminar">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -196,13 +196,13 @@
                                                                 <p class="text-xs text-gray-500">ID: {{ $nivel4->id }}</p>
                                                             </div>
                                                             <div class="space-x-2">
-                                                                <button onclick="editarNivel('nivel_4', {{ $nivel4->id }}, '{{ $nivel4->nombre }}')" 
+                                                                <button onclick="editarNivel('nivel_4', {{ $nivel4->id }}, this.dataset.nombre)" data-nombre="{{ $nivel4->nombre }}" 
                                                                         class="text-purple-500 hover:text-purple-700" title="Editar">
                                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                                                     </svg>
                                                                 </button>
-                                                                <button onclick="eliminarNivel('nivel_4', {{ $nivel4->id }}, '{{ $nivel4->nombre }}')" 
+                                                                <button onclick="eliminarNivel('nivel_4', {{ $nivel4->id }}, this.dataset.nombre)" data-nombre="{{ $nivel4->nombre }}" 
                                                                         class="text-red-500 hover:text-red-700" title="Eliminar">
                                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>

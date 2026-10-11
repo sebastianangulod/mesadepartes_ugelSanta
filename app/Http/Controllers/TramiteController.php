@@ -503,16 +503,6 @@ class TramiteController extends Controller
                     'status' => 'error',
                     'message' => $errorMessage,
                     'errors' => ['archivo' => [$errorMessage]],
-                    'debug' => [
-                        'php_upload_max_filesize' => ini_get('upload_max_filesize') . ' (' . number_format($uploadMaxFilesize / 1024 / 1024, 2) . ' MB)',
-                        'php_post_max_size' => ini_get('post_max_size') . ' (' . number_format($postMaxSize / 1024 / 1024, 2) . ' MB)',
-                        'php_max_file_uploads' => ini_get('max_file_uploads'),
-                        'has_file' => $request->hasFile('archivo'),
-                        'all_files' => array_keys($request->allFiles()),
-                        'upload_error_code' => $_FILES['archivo']['error'] ?? null,
-                        'file_size' => $fileSize ? number_format($fileSize / 1024 / 1024, 2) . ' MB' : 'No disponible',
-                        'suggestion' => 'Por favor, configure php.ini con: upload_max_filesize = 10M y post_max_size = 12M'
-                    ]
                 ], 422);
             }
 
@@ -652,7 +642,7 @@ class TramiteController extends Controller
             
             return response()->json([
                 'status' => 'error',
-                'message' => 'Error al procesar la solicitud: ' . $e->getMessage(),
+                'message' => 'Error al procesar la solicitud. Por favor, inténtelo nuevamente.',
             ], 500);
         }
     }
@@ -667,8 +657,8 @@ class TramiteController extends Controller
     {
         $tramite = Tramite::with(['procedimiento', 'usuario', 'creador', 'titular'])->findOrFail($id);
 
-        // Cualquier usuario autenticado puede ver la confirmación
-        // (la autenticación se valida en el middleware 'auth')
+        // Contiene datos personales: solo quien tenga acceso al trámite.
+        $this->authorize('view', $tramite);
 
         // Asegurar que fecha_creacion esté establecida
         if (!$tramite->fecha_creacion) {
@@ -692,8 +682,8 @@ class TramiteController extends Controller
     {
         $tramite = Tramite::with(['procedimiento', 'usuario', 'creador', 'titular'])->findOrFail($id);
 
-        // Cualquier usuario autenticado puede ver el voucher
-        // (la autenticación se valida en el middleware 'auth')
+        // Contiene datos personales (incluido DNI): solo quien tenga acceso al trámite.
+        $this->authorize('view', $tramite);
 
         // Obtener niveles de derivación (similar a hojaRuta)
         $nivelesDerivacion = [];
@@ -1133,17 +1123,22 @@ class TramiteController extends Controller
      */
     public function hojaRuta(int $id): JsonResponse
     {
+        $tramite = Tramite::with([
+            'procedimiento',
+            'usuario',
+            'creador',
+            'titular',
+            'nodoActual',
+            'movimientosFlujo.usuario',
+            'movimientosFlujo.nodoDesde',
+            'movimientosFlujo.nodoHacia'
+        ])->findOrFail($id);
+
+        // Expone nombres y correos: solo quien tenga acceso al trámite.
+        // (Fuera del try para que el 403 no se convierta en 500.)
+        $this->authorize('view', $tramite);
+
         try {
-            $tramite = Tramite::with([
-                'procedimiento', 
-                'usuario',
-                'creador',
-                'titular',
-                'nodoActual',
-                'movimientosFlujo.usuario',
-                'movimientosFlujo.nodoDesde',
-                'movimientosFlujo.nodoHacia'
-            ])->findOrFail($id);
             
             // 1. Niveles estáticos del procedimiento (ruta esperada)
             $nivelesEstaticos = $this->obtenerNivelesEstaticos($tramite);
@@ -1175,9 +1170,10 @@ class TramiteController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
+            \Log::error('Error al obtener la hoja de ruta', ['tramite' => $id, 'message' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error al obtener la hoja de ruta: ' . $e->getMessage(),
+                'message' => 'Error al obtener la hoja de ruta.',
             ], 500);
         }
     }

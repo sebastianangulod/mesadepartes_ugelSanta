@@ -138,7 +138,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                             </svg>
                         </button>
-                        <button onclick="abrirModalNiveles({{ $usuario->id }}, '{{ $usuario->nombres }} {{ $usuario->apellido_paterno }}')" 
+                        <button onclick="abrirModalNiveles({{ $usuario->id }}, this.dataset.nombre)" data-nombre="{{ $usuario->nombres }} {{ $usuario->apellido_paterno }}"
                                 class="text-purple-500 hover:text-purple-700 mr-2" title="Asignar Niveles">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 002-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
@@ -146,27 +146,27 @@
                         </button>
                         @if($usuario->id != auth()->id())
                         @if($usuario->administrador)
-                        <button onclick="toggleAdmin({{ $usuario->id }}, true, '{{ $usuario->nombres }} {{ $usuario->apellido_paterno }}')"
+                        <button onclick="toggleAdmin({{ $usuario->id }}, true, this.dataset.nombre)" data-nombre="{{ $usuario->nombres }} {{ $usuario->apellido_paterno }}"
                                 class="text-amber-500 hover:text-amber-700 mr-2" title="Quitar administrador">
                             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M12 2l2.9 6.26L21.5 9.3l-4.75 4.87L17.8 21 12 17.77 6.2 21l1.05-6.83L2.5 9.3l6.6-1.04L12 2z"></path>
                             </svg>
                         </button>
                         @else
-                        <button onclick="toggleAdmin({{ $usuario->id }}, false, '{{ $usuario->nombres }} {{ $usuario->apellido_paterno }}')"
+                        <button onclick="toggleAdmin({{ $usuario->id }}, false, this.dataset.nombre)" data-nombre="{{ $usuario->nombres }} {{ $usuario->apellido_paterno }}"
                                 class="text-gray-400 hover:text-amber-600 mr-2" title="Hacer administrador">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2l2.9 6.26L21.5 9.3l-4.75 4.87L17.8 21 12 17.77 6.2 21l1.05-6.83L2.5 9.3l6.6-1.04L12 2z"></path>
                             </svg>
                         </button>
                         @endif
-                        <button onclick="resetearPassword({{ $usuario->id }}, '{{ $usuario->nombres }} {{ $usuario->apellido_paterno }}')"
+                        <button onclick="resetearPassword({{ $usuario->id }}, this.dataset.nombre)" data-nombre="{{ $usuario->nombres }} {{ $usuario->apellido_paterno }}"
                                 class="text-blue-500 hover:text-blue-700 mr-2" title="Resetear contraseña">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
                             </svg>
                         </button>
-                        <button onclick="eliminarUsuario({{ $usuario->id }}, '{{ $usuario->nombres }} {{ $usuario->apellido_paterno }}')"
+                        <button onclick="eliminarUsuario({{ $usuario->id }}, this.dataset.nombre)" data-nombre="{{ $usuario->nombres }} {{ $usuario->apellido_paterno }}"
                                 class="text-red-500 hover:text-red-700" title="Eliminar">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -1840,7 +1840,7 @@
                     const nivelLabels = { 1: 'Nivel 1', 2: 'Nivel 2', 3: 'Nivel 3', 4: 'Nivel 4' };
                     html += `
                         <div class="flex items-center justify-between p-2 bg-white border rounded">
-                            <span class="font-medium text-gray-900">${nivelLabels[nivel.nivel] || 'Nivel ' + nivel.nivel}: ${nivel.nombre || 'N/A'}</span>
+                            <span class="font-medium text-gray-900">${window.app.esc(nivelLabels[nivel.nivel]) || 'Nivel ' + nivel.nivel}: ${window.app.esc(nivel.nombre) || 'N/A'}</span>
                             <button type="button" onclick="eliminarNivelUsuario(${usuarioId}, ${nivel.nivel})" 
                                     class="text-red-500 hover:text-red-700 text-sm" title="Eliminar">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

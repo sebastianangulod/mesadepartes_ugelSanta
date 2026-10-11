@@ -14,6 +14,13 @@
     <script>
 (function() {
 // ══════ Toasts del sistema ══════
+            // Escape HTML para interpolar datos del servidor en innerHTML
+            // (nombres de usuarios, nodos y procedimientos son editables).
+            window.app.esc = function(s) {
+                return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function(c) {
+                    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+                });
+            };
             window.app.toast = function(message, type) {
                 type = type || 'info';
                 const box = document.getElementById('mpToasts');

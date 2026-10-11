@@ -445,7 +445,7 @@
             .then(data => {
                 tbody.innerHTML = '';
                 if (!data.success) {
-                    tbody.innerHTML = '<tr><td class="py-6 text-center text-sm font-semibold text-red-500">' + (data.message || 'Error al cargar datos') + '</td></tr>';
+                    tbody.innerHTML = '<tr><td class="py-6 text-center text-sm font-semibold text-red-500">' + window.app.esc(data.message || 'Error al cargar datos') + '</td></tr>';
                     return;
                 }
 
@@ -454,7 +454,7 @@
                     const pos = data.posicion_actual;
                     tbody.innerHTML += `
                         <tr class="bg-primary-50">
-                            <td class="py-3 px-4 text-[13px]" colspan="2">📍 <strong>Posición actual:</strong> ${pos.nodo_nombre} (Orden ${pos.nodo_orden})
+                            <td class="py-3 px-4 text-[13px]" colspan="2">📍 <strong>Posición actual:</strong> ${window.app.esc(pos.nodo_nombre)} (Orden ${window.app.esc(pos.nodo_orden)})
                                 <span class="ml-2 px-2 py-0.5 text-[11px] font-bold rounded-full ${pos.puede_finalizar ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">
                                     ${pos.puede_finalizar ? 'Nodo final' : 'Nodo intermedio'}
                                 </span>
@@ -474,13 +474,13 @@
                         </tr>
                     `;
                     data.historial.forEach((mov, index) => {
-                        const desde = mov.nodo_desde ? `${mov.nodo_desde.nombre} (Ord: ${mov.nodo_desde.orden})` : '—';
-                        const hacia = mov.nodo_hacia ? `${mov.nodo_hacia.nombre} (Ord: ${mov.nodo_hacia.orden})` : '—';
-                        const usuario = mov.usuario ? `${mov.usuario.nombre} (${mov.usuario.email})` : 'Sistema';
+                        const desde = mov.nodo_desde ? `${window.app.esc(mov.nodo_desde.nombre)} (Ord: ${window.app.esc(mov.nodo_desde.orden)})` : '—';
+                        const hacia = mov.nodo_hacia ? `${window.app.esc(mov.nodo_hacia.nombre)} (Ord: ${window.app.esc(mov.nodo_hacia.orden)})` : '—';
+                        const usuario = mov.usuario ? `${window.app.esc(mov.usuario.nombre)} (${window.app.esc(mov.usuario.email)})` : 'Sistema';
 
                         tbody.innerHTML += `
                             <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-slate-50'}">
-                                <td class="py-2.5 px-4 text-[12px] text-slate-500 whitespace-nowrap">${mov.fecha}<br><span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700">${mov.accion_legible}</span></td>
+                                <td class="py-2.5 px-4 text-[12px] text-slate-500 whitespace-nowrap">${window.app.esc(mov.fecha)}<br><span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700">${window.app.esc(mov.accion_legible)}</span></td>
                                 <td class="py-2.5 px-4 text-[13px]"><div><strong>De:</strong> ${desde}</div><div><strong>A:</strong> ${hacia}</div><div class="text-[12px] text-slate-500 mt-0.5">${usuario}</div></td>
                             </tr>
                         `;
@@ -505,8 +505,8 @@
                             && nivel.id_nodo && data.posicion_actual.nodo_id === nivel.id_nodo;
                         tbody.innerHTML += `
                             <tr class="${esActual ? 'bg-primary-50 font-semibold' : ''}">
-                                <td class="py-2 px-4 text-center font-extrabold text-slate-700">${nivel.nivel}</td>
-                                <td class="py-2 px-4 text-[13px]">${nivel.nombre} ${esActual ? '<span class="ml-2 px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary-600 text-white">ACTUAL</span>' : ''}</td>
+                                <td class="py-2 px-4 text-center font-extrabold text-slate-700">${window.app.esc(nivel.nivel)}</td>
+                                <td class="py-2 px-4 text-[13px]">${window.app.esc(nivel.nombre)} ${esActual ? '<span class="ml-2 px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary-600 text-white">ACTUAL</span>' : ''}</td>
                             </tr>
                         `;
                     });

@@ -38,9 +38,9 @@ Route::middleware('guest')->group(function () {
     Route::get('/login-interno', [AuthController::class, 'showLoginInternoForm'])->name('login.interno');
     Route::post('/login-interno', [AuthController::class, 'loginInterno']);
     
-    // Registro
+    // Registro (límite anti-spam: crea cuentas y envía correos)
     Route::get('/registro', [AuthController::class, 'showRegistroForm'])->name('register');
-    Route::post('/registro', [AuthController::class, 'registro']);
+    Route::post('/registro', [AuthController::class, 'registro'])->middleware('throttle:10,1');
     
     // Recuperación de contraseña (vista pública; el POST atiende a invitados
     // y a autenticados —p. ej. el formulario embebido en actualizar-contraseña—)
@@ -50,7 +50,7 @@ Route::middleware('guest')->group(function () {
 
 // Solicitud de recuperación por DNI: fuera del grupo guest para que
 // también funcione con sesión iniciada (formulario en perfil)
-Route::post('/recuperar', [AuthController::class, 'recuperar']);
+Route::post('/recuperar', [AuthController::class, 'recuperar'])->middleware('throttle:10,1');
 // Restablecer con token: también fuera de guest, el link puede abrirse
 // con sesión iniciada sin redirigir dentro del sistema
 Route::get('/restablecer/{token}', [AuthController::class, 'showRestablecerForm'])->name('password.reset');
@@ -72,28 +72,24 @@ Route::get('/api/departamentos', [AuthController::class, 'obtenerDepartamentos']
 Route::get('/api/provincias/{departamentoId}', [AuthController::class, 'obtenerProvincias'])->name('api.provincias');
 Route::get('/api/distritos/{provinciaId}', [AuthController::class, 'obtenerDistritos'])->name('api.distritos');
 
-// API para validaciones de registro - Públicas (sin middleware guest para permitir peticiones AJAX)
-Route::post('/api/validar-dni', [AuthController::class, 'validarDni'])->name('api.validar-dni');
-Route::post('/api/validar-ruc', [AuthController::class, 'validarRuc'])->name('api.validar-ruc');
-Route::post('/api/validar-email', [AuthController::class, 'validarEmail'])->name('api.validar-email');
+// API para validaciones de registro - Públicas (sin middleware guest para permitir peticiones AJAX).
+// Con límite: consultan servicios externos de pago (RENIEC/SUNAT) y permiten enumerar DNIs/correos.
+Route::post('/api/validar-dni', [AuthController::class, 'validarDni'])->middleware('throttle:30,1')->name('api.validar-dni');
+Route::post('/api/validar-ruc', [AuthController::class, 'validarRuc'])->middleware('throttle:30,1')->name('api.validar-ruc');
+Route::post('/api/validar-email', [AuthController::class, 'validarEmail'])->middleware('throttle:30,1')->name('api.validar-email');
 
 // Logout (accesible solo para usuarios autenticados)
 Route::middleware('auth')->post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Rutas públicas de mesa de partes
 Route::prefix('mesa-partes')->group(function () {
-    // Rastreo de trámites (público)
+    // Rastreo de trámites (público, con límite anti-raspadado)
     Route::get('/rastrear', [TramiteController::class, 'rastrear'])->name('mesa-partes.rastrear');
-    Route::post('/rastrear/buscar', [TramiteController::class, 'buscarParaRastreo'])->name('mesa-partes.rastrear.buscar');
+    Route::post('/rastrear/buscar', [TramiteController::class, 'buscarParaRastreo'])->middleware('throttle:30,1')->name('mesa-partes.rastrear.buscar');
     
-    // Registro de nuevos trámites (público)
+    // Registro de nuevos trámites (requiere autenticación efectiva en el servicio)
     Route::get('/nuevo', [TramiteController::class, 'nuevo'])->name('mesa-partes.nuevo');
-    Route::post('/guardar', [TramiteController::class, 'guardar'])->name('mesa-partes.guardar');
-    
-    // Confirmación y voucher
-    Route::get('/confirmacion/{id}', [TramiteController::class, 'confirmacion'])->name('mesa-partes.confirmacion');
-    Route::get('/voucher/{id}', [TramiteController::class, 'voucher'])->name('mesa-partes.voucher');
-    Route::get('/hoja-ruta/{id}', [TramiteController::class, 'hojaRuta'])->name('mesa-partes.hoja-ruta');
+    Route::post('/guardar', [TramiteController::class, 'guardar'])->middleware('throttle:10,1')->name('mesa-partes.guardar');
 });
 
 // Grupo de rutas protegidas
@@ -224,6 +220,12 @@ Route::middleware(['auth'])->group(function () {
             ->name('mesa-partes.tramites-recibidos');
         Route::post('/tramites-recibidos/ajax', [MesaPartesController::class, 'obtenerTramitesPorNivelUsuario'])
             ->name('mesa-partes.tramites-recibidos.ajax');
+
+        // Confirmación, voucher y hoja de ruta: contienen datos personales,
+        // solo para usuarios autenticados con acceso al trámite.
+        Route::get('/confirmacion/{id}', [TramiteController::class, 'confirmacion'])->name('mesa-partes.confirmacion');
+        Route::get('/voucher/{id}', [TramiteController::class, 'voucher'])->name('mesa-partes.voucher');
+        Route::get('/hoja-ruta/{id}', [TramiteController::class, 'hojaRuta'])->name('mesa-partes.hoja-ruta');
     });
     // Bandeja de notificaciones del usuario autenticado
     Route::prefix('notificaciones')->group(function () {
