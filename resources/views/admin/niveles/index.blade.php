@@ -411,12 +411,12 @@
             if (data.success) {
                 location.reload();
             } else {
-                alert('Error: ' + data.message);
+                window.app.toast('Error: ' + data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al guardar el nivel');
+            window.app.toast('Error al guardar el nivel.', 'error');
         });
     }
 
@@ -493,12 +493,12 @@
             if (data.success) {
                 location.reload();
             } else {
-                alert('Error: ' + data.message);
+                window.app.toast('Error: ' + data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al eliminar el nivel');
+            window.app.toast('Error al eliminar el nivel.', 'error');
         });
     }
 </script>

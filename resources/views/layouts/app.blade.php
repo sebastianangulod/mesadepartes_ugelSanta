@@ -74,7 +74,7 @@
                             <div class="flex items-center space-x-2">
                                 <div class="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center">
                                     <span class="text-white text-sm font-medium">
-                                        {{ substr(auth()->user()->nombres ?? 'U', 0, 1) }}
+                                        {{ mb_substr(auth()->user()->nombres ?? 'U', 0, 1) }}
                                     </span>
                                 </div>
                                 <div class="hidden md:block">
@@ -173,15 +173,16 @@
         window.app = {
             // Mostrar notificación
             showNotification: function(message, type = 'success') {
-                // Aquí puedes integrar una librería de notificaciones como Toastr
-                console.log(`[${type.toUpperCase()}] ${message}`);
+                window.app.toast(message, type);
             },
             
             // Confirmar acción
             confirmAction: function(message, callback) {
-                if (confirm(message)) {
-                    callback();
-                }
+                window.app.confirmDialog(message, { danger: false }).then(function(ok) {
+                    if (ok && typeof callback === 'function') {
+                        callback();
+                    }
+                });
             },
             
             // Formatear fecha
@@ -229,6 +230,8 @@
         };
     </script>
     
+    @include('components.sistema-notificaciones')
+
     @stack('scripts')
 </body>
 </html>

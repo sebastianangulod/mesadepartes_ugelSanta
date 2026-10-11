@@ -340,12 +340,12 @@
             } else {
                 selectedValue = $('#id_procedimiento').val();
             }
-            if (!selectedValue) { alert('Debe seleccionar un procedimiento.'); return; }
+            if (!selectedValue) { window.app.toast('Debe seleccionar un procedimiento.', 'warning'); return; }
 
             var archivoInput = document.getElementById('archivo');
             var archivo = archivoInput && archivoInput.files.length > 0 ? archivoInput.files[0] : null;
-            if (!archivo) { alert('Debe adjuntar un archivo PDF.'); return; }
-            if (archivo.type !== 'application/pdf' || archivo.size > 26214400) { alert('Archivo inválido o mayor a 25MB.'); return; }
+            if (!archivo) { window.app.toast('Debe adjuntar un archivo PDF.', 'warning'); return; }
+            if (archivo.type !== 'application/pdf' || archivo.size > 26214400) { window.app.toast('Archivo inválido o mayor a 25MB.', 'error'); return; }
 
             var formData = new FormData();
             formData.append('_token', csrfToken());
@@ -358,7 +358,7 @@
                 // Entidad pública: solo nombre (sin DNI ni RUC), como en el login.
                 if (tipo === '3') {
                     const nomEnt = document.getElementById('titular_nombre_entidad').value.trim();
-                    if (!nomEnt) { alert('Debe ingresar el nombre de la entidad pública.'); return; }
+                    if (!nomEnt) { window.app.toast('Debe ingresar el nombre de la entidad pública.', 'warning'); return; }
                     formData.append('titular_tipo_persona', tipo);
                     formData.append('titular_dni', '');
                     formData.append('titular_nombres', '');
@@ -367,8 +367,8 @@
                     formData.append('titular_ruc', '');
                     formData.append('titular_razon_social', nomEnt.toUpperCase());
                 } else {
-                    if (!titularDniValidado) { alert('Debe validar el DNI del ciudadano antes de crear el trámite.'); return; }
-                    if (tipo === '2' && !titularRucValidado) { alert('Debe validar el RUC de la empresa.'); return; }
+                    if (!titularDniValidado) { window.app.toast('Debe validar el DNI del ciudadano antes de crear el trámite.', 'warning'); return; }
+                    if (tipo === '2' && !titularRucValidado) { window.app.toast('Debe validar el RUC de la empresa.', 'warning'); return; }
                     formData.append('titular_tipo_persona', tipo);
                     formData.append('titular_dni', document.getElementById('titular_dni').value.trim());
                     formData.append('titular_nombres', document.getElementById('titular_nombres').value);
@@ -389,9 +389,9 @@
                 },
                 success: function(response) {
                     if (response.status === 'success') {
-                        alert(response.message);
+                        window.app.toast(response.message, 'success');
                         if (response.redirect) window.location.href = response.redirect;
-                    } else { alert('Error: ' + response.message); resetBoton(); }
+                    } else { window.app.toast('Error: ' + response.message, 'error'); resetBoton(); }
                 },
                 error: function(xhr) {
                     var msg = 'Ocurrió un error al procesar la solicitud.';
@@ -405,7 +405,7 @@
                             if (det.length) msg = 'Errores de validación:\n\n' + det.join('\n');
                         }
                     }
-                    alert(msg); resetBoton();
+                    window.app.toast(msg, 'error'); resetBoton();
                 }
             });
         });
@@ -445,7 +445,7 @@
     async function validarDniCiudadano() {
         const btn = document.getElementById('btnValidarDni');
         const dni = document.getElementById('titular_dni').value.trim();
-        if (dni.length !== 8) { alert('El DNI debe tener 8 dígitos'); return; }
+        if (dni.length !== 8) { window.app.toast('El DNI debe tener 8 dígitos.', 'warning'); return; }
         btn.disabled = true; btn.textContent = 'Validando...';
         try {
             // 1. ¿Está registrado en el sistema?
@@ -496,12 +496,12 @@
                 setEstadoCiudadano('DNI validado por RENIEC. No está registrado: el trámite saldrá a su nombre (snapshot).', 'warn');
                 validarFormulario();
             } else {
-                alert(data.message || 'No se pudo validar el DNI');
+                window.app.toast(data.message || 'No se pudo validar el DNI.', 'error');
                 btn.disabled = false; btn.textContent = 'Validar DNI';
             }
         } catch (e) {
             console.error(e);
-            alert('Error al validar el DNI.');
+            window.app.toast('Error al validar el DNI.', 'error');
             btn.disabled = false; btn.textContent = 'Validar DNI';
         }
     }
@@ -509,7 +509,7 @@
     async function validarRucCiudadano() {
         const btn = document.getElementById('btnValidarRuc');
         const ruc = document.getElementById('titular_ruc').value.trim();
-        if (ruc.length !== 11) { alert('El RUC debe tener 11 dígitos'); return; }
+        if (ruc.length !== 11) { window.app.toast('El RUC debe tener 11 dígitos.', 'warning'); return; }
         btn.disabled = true; btn.textContent = 'Validando...';
         try {
             const resp = await fetch('{{ route("api.validar-ruc") }}', {
@@ -525,12 +525,12 @@
                 btn.disabled = true; btn.textContent = '✓ Validado';
                 validarFormulario();
             } else {
-                alert(data.message || 'No se pudo validar el RUC');
+                window.app.toast(data.message || 'No se pudo validar el RUC.', 'error');
                 btn.disabled = false; btn.textContent = 'Validar RUC';
             }
         } catch (e) {
             console.error(e);
-            alert('Error al validar el RUC.');
+            window.app.toast('Error al validar el RUC.', 'error');
             btn.disabled = false; btn.textContent = 'Validar RUC';
         }
     }

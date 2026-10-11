@@ -202,7 +202,8 @@
 
             // Vaciar la entrada pausa la recepción: confirmación dedicada.
             if (destinoId === null) {
-                if (!confirm('¿Dejar el procedimiento sin nodo de entrada? Mientras tanto no podrá recibir trámites nuevos.')) return;
+                const okVacio = await window.app.confirmDialog('¿Dejar el procedimiento sin nodo de entrada? Mientras tanto no podrá recibir trámites nuevos.', { title: 'Sin nodo de entrada' });
+                if (!okVacio) return;
                 await guardarEntrada(destinoId, true);
                 return;
             }
@@ -236,7 +237,8 @@
         // El backend pide confirmación cuando hay trámites en curso.
         if (r && r.needs_confirm) {
             const n = r.sensibles || 0;
-            if (confirm(`Hay ${n} trámite(s) en curso. Cambiar el nodo de entrada moverá su aceptación, bandeja y retroceso al nuevo nodo. ¿Continuar?`)) {
+            const continuar = await window.app.confirmDialog(`Hay ${n} trámite(s) en curso. Cambiar el nodo de entrada moverá su aceptación, bandeja y retroceso al nuevo nodo. ¿Continuar?`, { title: 'Cambiar nodo de entrada' });
+            if (continuar) {
                 await guardarEntrada(destinoId, true);
             }
             return;
@@ -269,7 +271,8 @@
         // El backend pide confirmación cuando hay trámites en curso.
         if (r && r.needs_confirm) {
             const n = r.sensibles || 0;
-            if (confirm(`Hay ${n} trámite(s) en curso. Regenerar restablecerá nombres, banderas y nodo de entrada del flujo (los trámites existentes conservan su nodo actual). ¿Continuar?`)) {
+            const continuarRegen = await window.app.confirmDialog(`Hay ${n} trámite(s) en curso. Regenerar restablecerá nombres, banderas y nodo de entrada del flujo (los trámites existentes conservan su nodo actual). ¿Continuar?`, { title: 'Regenerar flujo' });
+            if (continuarRegen) {
                 await regenerarDesdeJerarquia(true);
             }
             return;

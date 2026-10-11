@@ -41,6 +41,31 @@ class Tramite extends Model
     use HasFactory;
 
     /**
+     * Dispara notificaciones de bandeja ante cambios de estado
+     * o de responsable. Cubre ambos motores (clásico y por nodos)
+     * sin tocar cada acción por separado.
+     */
+    protected static function booted(): void
+    {
+        static::updated(function (Tramite $tramite) {
+            try {
+                $servicio = app(\App\Services\NotificacionService::class);
+
+                if ($tramite->wasChanged('estado')) {
+                    $servicio->avisarCambioEstado($tramite, $tramite->getOriginal('estado'));
+                }
+
+                if ($tramite->wasChanged('id_usuario')) {
+                    $servicio->avisarNuevoResponsable($tramite);
+                }
+            } catch (\Exception $e) {
+                // Las notificaciones nunca deben romper la operación.
+                \Illuminate\Support\Facades\Log::warning('Fallo al notificar cambio de trámite: ' . $e->getMessage());
+            }
+        });
+    }
+
+    /**
      * La tabla asociada al modelo
      * 
      * @var string

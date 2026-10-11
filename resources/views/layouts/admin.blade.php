@@ -116,6 +116,24 @@
                     </div>
 
                     @auth
+                    <!-- Campana de notificaciones -->
+                    <div class="relative shrink-0" id="mpNotifWrap">
+                        <button id="mpNotifBtn" type="button" aria-label="Notificaciones" aria-haspopup="true"
+                            class="relative inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.857 17.082a24 24 0 00-5.714 0M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M10.3 21a1.94 1.94 0 003.4 0"/>
+                            </svg>
+                            <span id="mpNotifBadge" class="hidden absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[11px] font-extrabold items-center justify-center shadow">0</span>
+                        </button>
+                        <div id="mpNotifMenu" class="hidden absolute right-0 top-12 w-[min(92vw,340px)] rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden z-50">
+                            <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                                <p class="text-[14px] font-extrabold text-slate-900">Notificaciones</p>
+                                <button id="mpNotifReadAll" type="button" class="text-[12px] font-bold text-primary-700 hover:text-primary-900">Marcar todas</button>
+                            </div>
+                            <div id="mpNotifList" class="max-h-[320px] overflow-y-auto mp-scroll divide-y divide-slate-100"></div>
+                            <a href="{{ route('notificaciones.index') }}" class="block text-center px-4 py-2.5 text-[13px] font-bold text-primary-700 hover:bg-primary-50 border-t border-slate-100 transition">Ver todas</a>
+                        </div>
+                    </div>
                     <div class="flex items-center gap-2 pl-2 sm:border-l sm:border-slate-200 sm:ml-1 sm:pl-4">
                         <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary-600 to-primary-900 text-white flex items-center justify-center text-sm font-extrabold shadow-md ring-2 ring-white">
                             {{ $mpInitials }}
@@ -154,9 +172,14 @@
                 </div>
                 @endif
 
-                <!-- Alertas -->
+                <!-- Avisos de sesión: se muestran como toasts del sistema -->
                 @unless(isset($hideAlerts) && $hideAlerts)
-                    <div class="mp-animate mp-animate-1"><x-alerts /></div>
+                    <div class="mp-animate mp-animate-1" data-flash-toasts
+                         @if(session('success')) data-flash-success="{{ session('success') }}" @endif
+                         @if(session('error')) data-flash-error="{{ session('error') }}" @endif
+                         @if(session('info')) data-flash-info="{{ session('info') }}" @endif
+                         @if($errors->any()) @foreach($errors->all() as $i => $msg) data-flash-err{{ $i }}="{{ $msg }}" @endforeach @endif
+                    ></div>
                 @endunless
 
                 <!-- Cuerpo -->
@@ -330,7 +353,11 @@
                 showNotification: function(message, type) {
                     console.log('[' + (type || 'success').toUpperCase() + '] ' + message);
                 },
-                confirmAction: function(message, callback) { if (confirm(message)) callback(); },
+                confirmAction: function(message, callback) {
+                    window.app.confirmDialog(message, { danger: false }).then(function(ok) {
+                        if (ok && typeof callback === 'function') callback();
+                    });
+                },
                 formatDate: function(dateString) {
                     try {
                         return new Date(dateString).toLocaleDateString('es-PE', {
@@ -362,6 +389,8 @@
             });
         })();
     </script>
+
+    @include('components.sistema-notificaciones')
 
     @stack('scripts')
 </body>

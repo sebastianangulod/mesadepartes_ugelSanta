@@ -549,7 +549,7 @@
 
     window.abrirModalAcciones = async function(idTramite) {
         const tramite = tramitesCache[idTramite];
-        if (!tramite) return alert('No se encontró el trámite.');
+        if (!tramite) { window.app.toast('No se encontró el trámite.', 'error'); return; }
 
         const modal = document.getElementById('modalAccionesTramite');
         const cont = document.getElementById('modalAccionesBtns');
@@ -651,7 +651,7 @@
                     btn.textContent = 'Derivar';
                     btn.onclick = function() {
                         const destinoId = document.getElementById('derivarDestinoSelect').value;
-                        if (!destinoId) return alert('Seleccione un destino');
+                        if (!destinoId) { window.app.toast('Seleccione un destino.', 'warning'); return; }
                         closeModal('modalAccionesTramite');
                         derivarTramiteConDestino(idTramite, parseInt(destinoId));
                     };
@@ -723,23 +723,30 @@
         openModal('modalCorregir');
     }
 
-    window.observarTramite = function(id) {
-        const observacion = prompt('Ingrese el motivo de la observación:');
+    window.observarTramite = async function(id) {
+        const observacion = await window.app.promptDialog({
+            title: 'Observar trámite',
+            label: 'Motivo de la observación',
+            placeholder: 'Describa qué debe subsanar el administrado…',
+            multiline: true,
+            confirmText: 'Observar'
+        });
         if (!observacion) return;
         fetch(`/tramites/${id}/observar`, {
             method: 'POST',
             headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json', 'Content-Type': 'application/json' },
             body: JSON.stringify({ observacion: observacion })
         }).then(res => res.json()).then(data => {
-            if (data.success) { alert('Trámite observado correctamente.'); cargarTramites(paginaActual); }
-            else alert(data.message || 'Error al observar el trámite.');
-        }).catch(() => alert('Error de red al intentar observar el trámite.'));
+            if (data.success) { window.app.toast('Trámite observado correctamente.', 'success'); cargarTramites(paginaActual); }
+            else window.app.toast(data.message || 'Error al observar el trámite.', 'error');
+        }).catch(() => window.app.toast('Error de red al intentar observar el trámite.', 'error'));
     }
 
     window.derivarTramite = async function(id) {
         const tInfo = tramitesCache[id];
         const reiniciaFlujo = tInfo && tInfo.id_nodo_actual && tInfo.nodo_puede_finalizar && tInfo.modo_derivacion !== 'MANUAL_FORZADO';
-        if (!confirm(reiniciaFlujo ? '¿Derivar este trámite? Al estar en el nivel final, la derivación automática lo enviará al inicio del flujo.' : '¿Está seguro de derivar este trámite al siguiente nivel?')) return;
+        const ok = await window.app.confirmDialog(reiniciaFlujo ? 'Al estar en el nivel final, la derivación automática lo enviará al inicio del flujo. ¿Derivar este trámite?' : '¿Derivar este trámite al siguiente nivel?', { title: 'Derivar trámite' });
+        if (!ok) return;
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
         const headersJson = { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' };
         let body = null;
@@ -751,20 +758,21 @@
                 const op = await rOp.json();
                 const tr = op.transiciones || [];
                 if (tr.length > 1) {
-                    const lineas = tr.map((x, i) => `${i + 1}) ${x.nombre_destino} (id destino ${x.hacia_nodo_id})`).join('\n');
-                    const sel = prompt(`Seleccione destino (modo manual). Escriba el número de opción:\n\n${lineas}`);
-                    if (!sel) return;
-                    const idx = parseInt(sel, 10) - 1;
-                    if (isNaN(idx) || idx < 0 || idx >= tr.length) { alert('Opción no válida.'); return; }
-                    body = JSON.stringify({ hacia_nodo_id: tr[idx].hacia_nodo_id });
+                    const elegido = await window.app.listDialog({
+                        title: 'Destino de derivación (modo manual)',
+                        options: tr.map(x => ({ value: String(x.hacia_nodo_id), label: `${x.nombre_destino}` })),
+                        confirmText: 'Derivar'
+                    });
+                    if (!elegido) return;
+                    body = JSON.stringify({ hacia_nodo_id: parseInt(elegido, 10) });
                 } else if (tr.length === 1) body = JSON.stringify({ hacia_nodo_id: tr[0].hacia_nodo_id });
-            } catch (e) { alert('No se pudieron cargar las opciones de derivación.'); return; }
+            } catch (e) { window.app.toast('No se pudieron cargar las opciones de derivación.', 'error'); return; }
         }
         fetch(`/tramites/${id}/derivar`, { method: 'POST', headers: body ? headersJson : { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' }, body: body || undefined })
         .then(res => res.json()).then(data => {
-            if (data.success) { alert(data.message || 'Trámite derivado correctamente.'); cargarTramites(paginaActual); }
-            else alert(data.message || 'Error al derivar el trámite.');
-        }).catch(() => alert('Error de red al intentar derivar el trámite.'));
+            if (data.success) { window.app.toast(data.message || 'Trámite derivado correctamente.', 'success'); cargarTramites(paginaActual); }
+            else window.app.toast(data.message || 'Error al derivar el trámite.', 'error');
+        }).catch(() => window.app.toast('Error de red al intentar derivar el trámite.', 'error'));
     }
 
     window.derivarTramiteConDestino = async function(id, destinoId) {
@@ -774,76 +782,88 @@
             headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
             body: JSON.stringify({ hacia_nodo_id: destinoId }),
         }).then(res => res.json()).then(data => {
-            if (data.success) { alert(data.message || 'Trámite derivado correctamente.'); cargarTramites(paginaActual); }
-            else alert(data.message || 'Error al derivar el trámite.');
-        }).catch(() => alert('Error de red al intentar derivar el trámite.'));
+            if (data.success) { window.app.toast(data.message || 'Trámite derivado correctamente.', 'success'); cargarTramites(paginaActual); }
+            else window.app.toast(data.message || 'Error al derivar el trámite.', 'error');
+        }).catch(() => window.app.toast('Error de red al intentar derivar el trámite.', 'error'));
     }
 
-    window.retrocederTramite = function(id) {
-        if (!confirm('¿Retroceder el trámite al paso anterior del flujo (derivación o ingreso)?')) return;
+    window.retrocederTramite = async function(id) {
+        const ok = await window.app.confirmDialog('¿Retroceder el trámite al paso anterior del flujo (derivación o ingreso)?', { title: 'Retroceder trámite' });
+        if (!ok) return;
         fetch(`/tramites/${id}/flujo/retroceder`, { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' } })
         .then(res => res.json()).then(data => {
-            if (data.success) { alert(data.message || 'Retroceso aplicado.'); cargarTramites(paginaActual); }
-            else alert(data.message || 'No se pudo retroceder.');
-        }).catch(() => alert('Error de red al retroceder el trámite.'));
+            if (data.success) { window.app.toast(data.message || 'Retroceso aplicado.', 'success'); cargarTramites(paginaActual); }
+            else window.app.toast(data.message || 'No se pudo retroceder.', 'error');
+        }).catch(() => window.app.toast('Error de red al retroceder el trámite.', 'error'));
     };
 
-    window.activarModoManualTramite = function(id) {
-        if (!confirm('¿Activar derivación manual permanente para este trámite? Ya no se usará derivación automática.')) return;
+    window.activarModoManualTramite = async function(id) {
+        const ok = await window.app.confirmDialog('¿Activar derivación manual permanente para este trámite? Ya no se usará derivación automática.', { title: 'Derivación manual' });
+        if (!ok) return;
         fetch(`/tramites/${id}/flujo/modo-manual`, { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' } })
         .then(res => res.json()).then(data => {
-            if (data.success) { alert(data.message || 'Modo manual activado.'); cargarTramites(paginaActual); }
-            else alert(data.message || 'Error al activar el modo manual.');
-        }).catch(() => alert('Error de red al activar el modo manual.'));
+            if (data.success) { window.app.toast(data.message || 'Modo manual activado.', 'success'); cargarTramites(paginaActual); }
+            else window.app.toast(data.message || 'Error al activar el modo manual.', 'error');
+        }).catch(() => window.app.toast('Error de red al activar el modo manual.', 'error'));
     };
 
-    window.desactivarModoManualTramite = function(id) {
-        if (!confirm('¿Restaurar derivación automática para este trámite?')) return;
+    window.desactivarModoManualTramite = async function(id) {
+        const ok = await window.app.confirmDialog('¿Restaurar derivación automática para este trámite?', { title: 'Derivación automática' });
+        if (!ok) return;
         fetch(`/tramites/${id}/flujo/modo-auto`, { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' } })
         .then(res => res.json()).then(data => {
-            if (data.success) { alert(data.message || 'Derivación automática restaurada.'); cargarTramites(paginaActual); }
-            else alert(data.message || 'Error al restaurar el modo automático.');
-        }).catch(() => alert('Error de red al restaurar el modo automático.'));
+            if (data.success) { window.app.toast(data.message || 'Derivación automática restaurada.', 'success'); cargarTramites(paginaActual); }
+            else window.app.toast(data.message || 'Error al restaurar el modo automático.', 'error');
+        }).catch(() => window.app.toast('Error de red al restaurar el modo automático.', 'error'));
     };
 
-    window.aceptarTramite = function(id) {
-        if (!confirm('¿Está seguro de aceptar este trámite?')) return;
+    window.aceptarTramite = async function(id) {
+        const ok = await window.app.confirmDialog('¿Aceptar este trámite y pasarlo a proceso?', { title: 'Aceptar trámite', danger: false });
+        if (!ok) return;
         fetch(`/tramites/${id}/aceptar`, { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' } })
         .then(res => res.json()).then(data => {
-            if (data.success) { alert('Trámite aceptado correctamente.'); cargarTramites(paginaActual); }
-            else alert(data.message || 'Error al aceptar el trámite.');
-        }).catch(() => alert('Error de red al intentar aceptar el trámite.'));
+            if (data.success) { window.app.toast('Trámite aceptado correctamente.', 'success'); cargarTramites(paginaActual); }
+            else window.app.toast(data.message || 'Error al aceptar el trámite.', 'error');
+        }).catch(() => window.app.toast('Error de red al intentar aceptar el trámite.', 'error'));
     }
 
-    window.rechazarTramite = function(id) {
-        const motivo = prompt('Ingrese el motivo del rechazo:');
+    window.rechazarTramite = async function(id) {
+        const motivo = await window.app.promptDialog({
+            title: 'Rechazar trámite',
+            label: 'Motivo del rechazo',
+            placeholder: 'Describa el motivo del rechazo…',
+            multiline: true,
+            confirmText: 'Rechazar'
+        });
         if (!motivo) return;
         fetch(`/tramites/${id}/rechazar`, {
             method: 'POST',
             headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json', 'Content-Type': 'application/json' },
             body: JSON.stringify({ motivo: motivo })
         }).then(res => res.json()).then(data => {
-            if (data.success) { alert('Trámite rechazado correctamente.'); cargarTramites(paginaActual); }
-            else alert(data.message || 'Error al rechazar el trámite.');
-        }).catch(() => alert('Error de red al intentar rechazar el trámite.'));
+            if (data.success) { window.app.toast('Trámite rechazado correctamente.', 'success'); cargarTramites(paginaActual); }
+            else window.app.toast(data.message || 'Error al rechazar el trámite.', 'error');
+        }).catch(() => window.app.toast('Error de red al intentar rechazar el trámite.', 'error'));
     }
 
-    window.verificarTramite = function(id) {
-        if (!confirm('¿Está seguro de verificar este trámite?')) return;
+    window.verificarTramite = async function(id) {
+        const ok = await window.app.confirmDialog('¿Verificar este trámite?', { title: 'Verificar trámite', danger: false });
+        if (!ok) return;
         fetch(`/tramites/${id}/verificar`, { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' } })
         .then(res => res.json()).then(data => {
-            if (data.success) { alert('Trámite verificado correctamente.'); cargarTramites(paginaActual); }
-            else alert(data.message || 'Error al verificar el trámite.');
-        }).catch(() => alert('Error de red al intentar verificar el trámite.'));
+            if (data.success) { window.app.toast('Trámite verificado correctamente.', 'success'); cargarTramites(paginaActual); }
+            else window.app.toast(data.message || 'Error al verificar el trámite.', 'error');
+        }).catch(() => window.app.toast('Error de red al intentar verificar el trámite.', 'error'));
     }
 
-    window.derivarEspecialistaTramite = function(id) {
-        if (!confirm('¿Está seguro de derivar este trámite al especialista?')) return;
+    window.derivarEspecialistaTramite = async function(id) {
+        const ok = await window.app.confirmDialog('¿Derivar este trámite al especialista?', { title: 'Derivar a especialista' });
+        if (!ok) return;
         fetch(`/tramites/${id}/derivar-especialista`, { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' } })
         .then(res => res.json()).then(data => {
-            if (data.success) { alert('Trámite derivado al especialista correctamente.'); cargarTramites(paginaActual); }
-            else alert(data.message || 'Error al derivar al especialista.');
-        }).catch(() => alert('Error de red al intentar derivar al especialista.'));
+            if (data.success) { window.app.toast('Trámite derivado al especialista correctamente.', 'success'); cargarTramites(paginaActual); }
+            else window.app.toast(data.message || 'Error al derivar al especialista.', 'error');
+        }).catch(() => window.app.toast('Error de red al intentar derivar al especialista.', 'error'));
     }
 
     window.observarConOficioTramite = function(id) {
@@ -855,13 +875,14 @@
         document.getElementById('formObservarConOficio').reset();
     }
 
-    window.procesarTramite = function(id) {
-        if (!confirm('¿Está seguro de que desea finalizar este trámite y generar el voucher?')) return;
+    window.procesarTramite = async function(id) {
+        const ok = await window.app.confirmDialog('¿Finalizar este trámite y generar el voucher?', { title: 'Finalizar trámite' });
+        if (!ok) return;
         fetch(`/tramites/${id}/procesar`, { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' } })
         .then(res => res.json()).then(data => {
-            if (data.success) { alert('Trámite finalizado correctamente. El voucher ha sido generado.'); cargarTramites(paginaActual); }
-            else alert(data.message || 'Error al finalizar el trámite.');
-        }).catch(() => alert('Error de red al intentar procesar el trámite.'));
+            if (data.success) { window.app.toast('Trámite finalizado correctamente. El voucher ha sido generado.', 'success'); cargarTramites(paginaActual); }
+            else window.app.toast(data.message || 'Error al finalizar el trámite.', 'error');
+        }).catch(() => window.app.toast('Error de red al intentar procesar el trámite.', 'error'));
     }
 
     window.verHojaRuta = function(idTramite) {
@@ -905,17 +926,17 @@
     window.cerrarHojaRuta = function() { closeModal('hojaRutaModal'); }
 
     window.verOficio = function(nombreOficio, tramiteId) {
-        if (!nombreOficio || !tramiteId) { alert('No hay oficio adjunto'); return; }
+        if (!nombreOficio || !tramiteId) { window.app.toast('No hay oficio adjunto.', 'warning'); return; }
         window.location.href = `/tramites/${tramiteId}/visor/${nombreOficio}`;
     }
     window.verDocumento = function(nombreDocumento, tramiteId) {
-        if (!nombreDocumento || !tramiteId) { alert('No hay documento adjunto'); return; }
+        if (!nombreDocumento || !tramiteId) { window.app.toast('No hay documento adjunto.', 'warning'); return; }
         window.location.href = `/tramites/${tramiteId}/visor/${nombreDocumento}`;
     }
 
     window.verObservacion = function(idTramite) {
         const tramite = tramitesCache[idTramite];
-        if (!tramite) return alert('No se encontró el trámite.');
+        if (!tramite) { window.app.toast('No se encontró el trámite.', 'error'); return; }
         document.getElementById('observacionTexto').textContent = tramite.observaciones || 'Sin observación registrada.';
         const oficioSection = document.getElementById('oficioSection');
         if (tramite.oficio && !tramite.requiere_oficio) {
@@ -1012,9 +1033,9 @@
                 headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' },
                 body: formData
             }).then(res => res.json()).then(data => {
-                if (data.success) { alert('Oficio subido correctamente'); cerrarModalOficio(); cargarTramites(paginaActual); }
-                else alert(data.message || 'Error al subir el oficio');
-            }).catch(() => alert('Error de red al intentar subir el oficio'))
+                if (data.success) { window.app.toast('Oficio subido correctamente.', 'success'); cerrarModalOficio(); cargarTramites(paginaActual); }
+                else window.app.toast(data.message || 'Error al subir el oficio', 'error');
+            }).catch(() => window.app.toast('Error de red al intentar subir el oficio', 'error'))
             .finally(() => { btn.textContent = originalText; });
         };
 
@@ -1023,15 +1044,15 @@
             const formData = new FormData(this);
             const observacion = formData.get('observacion');
             const idTramite = formData.get('id_tramite');
-            if (!observacion || observacion.trim() === '') { alert('Por favor ingrese el motivo de la observación'); return; }
+            if (!observacion || observacion.trim() === '') { window.app.toast('Ingrese el motivo de la observación.', 'warning'); return; }
             fetch(`/tramites/${idTramite}/observar-con-oficio`, {
                 method: 'POST',
                 headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json', 'Content-Type': 'application/json' },
                 body: JSON.stringify({ observacion: observacion })
             }).then(res => res.json()).then(data => {
-                if (data.success) { alert('Trámite observado con oficio correctamente.'); cerrarModalObservarConOficio(); cargarTramites(paginaActual); }
-                else alert(data.message || 'Error al observar el trámite con oficio.');
-            }).catch(() => alert('Error de red al intentar observar el trámite.'));
+                if (data.success) { window.app.toast('Trámite observado con oficio correctamente.', 'success'); cerrarModalObservarConOficio(); cargarTramites(paginaActual); }
+                else window.app.toast(data.message || 'Error al observar el trámite con oficio.', 'error');
+            }).catch(() => window.app.toast('Error de red al intentar observar el trámite.', 'error'));
         };
 
         const fechaDesdeInput = document.getElementById('filtro_fecha_desde');
@@ -1051,14 +1072,14 @@
         if (fechaHastaInput) fechaHastaInput.addEventListener('change', function() {
             const fechaHasta = this.value;
             const fechaDesde = fechaDesdeInput ? fechaDesdeInput.value : '';
-            if (fechaDesde && fechaHasta && fechaHasta < fechaDesde) { alert('La fecha "Hasta" debe ser igual o posterior a la fecha "Desde"'); this.value = fechaDesde; }
+            if (fechaDesde && fechaHasta && fechaHasta < fechaDesde) { window.app.toast('La fecha "Hasta" debe ser igual o posterior a la fecha "Desde".', 'warning'); this.value = fechaDesde; }
         });
         function validarFechas() {
             const fechaDesde = fechaDesdeInput ? fechaDesdeInput.value : '';
             const fechaHasta = fechaHastaInput ? fechaHastaInput.value : '';
-            if (fechaDesde && fechaDesde > fechaActual) { alert('La fecha "Desde" no puede ser superior a la fecha actual'); if (fechaDesdeInput) fechaDesdeInput.value = ''; return false; }
-            if (fechaHasta && fechaHasta > fechaActual) { alert('La fecha "Hasta" no puede ser superior a la fecha actual'); if (fechaHastaInput) fechaHastaInput.value = ''; return false; }
-            if (fechaDesde && fechaHasta && fechaHasta < fechaDesde) { alert('La fecha "Hasta" debe ser igual o posterior a la fecha "Desde"'); if (fechaHastaInput) fechaHastaInput.value = fechaDesde; return false; }
+            if (fechaDesde && fechaDesde > fechaActual) { window.app.toast('La fecha "Desde" no puede ser superior a la fecha actual.', 'warning'); if (fechaDesdeInput) fechaDesdeInput.value = ''; return false; }
+            if (fechaHasta && fechaHasta > fechaActual) { window.app.toast('La fecha "Hasta" no puede ser superior a la fecha actual.', 'warning'); if (fechaHastaInput) fechaHastaInput.value = ''; return false; }
+            if (fechaDesde && fechaHasta && fechaHasta < fechaDesde) { window.app.toast('La fecha "Hasta" debe ser igual o posterior a la fecha "Desde".', 'warning'); if (fechaHastaInput) fechaHastaInput.value = fechaDesde; return false; }
             return true;
         }
 

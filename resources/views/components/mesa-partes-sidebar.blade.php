@@ -151,6 +151,16 @@
                             <span class="flex-1">Documentos enviados</span>
                         </a>
                     </li>
+                    <li>
+                        <a href="{{ route('notificaciones.index') }}"
+                           class="{{ $linkBase }} {{ request()->routeIs('notificaciones.*') ? $linkActive : $linkIdle }}">
+                            <span class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 {{ request()->routeIs('notificaciones.*') ? 'bg-primary-50 text-primary-700' : 'bg-white/10 text-slate-200 group-hover:bg-white/15' }}">
+                                <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.857 17.082a24 24 0 00-5.714 0M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M10.3 21a1.94 1.94 0 003.4 0"/></svg>
+                            </span>
+                            <span class="flex-1">Notificaciones</span>
+                            <span data-notif-badge class="hidden min-w-[24px] h-6 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-extrabold items-center justify-center shadow">0</span>
+                        </a>
+                    </li>
                 </ul>
             </div>
 

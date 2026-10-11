@@ -1275,28 +1275,28 @@
         
         // Validar que los campos requeridos estén llenos
         if (!dniUsuario || !nombreUsuario || !apellidoPaternoUsuario || !apellidoMaternoUsuario) {
-            alert('Debe validar el DNI primero para obtener los datos del usuario');
+            window.app.toast('Debe validar el DNI primero para obtener los datos del usuario.', 'warning');
             return;
         }
         
         // Validar contraseña
         const passwordValid = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[@$!%*?&_])[A-Za-z\d@$!%*?&_]{8,}$/.test(contrasenaUsuario);
         if (!passwordValid) {
-            alert('La contraseña no cumple con los requisitos. Debe tener al menos 8 caracteres, una mayúscula, un número y un carácter especial (@$!%*?&_)');
+            window.app.toast('La contraseña no cumple con los requisitos. Debe tener al menos 8 caracteres, una mayúscula, un número y un carácter especial (@$!%*?&_).', 'warning');
             return;
         }
         
         // Validar email
         const emailValidado = document.getElementById('emailValidado').value === 'true';
         if (!emailValidado) {
-            alert('El correo electrónico no es válido o ya está registrado');
+            window.app.toast('El correo electrónico no es válido o ya está registrado.', 'warning');
             return;
         }
         
         // Validar que se haya seleccionado al menos el Nivel 1
         const nivel1 = document.getElementById('nivel1').value;
         if (!nivel1 || nivel1 === '') {
-            alert('Debe seleccionar al menos el Nivel 1 para el usuario');
+            window.app.toast('Debe seleccionar al menos el Nivel 1 para el usuario.', 'warning');
             document.getElementById('nivel1').focus();
             return;
         }
@@ -1352,12 +1352,12 @@
             if (data.success) {
                 location.reload();
             } else {
-                alert('Error: ' + data.message);
+                window.app.toast('Error: ' + data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al crear el usuario');
+            window.app.toast('Error al crear el usuario.', 'error');
         });
     }
 
@@ -1448,7 +1448,7 @@
 
         const telEdit = document.getElementById('editTelefonoUsuario').value.replace(/[^0-9]/g, '');
         if (!/^\d{9}$/.test(telEdit)) {
-            alert('El teléfono debe tener 9 dígitos numéricos');
+            window.app.toast('El teléfono debe tener 9 dígitos numéricos.', 'warning');
             return;
         }
         document.getElementById('editTelefonoUsuario').value = telEdit;
@@ -1477,7 +1477,7 @@
         }
         
         if (!nivel || !idNivel) {
-            alert('Debe seleccionar al menos el Nivel 1');
+            window.app.toast('Debe seleccionar al menos el Nivel 1.', 'warning');
             return;
         }
         
@@ -1507,12 +1507,12 @@
             if (data.success) {
                 location.reload();
             } else {
-                alert('Error: ' + data.message);
+                window.app.toast('Error: ' + data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al actualizar el usuario');
+            window.app.toast('Error al actualizar el usuario.', 'error');
         });
     }
 
@@ -1594,12 +1594,13 @@
             });
     }
 
-    function toggleAdmin(id, esAdmin, nombre) {
+    async function toggleAdmin(id, esAdmin, nombre) {
         const accion = esAdmin ? 'quitar-admin' : 'hacer-admin';
         const mensaje = esAdmin
             ? `¿Quitar el rol de administrador a ${nombre}?`
             : `¿Hacer administrador a ${nombre}?`;
-        if (!confirm(mensaje)) return;
+        const ok = await window.app.confirmDialog(mensaje, { title: 'Rol de administrador' });
+        if (!ok) return;
 
         fetch(`/admin/usuarios/${id}/${accion}`, {
             method: 'POST',
@@ -1613,17 +1614,18 @@
             if (data.success) {
                 location.reload();
             } else {
-                alert('Error: ' + data.message);
+                window.app.toast('Error: ' + data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al cambiar el rol de administrador');
+            window.app.toast('Error al cambiar el rol de administrador.', 'error');
         });
     }
 
-    function resetearPassword(id, nombre) {
-        if (!confirm(`¿Resetear la contraseña de ${nombre}? Se generará una nueva clave temporal.`)) return;
+    async function resetearPassword(id, nombre) {
+        const ok = await window.app.confirmDialog(`¿Resetear la contraseña de ${nombre}? Se generará una nueva clave temporal.`, { title: 'Resetear contraseña' });
+        if (!ok) return;
 
         fetch(`/admin/usuarios/${id}/resetear-password`, {
             method: 'POST',
@@ -1635,15 +1637,17 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('Nueva contraseña temporal para ' + nombre + ':\n\n' + data.data.nueva_contrasena + '\n\nEntréguela al usuario por un canal seguro.');
-                location.reload();
+                window.app.infoDialog(
+                    'Nueva contraseña temporal',
+                    'Para ' + nombre + ':\n\n' + data.data.nueva_contrasena + '\n\nEntréguela al usuario por un canal seguro.'
+                ).then(function() { location.reload(); });
             } else {
-                alert('Error: ' + data.message);
+                window.app.toast('Error: ' + data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al resetear la contraseña');
+            window.app.toast('Error al resetear la contraseña.', 'error');
         });
     }
 
@@ -1662,12 +1666,12 @@
             if (data.success) {
                 location.reload();
             } else {
-                alert('Error: ' + data.message);
+                window.app.toast('Error: ' + data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al eliminar el usuario');
+            window.app.toast('Error al eliminar el usuario.', 'error');
         });
     }
     
@@ -1912,7 +1916,7 @@
         const idNivel = document.getElementById('nuevoIdNivel').value;
         
         if (!nivel || !idNivel) {
-            alert('Seleccione nivel y unidad');
+            window.app.toast('Seleccione nivel y unidad.', 'warning');
             return;
         }
         
@@ -1943,12 +1947,12 @@
                 btn.disabled = true;
                 btn.textContent = 'Agregar';
             } else {
-                alert('Error: ' + data.message);
+                window.app.toast('Error: ' + data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al agregar nivel');
+            window.app.toast('Error al agregar nivel.', 'error');
         })
         .finally(() => {
             btn.disabled = false;
@@ -1956,8 +1960,9 @@
         });
     }
 
-    function eliminarNivelUsuario(usuarioId, nivel) {
-        if (!confirm('¿Eliminar este nivel del usuario?')) return;
+    async function eliminarNivelUsuario(usuarioId, nivel) {
+        const ok = await window.app.confirmDialog('¿Eliminar este nivel del usuario?', { title: 'Eliminar nivel' });
+        if (!ok) return;
         
         // Obtener niveles actuales y enviar lista sin el que se quiere eliminar
         fetch(`/admin/usuarios/${usuarioId}/niveles`, {
@@ -1982,7 +1987,7 @@
                     if (data.success) {
                         cargarNivelesAsignados(usuarioId);
                     } else {
-                        alert('Error: ' + data.message);
+                        window.app.toast('Error: ' + data.message, 'error');
                     }
                 });
             }

@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\FlujoProcedimientoController;
 use App\Http\Controllers\Admin\UsuariosController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\MesaPartesController;
+use App\Http\Controllers\NotificacionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -223,9 +224,16 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/tramites-recibidos/ajax', [MesaPartesController::class, 'obtenerTramitesPorNivelUsuario'])
             ->name('mesa-partes.tramites-recibidos.ajax');
     });
+    // Bandeja de notificaciones del usuario autenticado
+    Route::prefix('notificaciones')->group(function () {
+        Route::get('/', [NotificacionController::class, 'index'])->name('notificaciones.index');
+        Route::get('/ajax', [NotificacionController::class, 'lista'])->name('notificaciones.ajax');
+        Route::get('/no-leidas', [NotificacionController::class, 'noLeidas'])->name('notificaciones.no-leidas');
+        Route::post('/{id}/leer', [NotificacionController::class, 'leer'])->name('notificaciones.leer');
+        Route::post('/leer-todas', [NotificacionController::class, 'leerTodas'])->name('notificaciones.leer-todas');
+    });
     // Rutas API AJAX para administración
-    Route::prefix('api')->group(function () {
-        // Niveles dinámicos para selects
+    Route::prefix('api')->group(function () {        // Niveles dinámicos para selects
         Route::get('/niveles/nivel2/{nivel1Id}', [NivelesController::class, 'obtenerNivel2'])->name('api.niveles.nivel2');
         Route::get('/niveles/nivel3/{nivel2Id}', [NivelesController::class, 'obtenerNivel3'])->name('api.niveles.nivel3');
         Route::get('/niveles/nivel4/{nivel3Id}', [NivelesController::class, 'obtenerNivel4'])->name('api.niveles.nivel4');

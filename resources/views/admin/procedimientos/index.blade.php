@@ -503,15 +503,15 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('Especialistas asignados correctamente');
+                window.app.toast('Especialistas asignados correctamente.', 'success');
                 closeModal('modalAsignarEspecialistas');
             } else {
-                alert('Error: ' + (data.message || 'No se pudieron asignar los especialistas'));
+                window.app.toast('Error: ' + (data.message || 'No se pudieron asignar los especialistas.'), 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al asignar especialistas. Intente nuevamente.');
+            window.app.toast('Error al asignar especialistas. Intente nuevamente.', 'error');
         });
     }
 
@@ -671,26 +671,26 @@
         
         // Validar nombre
         if (!nombre || nombre.length < 3) {
-            alert('El nombre del procedimiento es obligatorio y debe tener al menos 3 caracteres');
+            window.app.toast('El nombre del procedimiento es obligatorio y debe tener al menos 3 caracteres.', 'warning');
             document.getElementById('nombreProcedimiento').focus();
             return;
         }
         
         // Validar nivel 1
         if (!idArea) {
-            alert('Debe seleccionar un Nivel 1');
+            window.app.toast('Debe seleccionar un Nivel 1.', 'warning');
             return;
         }
         
         // Validar nivel 2
         if (!idSubarea) {
-            alert('Debe seleccionar un Nivel 2');
+            window.app.toast('Debe seleccionar un Nivel 2.', 'warning');
             return;
         }
         
         // Validar que se haya seleccionado un nivel final
         if (!nivelFinal || !['2', '3', '4'].includes(nivelFinal)) {
-            alert('Debe seleccionar si el procedimiento termina en Nivel 2, Nivel 3 o Nivel 4');
+            window.app.toast('Debe seleccionar si el procedimiento termina en Nivel 2, Nivel 3 o Nivel 4.', 'warning');
             return;
         }
         
@@ -701,18 +701,18 @@
         } else if (nivelFinal === '3') {
             idNivelFinal = document.getElementById('nivel3Procedimiento').value;
             if (!idNivelFinal) {
-                alert('Debe seleccionar un Nivel 3');
+                window.app.toast('Debe seleccionar un Nivel 3.', 'warning');
                 return;
             }
         } else if (nivelFinal === '4') {
             const idNivel3 = document.getElementById('nivel3Procedimiento').value;
             idNivelFinal = document.getElementById('nivel4Procedimiento').value;
             if (!idNivel3) {
-                alert('Debe seleccionar primero un Nivel 3');
+                window.app.toast('Debe seleccionar primero un Nivel 3.', 'warning');
                 return;
             }
             if (!idNivelFinal) {
-                alert('Debe seleccionar un Nivel 4');
+                window.app.toast('Debe seleccionar un Nivel 4.', 'warning');
                 return;
             }
         }
@@ -737,12 +737,12 @@
             if (data.success) {
                 location.reload();
             } else {
-                alert('Error: ' + data.message);
+                window.app.toast('Error: ' + data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al crear el procedimiento');
+            window.app.toast('Error al crear el procedimiento.', 'error');
         });
     }
 
@@ -994,23 +994,23 @@
         const nivelFinal = form.querySelector('input[name="edit_nivel_final"]:checked')?.value;
         
         if (!nombre || nombre.length < 3) {
-            alert('El nombre del procedimiento es obligatorio y debe tener al menos 3 caracteres');
+            window.app.toast('El nombre del procedimiento es obligatorio y debe tener al menos 3 caracteres.', 'warning');
             document.getElementById('editNombreProcedimiento').focus();
             return;
         }
         
         if (!idArea) {
-            alert('Debe seleccionar un Nivel 1');
+            window.app.toast('Debe seleccionar un Nivel 1.', 'warning');
             return;
         }
         
         if (!idSubarea) {
-            alert('Debe seleccionar un Nivel 2');
+            window.app.toast('Debe seleccionar un Nivel 2.', 'warning');
             return;
         }
         
         if (!nivelFinal || !['2', '3', '4'].includes(nivelFinal)) {
-            alert('Debe seleccionar si el procedimiento termina en Nivel 2, Nivel 3 o Nivel 4');
+            window.app.toast('Debe seleccionar si el procedimiento termina en Nivel 2, Nivel 3 o Nivel 4.', 'warning');
             return;
         }
         
@@ -1020,18 +1020,18 @@
         } else if (nivelFinal === '3') {
             idNivelFinal = document.getElementById('editNivel3Procedimiento').value;
             if (!idNivelFinal) {
-                alert('Debe seleccionar un Nivel 3');
+                window.app.toast('Debe seleccionar un Nivel 3.', 'warning');
                 return;
             }
         } else if (nivelFinal === '4') {
             const idNivel3 = document.getElementById('editNivel3Procedimiento').value;
             idNivelFinal = document.getElementById('editNivel4Procedimiento').value;
             if (!idNivel3) {
-                alert('Debe seleccionar primero un Nivel 3');
+                window.app.toast('Debe seleccionar primero un Nivel 3.', 'warning');
                 return;
             }
             if (!idNivelFinal) {
-                alert('Debe seleccionar un Nivel 4');
+                window.app.toast('Debe seleccionar un Nivel 4.', 'warning');
                 return;
             }
         }
@@ -1056,12 +1056,12 @@
             if (data.success) {
                 location.reload();
             } else {
-                alert('Error: ' + data.message);
+                window.app.toast('Error: ' + data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al actualizar el procedimiento');
+            window.app.toast('Error al actualizar el procedimiento.', 'error');
         });
     }
 
@@ -1129,12 +1129,12 @@
             if (data.success) {
                 location.reload();
             } else {
-                alert('Error: ' + data.message);
+                window.app.toast('Error: ' + data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al eliminar el procedimiento');
+            window.app.toast('Error al eliminar el procedimiento.', 'error');
         });
     }
 </script>

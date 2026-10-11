@@ -224,11 +224,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (!recaptchaResponse || recaptchaResponse.length === 0) {
                 e.preventDefault();
-                const errorDiv = document.getElementById('recaptcha-error');
-                if (errorDiv) {
-                    errorDiv.classList.remove('hidden');
-                }
-                alert('Por favor, complete el reCAPTCHA antes de continuar.');
+                window.app.toast('Por favor, complete el reCAPTCHA antes de continuar.', 'warning');
                 return false;
             }
 

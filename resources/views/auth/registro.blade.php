@@ -455,7 +455,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('validarDni').addEventListener('click', function() {
         const dni = document.getElementById('dni').value;
         if (dni.length !== 8) {
-            alert('El DNI debe tener 8 dígitos');
+            window.app.toast('El DNI debe tener 8 dígitos.', 'warning');
             return;
         }
         
@@ -492,14 +492,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 checkValidations();
             } else {
                 console.error('Error en validación DNI:', data.message);
-                alert(data.message || 'No se pudo validar el DNI');
+                window.app.toast(data.message || 'No se pudo validar el DNI.', 'error');
                 this.disabled = false;
                 this.textContent = 'Validar DNI';
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al validar el DNI. Por favor, inténtelo nuevamente.');
+            window.app.toast('Error al validar el DNI. Por favor, inténtelo nuevamente.', 'error');
             this.disabled = false;
             this.textContent = 'Validar DNI';
         });
@@ -509,7 +509,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('validarRuc').addEventListener('click', function() {
         const ruc = document.getElementById('ruc').value;
         if (ruc.length !== 11) {
-            alert('El RUC debe tener 11 dígitos');
+            window.app.toast('El RUC debe tener 11 dígitos.', 'warning');
             return;
         }
         
@@ -536,14 +536,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.classList.add('bg-green-600');
                 checkValidations();
             } else {
-                alert(data.message || 'No se pudo validar el RUC');
+                window.app.toast(data.message || 'No se pudo validar el RUC.', 'error');
                 this.disabled = false;
                 this.textContent = 'Validar RUC';
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al validar el RUC. Por favor, inténtelo nuevamente.');
+            window.app.toast('Error al validar el RUC. Por favor, inténtelo nuevamente.', 'error');
             this.disabled = false;
             this.textContent = 'Validar RUC';
         });

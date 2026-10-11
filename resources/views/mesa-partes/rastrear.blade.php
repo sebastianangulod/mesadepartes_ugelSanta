@@ -242,7 +242,7 @@
                 const fechaDesde = fechaDesdeInput ? fechaDesdeInput.value : '';
 
                 if (fechaDesde && fechaHasta && fechaHasta < fechaDesde) {
-                    alert('La fecha "Hasta" debe ser igual o posterior a la fecha "Desde"');
+                    window.app.toast('La fecha "Hasta" debe ser igual o posterior a la fecha "Desde".', 'warning');
                     this.value = fechaDesde;
                 }
             });
@@ -255,20 +255,20 @@
 
             // Validar que no sean fechas futuras
             if (fechaDesde && fechaDesde > fechaActual) {
-                alert('La fecha "Desde" no puede ser superior a la fecha actual');
+                window.app.toast('La fecha "Desde" no puede ser superior a la fecha actual.', 'warning');
                 if (fechaDesdeInput) fechaDesdeInput.value = '';
                 return false;
             }
 
             if (fechaHasta && fechaHasta > fechaActual) {
-                alert('La fecha "Hasta" no puede ser superior a la fecha actual');
+                window.app.toast('La fecha "Hasta" no puede ser superior a la fecha actual.', 'warning');
                 if (fechaHastaInput) fechaHastaInput.value = '';
                 return false;
             }
 
             // Validar que "hasta" sea >= "desde"
             if (fechaDesde && fechaHasta && fechaHasta < fechaDesde) {
-                alert('La fecha "Hasta" debe ser igual o posterior a la fecha "Desde"');
+                window.app.toast('La fecha "Hasta" debe ser igual o posterior a la fecha "Desde".', 'warning');
                 if (fechaHastaInput) fechaHastaInput.value = fechaDesde;
                 return false;
             }
