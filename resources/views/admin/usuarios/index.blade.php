@@ -197,7 +197,7 @@
         </div>
         <div class="p-6">
         
-        <form id="formCrearUsuario" class="grid grid-cols-2 gap-4" autocomplete="off" onsubmit="crearUsuario(event)">
+        <form id="formCrearUsuario" class="grid grid-cols-1 sm:grid-cols-2 gap-4" autocomplete="off" onsubmit="crearUsuario(event)">
             @csrf
             <!-- DNI y Nombres -->
             <input type="hidden" id="dniValidado" value="false">
@@ -357,7 +357,7 @@
         </div>
         <div class="p-6">
         
-        <form id="formEditarUsuario" class="grid grid-cols-2 gap-4">
+        <form id="formEditarUsuario" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             @csrf
             @method('PUT')
             <input type="hidden" id="editUserId" name="id">
@@ -644,8 +644,9 @@
         document.body.style.overflow = 'auto';
     }
     
-    // Cerrar modal al hacer clic en el backdrop
+    // Cerrar modal al hacer clic en el backdrop (bloqueado durante mutaciones)
     document.addEventListener('click', function(e) {
+        if (window.app && window.app.mutationsInFlight > 0) return;
         if (e.target.classList.contains('bg-gray-900') || e.target.classList.contains('bg-opacity-75') || e.target.classList.contains('bg-slate-950/55')) {
             const modal = e.target.closest('[id^="modal"]');
             if (modal) {
@@ -654,9 +655,9 @@
         }
     });
     
-    // Cerrar modal con tecla ESC
+    // Cerrar modal con tecla ESC (bloqueado durante mutaciones)
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
+        if (e.key === 'Escape' && !(window.app && window.app.mutationsInFlight > 0)) {
             const modals = ['modalAddUser', 'modalEditUser', 'modalDeleteUser'];
             modals.forEach(modalId => {
                 const modal = document.getElementById(modalId);
@@ -1861,7 +1862,7 @@
         const select = document.getElementById('nuevoIdNivel');
         const btn = document.getElementById('btnAgregarNivel');
         
-        select.innerHTML = '<option value="">Cargando...</option>';
+        select.innerHTML = '<option value="">Cargando…</option>';
         select.disabled = true;
         btn.disabled = true;
         
@@ -1993,7 +1994,7 @@
     const allModals = ['modalAddUser', 'modalEditUser', 'modalDeleteUser', 'modalAsignarNiveles'];
     
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
+        if (e.key === 'Escape' && !(window.app && window.app.mutationsInFlight > 0)) {
             allModals.forEach(modalId => {
                 const modal = document.getElementById(modalId);
                 if (modal && !modal.classList.contains('hidden')) {

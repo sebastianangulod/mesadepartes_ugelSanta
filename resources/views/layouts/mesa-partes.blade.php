@@ -250,13 +250,69 @@
                 if (!loading) return;
                 loading.classList.add('hidden');
                 loading.classList.remove('flex');
+                document.querySelectorAll('.mp-main-wrap, #mpSidebar').forEach(function(el) {
+                    el.removeAttribute('inert');
+                });
             }
             function showLoading() {
                 if (!loading) return;
                 loading.classList.remove('hidden');
                 loading.classList.add('flex');
+                // Congelar la interfaz: ni clics, ni teclado, ni navegación
+                // mientras dura la operación.
+                document.querySelectorAll('.mp-main-wrap, #mpSidebar').forEach(function(el) {
+                    el.setAttribute('inert', '');
+                });
             }
             hideLoading();
+
+            // Contador de mutaciones en curso (lo usa el interceptor fetch y
+            // los modales para ignorar cierres con Escape/backdrop a mitad de proceso).
+            // Se inicializa en el objeto window.app más abajo.
+
+            // Rutas POST de solo lectura: no congelan (usan loader inline).
+
+            // Interceptor fetch: toda mutación (POST/PUT/PATCH/DELETE) congela
+            // la interfaz hasta resolverse. Las lecturas no.
+            if (window.fetch && !window.fetch.__mpWrapped) {
+                const originalFetch = window.fetch.bind(window);
+                const wrappedFetch = function(url, options) {
+                    const method = (((options && options.method) || 'GET') + '').toUpperCase();
+                    const target = (typeof url === 'string' ? url : (url && url.url) || '') + '';
+                    const esLectura = method === 'GET' || window.app.READ_ONLY_POSTS.some(function(p) {
+                        return target.indexOf(p) !== -1;
+                    });
+                    if (esLectura) {
+                        return originalFetch(url, options);
+                    }
+                    window.app.mutationsInFlight++;
+                    window.app.showLoading();
+                    return originalFetch(url, options).finally(function() {
+                        window.app.mutationsInFlight = Math.max(0, window.app.mutationsInFlight - 1);
+                        if (window.app.mutationsInFlight === 0) {
+                            window.app.hideLoading();
+                        }
+                    });
+                };
+                wrappedFetch.__mpWrapped = true;
+                window.fetch = wrappedFetch;
+            }
+
+            // Envíos nativos (login, registro, perfil...): congelar la página
+            // durante la petición. Los formularios AJAX cancelan el envío
+            // (preventDefault) y por tanto no congelan desde aquí.
+            document.addEventListener('submit', function(e) {
+                const form = e.target;
+                setTimeout(function() {
+                    if (!e.defaultPrevented) {
+                        const btn = e.submitter || (form && form.querySelector && form.querySelector('[type="submit"]'));
+                        if (btn) {
+                            btn.disabled = true;
+                        }
+                        window.app.showLoading();
+                    }
+                }, 0);
+            });
 
             if (typeof window.$ !== 'undefined' && window.$.ajaxSetup) {
                 window.$.ajaxSetup({
@@ -267,6 +323,10 @@
             window.app = {
                 showLoading: showLoading,
                 hideLoading: hideLoading,
+                // Congelamiento uniforme: el interceptor fetch y los envíos
+                // nativos leen y actualizan estos campos en tiempo real.
+                mutationsInFlight: 0,
+                READ_ONLY_POSTS: ['/mesa-partes/rastrear/buscar', '/mesa-partes/tramites-recibidos/ajax'],
                 openSidebar: openSidebar,
                 closeSidebar: closeSidebar,
                 showNotification: function(message, type) {

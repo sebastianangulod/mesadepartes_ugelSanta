@@ -39,7 +39,7 @@
                 {{-- Tipo de Persona --}}
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Persona</label>
-                    <div class="flex space-x-6">
+                    <div class="flex flex-wrap gap-x-6 gap-y-2">
                         <label class="inline-flex items-center">
                             <input type="radio" name="tipo_persona" value="1" 
                                    class="focus:ring-primary-600 h-4 w-4 text-primary-700 border-gray-300"

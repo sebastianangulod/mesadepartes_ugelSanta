@@ -161,7 +161,7 @@
                         <td colspan="9" class="px-6 py-12 text-center">
                             <div class="flex flex-col items-center gap-3">
                                 <div class="mp-spinner w-8 h-8 rounded-full border-[3px] border-slate-200 border-t-primary-600"></div>
-                                <p class="text-sm font-semibold text-slate-500">Cargando expedientes…</p>
+                                <p class="text-sm font-semibold text-slate-500">Cargando…</p>
                             </div>
                         </td>
                     </tr>
@@ -606,7 +606,7 @@
                         nivelSelect.onchange = async function() {
                             const nivel = this.value;
                             if (!nivel) return;
-                            select.innerHTML = '<option value="">Cargando nodos...</option>';
+                            select.innerHTML = '<option value="">Cargando…</option>';
                             select.disabled = true;
                             try {
                                 const resp = await fetch('{{ route("flujo.nodos-globales") }}', { headers: { 'Accept': 'application/json' } });
@@ -866,7 +866,7 @@
 
     window.verHojaRuta = function(idTramite) {
         const tbody = document.getElementById('hr-niveles-tbody');
-        tbody.innerHTML = '<tr><td colspan="2" class="py-8 text-center text-sm text-slate-400">Cargando hoja de ruta…</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="2" class="py-8 text-center text-sm text-slate-400">Cargando…</td></tr>';
         openModal('hojaRutaModal');
         fetch(`/mesa-partes/hoja-ruta/${idTramite}`, { method: 'GET', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' } })
         .then(res => res.json()).then(data => {
@@ -971,13 +971,13 @@
         document.getElementById('cerrarModalCorregir').onclick = closeCorr;
         document.getElementById('cerrarModalCorregirBtn').onclick = closeCorr;
 
-        // Cerrar modales con clic fuera / Escape
+        // Cerrar modales con clic fuera / Escape (bloqueado durante mutaciones)
         ['hojaRutaModal','modalCorregir','modalOficio','modalObservarConOficio','modalObservacion','modalAccionesTramite'].forEach(id => {
             const m = document.getElementById(id);
-            if (m) m.addEventListener('click', function(e) { if (e.target === m) closeModal(id); });
+            if (m) m.addEventListener('click', function(e) { if (e.target === m && !(window.app && window.app.mutationsInFlight > 0)) closeModal(id); });
         });
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') ['hojaRutaModal','modalCorregir','modalOficio','modalObservarConOficio','modalObservacion','modalAccionesTramite'].forEach(closeModal);
+            if (e.key === 'Escape' && !(window.app && window.app.mutationsInFlight > 0)) ['hojaRutaModal','modalCorregir','modalOficio','modalObservarConOficio','modalObservacion','modalAccionesTramite'].forEach(closeModal);
         });
 
         document.getElementById('formCorregir').onsubmit = function(e) {

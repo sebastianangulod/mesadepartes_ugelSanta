@@ -384,7 +384,8 @@
                 type: 'POST', data: formData, contentType: false, processData: false, dataType: 'json',
                 beforeSend: function() {
                     $('#submitBtn').prop('disabled', true);
-                    $('#submitBtn').html('<span class="inline-block animate-spin mr-2">⏳</span> Procesando...');
+                    window.app.showLoading();
+                    $('#submitBtn').html('<svg class="inline-block animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Procesando…');
                 },
                 success: function(response) {
                     if (response.status === 'success') {
@@ -411,6 +412,7 @@
     });
 
     function resetBoton() {
+        window.app.hideLoading();
         $('#submitBtn').prop('disabled', false);
         $('#submitBtn').text(ES_INTERNO ? 'Crear Trámite Presencial' : 'Crear Trámite');
         validarFormulario();

@@ -94,7 +94,7 @@
                 @foreach($niveles1 as $nivel1)
                 <div class="mb-6 bg-white rounded-2xl border border-slate-200 shadow-sm p-6" data-nivel="1" data-id="{{ $nivel1->id }}">
                     <!-- Nivel 1 -->
-                    <div class="nivel-header flex items-center justify-between mb-4 pb-4 border-b-2 border-blue-200 {{ $nivel1->nivel2->count() > 0 ? 'expandible' : '' }}" 
+                    <div class="nivel-header flex flex-wrap items-center justify-between gap-2 mb-4 pb-4 border-b-2 border-blue-200 {{ $nivel1->nivel2->count() > 0 ? 'expandible' : '' }}" 
                          @if($nivel1->nivel2->count() > 0) onclick="toggleNivel(1, {{ $nivel1->id }})" @endif>
                         <div class="flex-1">
                             <h3 class="text-xl font-bold text-blue-600">Nivel 1: {{ $nivel1->nombre }}</h3>
@@ -128,7 +128,7 @@
                             @foreach($nivel1->nivel2 as $nivel2)
                             <div class="mb-4 bg-slate-50 rounded-2xl border border-slate-100 p-4" data-nivel="2" data-id="{{ $nivel2->id }}">
                                 <!-- Nivel 2 -->
-                                <div class="nivel-header flex items-center justify-between mb-3 pb-3 border-b border-green-200 {{ $nivel2->nivel3->count() > 0 ? 'expandible' : '' }}" 
+                                <div class="nivel-header flex flex-wrap items-center justify-between gap-2 mb-3 pb-3 border-b border-green-200 {{ $nivel2->nivel3->count() > 0 ? 'expandible' : '' }}" 
                                      @if($nivel2->nivel3->count() > 0) onclick="toggleNivel(2, {{ $nivel2->id }})" @endif>
                                     <div class="flex-1">
                                         <h4 class="text-lg font-semibold text-green-600">Nivel 2: {{ $nivel2->nombre }}</h4>
@@ -159,7 +159,7 @@
                                         @foreach($nivel2->nivel3 as $nivel3)
                                         <div class="mb-3 bg-white rounded-xl border border-slate-100 p-3" data-nivel="3" data-id="{{ $nivel3->id }}">
                                             <!-- Nivel 3 -->
-                                            <div class="nivel-header flex items-center justify-between mb-2 pb-2 border-b border-yellow-200 {{ $nivel3->nivel4->count() > 0 ? 'expandible' : '' }}" 
+                                            <div class="nivel-header flex flex-wrap items-center justify-between gap-2 mb-2 pb-2 border-b border-yellow-200 {{ $nivel3->nivel4->count() > 0 ? 'expandible' : '' }}" 
                                                  @if($nivel3->nivel4->count() > 0) onclick="toggleNivel(3, {{ $nivel3->id }})" @endif>
                                                 <div class="flex-1">
                                                     <h5 class="text-md font-medium text-yellow-600">Nivel 3: {{ $nivel3->nombre }}</h5>
@@ -190,7 +190,7 @@
                                                     @foreach($nivel3->nivel4 as $nivel4)
                                                     <div class="bg-slate-50 rounded-xl p-2" data-nivel="4" data-id="{{ $nivel4->id }}">
                                                         <!-- Nivel 4 -->
-                                                        <div class="flex items-center justify-between">
+                                                        <div class="flex flex-wrap items-center justify-between gap-2">
                                                             <div>
                                                                 <h6 class="text-sm font-medium text-purple-600">Nivel 4: {{ $nivel4->nombre }}</h6>
                                                                 <p class="text-xs text-gray-500">ID: {{ $nivel4->id }}</p>
@@ -331,8 +331,9 @@
         document.body.style.overflow = 'auto';
     }
     
-    // Cerrar modal al hacer clic en el backdrop
+    // Cerrar modal al hacer clic en el backdrop (bloqueado durante mutaciones)
     document.addEventListener('click', function(e) {
+        if (window.app && window.app.mutationsInFlight > 0) return;
         if (e.target.classList.contains('bg-gray-900') || e.target.classList.contains('bg-opacity-75') || e.target.classList.contains('bg-slate-950/55')) {
             const modal = e.target.closest('[id^="modal"]');
             if (modal) {
@@ -341,9 +342,9 @@
         }
     });
     
-    // Cerrar modal con tecla ESC
+    // Cerrar modal con tecla ESC (bloqueado durante mutaciones)
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
+        if (e.key === 'Escape' && !(window.app && window.app.mutationsInFlight > 0)) {
             const modals = ['modalNivel', 'modalDeleteNivel'];
             modals.forEach(modalId => {
                 const modal = document.getElementById(modalId);

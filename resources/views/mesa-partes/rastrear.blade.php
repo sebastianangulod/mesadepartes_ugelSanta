@@ -119,7 +119,7 @@
 
         <div id="loadingIndicator" class="hidden px-6 py-10 text-center">
             <div class="mp-spinner inline-block w-8 h-8 rounded-full border-[3px] border-slate-200 border-t-primary-600"></div>
-            <p class="mt-3 text-sm font-semibold text-slate-500">Buscando trámites…</p>
+            <p class="mt-3 text-sm font-semibold text-slate-500">Cargando…</p>
         </div>
     </section>
 
@@ -431,7 +431,7 @@
 
         window.verHojaRuta = function(idTramite) {
             const tbody = document.getElementById('hr-niveles-tbody');
-            tbody.innerHTML = '<tr><td class="py-8 text-center text-sm text-slate-400">Cargando hoja de ruta…</td></tr>';
+            tbody.innerHTML = '<tr><td class="py-8 text-center text-sm text-slate-400">Cargando…</td></tr>';
             openRastrearModal('hojaRutaModal');
 
             fetch(`/mesa-partes/hoja-ruta/${idTramite}`, {
@@ -590,13 +590,13 @@
             `;
         });
 
-        // Cerrar modales con clic fuera / Escape
+        // Cerrar modales con clic fuera / Escape (bloqueado durante mutaciones)
         ['hojaRutaModal', 'modalCorregir'].forEach(id => {
             const m = document.getElementById(id);
-            if (m) m.addEventListener('click', function(e) { if (e.target === m) closeRastrearModal(id); });
+            if (m) m.addEventListener('click', function(e) { if (e.target === m && !(window.app && window.app.mutationsInFlight > 0)) closeRastrearModal(id); });
         });
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') ['hojaRutaModal', 'modalCorregir'].forEach(closeRastrearModal);
+            if (e.key === 'Escape' && !(window.app && window.app.mutationsInFlight > 0)) ['hojaRutaModal', 'modalCorregir'].forEach(closeRastrearModal);
         });
 
         // Búsqueda directa desde enlaces internos (?codigo=N): prellena y ejecuta.

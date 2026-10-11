@@ -317,7 +317,7 @@
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        <p>Cargando especialistas...</p>
+                        <p>Cargando…</p>
                     </div>
                 </div>
             </div>
@@ -375,8 +375,9 @@
         document.body.style.overflow = 'auto';
     }
     
-    // Cerrar modal al hacer clic en el backdrop
+    // Cerrar modal al hacer clic en el backdrop (bloqueado durante mutaciones)
     document.addEventListener('click', function(e) {
+        if (window.app && window.app.mutationsInFlight > 0) return;
         if (e.target.classList.contains('bg-gray-900') || e.target.classList.contains('bg-opacity-75') || e.target.classList.contains('bg-slate-950/55')) {
             const modal = e.target.closest('[id^="modal"]');
             if (modal) {
@@ -385,9 +386,9 @@
         }
     });
     
-    // Cerrar modal con tecla ESC
+    // Cerrar modal con tecla ESC (bloqueado durante mutaciones)
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
+        if (e.key === 'Escape' && !(window.app && window.app.mutationsInFlight > 0)) {
             const modals = ['modalAddProcedimiento', 'modalEditProcedimiento', 'modalDeleteProcedimiento', 'modalAsignarEspecialistas'];
             modals.forEach(modalId => {
                 const modal = document.getElementById(modalId);
@@ -410,7 +411,7 @@
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <p>Cargando especialistas...</p>
+                <p>Cargando…</p>
             </div>
         `;
         
