@@ -137,9 +137,6 @@
 @if($recaptchaEnabled && !empty($recaptchaSiteKey))
 <script src="https://www.google.com/recaptcha/api.js?hl=es" async defer></script>
 <script>
-// Variable global para almacenar el widget ID
-let recaptchaWidgetId = null;
-
 // Callback cuando reCAPTCHA se completa exitosamente
 function onRecaptchaSuccess(token) {
     const errorDiv = document.getElementById('recaptcha-error');

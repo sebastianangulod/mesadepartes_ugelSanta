@@ -491,14 +491,7 @@ class TramiteController extends Controller
                 ]);
                 
                 $errorMessage = $uploadError ?? 'No se recibió el archivo. Por favor, verifique que el archivo no exceda el tamaño máximo permitido por el servidor.';
-                
-                // Convertir límites de PHP a bytes para comparación
-                $uploadMaxFilesize = $this->convertToBytes(ini_get('upload_max_filesize'));
-                $postMaxSize = $this->convertToBytes(ini_get('post_max_size'));
-                
-                // Obtener tamaño del archivo si está disponible
-                $fileSize = isset($_FILES['archivo']['size']) ? $_FILES['archivo']['size'] : null;
-                
+
                 return response()->json([
                     'status' => 'error',
                     'message' => $errorMessage,
@@ -1346,32 +1339,6 @@ class TramiteController extends Controller
         ];
         
         return $map[$accion] ?? $accion;
-    }
-
-    /**
-     * Convertir tamaño de archivo en formato PHP (ej: "2M", "10M") a bytes
-     * 
-     * @param string $size
-     * @return int
-     */
-    private function convertToBytes(string $size): int
-    {
-        $size = trim($size);
-        $last = strtolower($size[strlen($size) - 1]);
-        $size = (int) $size;
-        
-        switch ($last) {
-            case 'g':
-                $size *= 1024;
-                // no break
-            case 'm':
-                $size *= 1024;
-                // no break
-            case 'k':
-                $size *= 1024;
-        }
-        
-        return $size;
     }
 
     /**
