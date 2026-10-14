@@ -51,7 +51,7 @@ class Tramite extends Model
             try {
                 $servicio = app(\App\Services\NotificacionService::class);
 
-                if ($tramite->wasChanged('estado')) {
+                if ($tramite->wasChanged('estado') && !\App\Services\NotificacionService::$silenciarCambios) {
                     $servicio->avisarCambioEstado($tramite, $tramite->getOriginal('estado'));
                 }
 

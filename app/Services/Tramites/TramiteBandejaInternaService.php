@@ -168,11 +168,12 @@ class TramiteBandejaInternaService
                         $acciones[] = 'MODO_MANUAL';
                     }
                     // Derivar: si hay siguiente nodo en la cadena (flujo normal)
-                    // o desde el nodo final (puede_finalizar). Desde el nodo final,
-                    // en modo AUTO la derivación reinicia el flujo hacia el nodo de
-                    // entrada; en modo MANUAL se elige cualquier destino.
+                    // o, solo en modo MANUAL, desde el nodo final (puede_finalizar)
+                    // para elegir cualquier destino. En modo AUTO el nodo final
+                    // se procesa, no se deriva (derivar reiniciaría el flujo).
                     $puedeDerivar = $tramite->id_nodo_actual && $nodo
-                        && ($this->tramiteFlujoService->nodoTieneSiguiente($nodo) || $nodo->puede_finalizar);
+                        && ($this->tramiteFlujoService->nodoTieneSiguiente($nodo)
+                            || ($nodo->puede_finalizar && $tramite->esModoManual()));
 
                     if ($puedeDerivar) {
                         $acciones[] = 'DERIVAR';

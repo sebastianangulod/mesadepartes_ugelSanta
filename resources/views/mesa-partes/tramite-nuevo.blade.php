@@ -150,6 +150,7 @@
                         <option value="{{ $procedimiento->id }}">{{ $procedimiento->nombre }}</option>
                     @endforeach
                 </select>
+                <p class="mt-1.5 text-[11.5px] text-slate-400">Escriba para buscar por nombre entre todos los procedimientos.</p>
             </div>
 
             <div>
@@ -181,18 +182,24 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.default.min.css">
 <style>
-    .choices { margin-bottom: 0; }
-    .choices__inner { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.75rem; min-height: 46px; padding: 6px 12px; }
-    .choices.is-focused .choices__inner { background-color: #fff; border-color: #2b6dc0; box-shadow: 0 0 0 2px rgba(43,109,192,.25); }
+    /* Tom Select adaptado al sistema (búsqueda + scroll para listas grandes) */
+    .ts-wrapper.single .ts-control { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.75rem; box-shadow: none; }
+    .ts-wrapper.single.focus .ts-control, .ts-wrapper.single.input-active .ts-control { background-color: #fff; border-color: #2b6dc0; box-shadow: 0 0 0 2px rgba(43,109,192,.25); }
+    .ts-wrapper.single .ts-control, .ts-wrapper.single .ts-control input { font-size: 0.875rem; color: #334155; }
+    .ts-wrapper.single .ts-control > input { flex: 1 1 auto !important; min-width: 0 !important; margin: 0 !important; }
+    .ts-dropdown { border-radius: 0.75rem; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px rgba(17,42,77,.15); font-size: 0.875rem; }
+    .ts-dropdown .no-results { padding: 12px; font-size: 0.85rem; color: #64748b; text-align: center; }
+    .ts-dropdown .option { padding: 8px 12px; }
+    .ts-dropdown .option.active { background-color: #eef5fc; color: #1a4078; }
     input[readonly] { background-color: #f1f5f9; }
 </style>
 @endpush
 
 @push('scripts')
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
     const ES_INTERNO = @json($esInterno);
     let procedimientoSelect;
@@ -261,13 +268,26 @@
     $(document).ready(function() {
         const procedimientoElement = document.getElementById('id_procedimiento');
         if (procedimientoElement) {
-            procedimientoSelect = new Choices(procedimientoElement, {
-                searchEnabled: true, placeholder: true,
-                placeholderValue: 'Seleccionar un procedimiento',
-                searchPlaceholderValue: 'Buscar procedimiento...',
-                itemSelectText: '', shouldSort: false,
-            });
-            procedimientoElement.addEventListener('addItem', validarFormulario);
+            // Tom Select: búsqueda insensible a tildes + scroll para listas
+            // grandes. El desplegable va al body para no recortarse en la tarjeta.
+            // Si el CDN falla, el <select> nativo sigue funcionando.
+            if (typeof TomSelect !== 'undefined') {
+                procedimientoSelect = new TomSelect(procedimientoElement, {
+                    placeholder: 'Seleccionar un procedimiento',
+                    searchField: 'text',
+                    searchPlaceholder: 'Escriba para buscar…',
+                    maxOptions: 5000,
+                    diacritics: true,
+                    copyClassesToDropdown: false,
+                    dropdownParent: 'body',
+                    render: {
+                        no_results: function() {
+                            return '<div class="no-results">Sin resultados para la búsqueda</div>';
+                        }
+                    },
+                    onChange: function() { validarFormulario(); }
+                });
+            }
             procedimientoElement.addEventListener('change', validarFormulario);
         }
 

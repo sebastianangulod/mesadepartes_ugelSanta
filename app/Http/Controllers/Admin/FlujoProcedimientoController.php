@@ -87,16 +87,20 @@ class FlujoProcedimientoController extends Controller
             ->with(['procedimiento:id,nombre'])
             ->orderBy('orden')
             ->orderBy('id')
-            ->get(['id', 'nombre', 'orden', 'puede_finalizar', 'id_procedimiento']);
+            ->get(['id', 'nombre', 'orden', 'puede_finalizar', 'id_procedimiento', 'nivel', 'id_nivel']);
 
+        // Agrupados por NIVEL jerárquico (1-4), no por orden secuencial:
+        // el selector en cascada Nivel → Nodo de derivación manual los pide por nivel.
+        // Nodos legacy sin nivel caen al grupo de su orden como aproximación.
         $agrupados = [];
         for ($nivel = 1; $nivel <= 4; $nivel++) {
             $agrupados[$nivel] = $nodos
-                ->filter(fn ($n) => $n->orden === $nivel)
+                ->filter(fn ($n) => (int) ($n->nivel ?? $n->orden) === $nivel)
                 ->map(fn ($n) => [
                     'id' => $n->id,
                     'nombre' => $n->nombre,
                     'orden' => $n->orden,
+                    'nivel' => $n->nivel,
                     'puede_finalizar' => (bool) $n->puede_finalizar,
                     'procedimiento' => $n->procedimiento?->nombre ?? '—',
                 ])

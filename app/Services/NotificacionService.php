@@ -14,6 +14,12 @@ use Illuminate\Support\Facades\Log;
 class NotificacionService
 {
     /**
+     * Cuando está activo, el hook de Tramite no genera el aviso
+     * genérico de cambio de estado (lo usa el comando de vencimientos,
+     * que envía su propio aviso con la causa).
+     */
+    public static bool $silenciarCambios = false;
+    /**
      * Avisa a creador y responsable (menos al actor) cuando el
      * estado del trámite cambia.
      */
@@ -48,6 +54,20 @@ class NotificacionService
             "Se te asignó el trámite #{$tramite->id} (" . ($tramite->procedimiento->nombre ?? 'procedimiento') . "). Revísalo en tu bandeja.",
             'info',
             route('mesa-partes.tramites-recibidos')
+        );
+    }
+
+    /**
+     * Avisa el rechazo automático por vencimiento (2 días sin subsanar
+     * u 30 días sin finalizar), con la causa incluida.
+     */
+    public function avisarVencimiento(Tramite $tramite, string $causa): void
+    {
+        $this->notificarInvolucrados(
+            $tramite,
+            "Trámite #{$tramite->id} rechazado automáticamente",
+            "El expediente #{$tramite->id} fue rechazado automáticamente: {$causa}. Puedes revisarlo en tu bandeja.",
+            'error'
         );
     }
 

@@ -565,9 +565,9 @@
             };
 
             const esManual = tramite.id_nodo_actual && (tramite.modo_derivacion === 'MANUAL_FORZADO' || tramite.modo_derivacion === true);
-            const nodoPuedeFinalizar = tramite.nodo_puede_finalizar === true || tramite.nodo_puede_finalizar === 'true';
-            const esNodoFinal = tramite.id_nodo_actual && nodoPuedeFinalizar;
-            const debeCargarOpciones = (esManual || esNodoFinal) && tramite.accionesPermitidas.includes('DERIVAR');
+            // En modo AUTO la derivación es directa (siguiente nodo); el selector
+            // de destino solo aparece en modo MANUAL.
+            const debeCargarOpciones = esManual && tramite.accionesPermitidas.includes('DERIVAR');
 
             let opcionesDerivacion = [];
             if (debeCargarOpciones) {

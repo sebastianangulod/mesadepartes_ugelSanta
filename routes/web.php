@@ -121,13 +121,16 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/{tramite}/corregir', [TramiteController::class, 'corregir'])->name('tramites.corregir');
             Route::post('/{tramite}/subir-oficio', [TramiteController::class, 'subirOficioUsuario'])->name('tramites.subir-oficio');
 
-        // Descargar archivo de trámite (protegido)
-        Route::get('/{tramite}/archivo/{nombreArchivo}', [TramiteController::class, 'descargarArchivo'])->name('tramites.archivo.descargar');
+        // Descargar archivo de trámite (protegido).
+        // El nombre puede incluir subcarpetas (p. ej. uploads/vouchers/2026/x.pdf),
+        // por eso se acepta cualquier ruta: localizarArchivo() solo resuelve
+        // nombres que coinciden con lo registrado para ese trámite.
+        Route::get('/{tramite}/archivo/{nombreArchivo}', [TramiteController::class, 'descargarArchivo'])->where('nombreArchivo', '.*')->name('tramites.archivo.descargar');
 
         // Visor de documento dentro del sistema (protegido)
-        Route::get('/{tramite}/visor/{nombreArchivo}', [TramiteController::class, 'visorDocumento'])->name('tramites.archivo.visor');
+        Route::get('/{tramite}/visor/{nombreArchivo}', [TramiteController::class, 'visorDocumento'])->where('nombreArchivo', '.*')->name('tramites.archivo.visor');
         // Ver documento en el navegador - visor interno (protegido)
-        Route::get('/{tramite}/ver/{nombreArchivo}', [TramiteController::class, 'verArchivo'])->name('tramites.archivo.ver');
+        Route::get('/{tramite}/ver/{nombreArchivo}', [TramiteController::class, 'verArchivo'])->where('nombreArchivo', '.*')->name('tramites.archivo.ver');
         
     });
     
